@@ -5,68 +5,87 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Netheraxia Server 💜</title>
     <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
         :root {
             --ease-expo: cubic-bezier(0.16, 1, 0.3, 1);
             --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
             --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
             --font-main: 'Vazirmatn', system-ui, sans-serif;
+            --font-pixel: 'Press Start 2P', 'Vazirmatn', monospace;
+            /* Blocky pixel radii */
+            --r-xs: 3px;
+            --r-sm: 5px;
+            --r-md: 8px;
+            --r-lg: 10px;
+            --r-xl: 12px;
+            --px: 4px; /* base pixel unit */
         }
 
         [data-theme="dark"] {
-            --bg-body: #04040f;
-            --bg-card: rgba(10, 8, 25, 0.72);
-            --bg-glass: rgba(8, 6, 20, 0.65);
-            --bg-glass-nav: rgba(6, 4, 18, 0.88);
-            --bg-chip: rgba(15, 10, 40, 0.55);
-            --text-primary: #f0ecff;
-            --text-secondary: #b8a8d4;
-            --text-tertiary: #6a5f80;
-            --accent: #7c4dff;
-            --accent-light: #a77fff;
-            --accent-dark: #5c2de0;
-            --accent-glow: rgba(124, 77, 255, 0.35);
-            --gold: #ffb347;
-            --gold-dark: #e08020;
-            --border-subtle: rgba(255,255,255,0.035);
-            --border-default: rgba(255,255,255,0.06);
-            --border-accent: rgba(124,77,255,0.22);
-            --shadow-md: 0 8px 32px rgba(0,0,0,0.6);
-            --shadow-lg: 0 20px 60px rgba(0,0,0,0.7);
+            --bg-body: #030a18;
+            --bg-card: rgba(6, 17, 38, 0.72);
+            --bg-glass: rgba(5, 14, 32, 0.65);
+            --bg-glass-nav: rgba(4, 12, 28, 0.88);
+            --bg-chip: rgba(8, 24, 54, 0.55);
+            --text-primary: #e6f2ff;
+            --text-secondary: #9dc2ea;
+            --text-tertiary: #5d7ea3;
+            --accent: #2f86ff;
+            --accent-light: #6fb8ff;
+            --accent-dark: #0f52c7;
+            --accent-glow: rgba(47, 134, 255, 0.35);
+            --accent-rgb: 47, 134, 255;
+            --cyan: #38e6ff;
+            --gold: #ffc94a;
+            --gold-dark: #e08c14;
+            --border-subtle: rgba(140, 200, 255, 0.07);
+            --border-default: rgba(140, 200, 255, 0.12);
+            --border-accent: rgba(47, 134, 255, 0.28);
+            --shadow-md: 0 8px 32px rgba(0, 8, 24, 0.6);
+            --shadow-lg: 0 20px 60px rgba(0, 6, 20, 0.7);
+            --pixel-shadow: 4px 4px 0 rgba(4, 20, 48, 0.55);
             --nav-blur: blur(60px) saturate(200%);
-            --loading-bg: #04040f;
-            --nebula1: rgba(80, 20, 180, 0.18);
-            --nebula2: rgba(20, 60, 200, 0.12);
-            --nebula3: rgba(160, 40, 120, 0.10);
-            --modal-bg: rgba(0,0,0,0.7);
+            --loading-bg: #030a18;
+            --nebula1: rgba(20, 80, 220, 0.20);
+            --nebula2: rgba(0, 140, 220, 0.13);
+            --nebula3: rgba(60, 40, 200, 0.11);
+            --grid-line: rgba(70, 160, 255, 0.055);
+            --modal-bg: rgba(1, 6, 16, 0.72);
         }
 
         [data-theme="light"] {
-            --bg-body: #f2f0ff;
-            --bg-card: rgba(255,255,255,0.75);
-            --bg-glass: rgba(245,242,255,0.7);
-            --bg-glass-nav: rgba(255,255,255,0.88);
-            --bg-chip: rgba(235,230,255,0.6);
-            --text-primary: #0e0820;
-            --text-secondary: #42306a;
-            --text-tertiary: #8070a0;
-            --accent: #6930e8;
-            --accent-light: #8850f8;
-            --accent-dark: #4a18c0;
-            --accent-glow: rgba(105, 48, 232, 0.2);
-            --gold: #c87820;
-            --gold-dark: #a05010;
-            --border-subtle: rgba(0,0,0,0.04);
-            --border-default: rgba(0,0,0,0.07);
-            --border-accent: rgba(105,48,232,0.18);
-            --shadow-md: 0 8px 28px rgba(80,40,180,0.1);
-            --shadow-lg: 0 20px 50px rgba(80,40,180,0.15);
+            --bg-body: #edf4ff;
+            --bg-card: rgba(255,255,255,0.78);
+            --bg-glass: rgba(240,247,255,0.7);
+            --bg-glass-nav: rgba(255,255,255,0.9);
+            --bg-chip: rgba(224,238,255,0.65);
+            --text-primary: #05203f;
+            --text-secondary: #1f4e80;
+            --text-tertiary: #6389ad;
+            --accent: #1268e0;
+            --accent-light: #3f95ff;
+            --accent-dark: #08479f;
+            --accent-glow: rgba(18, 104, 224, 0.22);
+            --accent-rgb: 18, 104, 224;
+            --cyan: #0aa5cc;
+            --gold: #c88014;
+            --gold-dark: #9c5c06;
+            --border-subtle: rgba(10, 60, 120, 0.07);
+            --border-default: rgba(10, 60, 120, 0.12);
+            --border-accent: rgba(18, 104, 224, 0.22);
+            --shadow-md: 0 8px 28px rgba(20, 80, 170, 0.12);
+            --shadow-lg: 0 20px 50px rgba(20, 80, 170, 0.18);
+            --pixel-shadow: 4px 4px 0 rgba(30, 90, 180, 0.18);
             --nav-blur: blur(60px) saturate(180%);
-            --loading-bg: #f2f0ff;
-            --nebula1: rgba(160, 100, 255, 0.12);
-            --nebula2: rgba(80, 120, 255, 0.08);
-            --nebula3: rgba(220, 120, 180, 0.07);
-            --modal-bg: rgba(0,0,0,0.5);
+            --loading-bg: #edf4ff;
+            --nebula1: rgba(60, 140, 255, 0.14);
+            --nebula2: rgba(0, 170, 235, 0.09);
+            --nebula3: rgba(90, 110, 255, 0.08);
+            --grid-line: rgba(20, 90, 190, 0.07);
+            --modal-bg: rgba(6, 26, 56, 0.5);
         }
 
         *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
@@ -109,6 +128,43 @@
             100% { transform: scale(0.97) rotate(-0.5deg); opacity: 1; }
         }
 
+        /* ===== PIXEL GRID + SCANLINES ===== */
+        .pixel-grid {
+            position: fixed; inset: 0; z-index: 0; pointer-events: none;
+            background-image:
+                linear-gradient(var(--grid-line) 1px, transparent 1px),
+                linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+            background-size: 32px 32px, 32px 32px;
+            mask-image: radial-gradient(ellipse 90% 75% at 50% 45%, #000 20%, transparent 78%);
+            -webkit-mask-image: radial-gradient(ellipse 90% 75% at 50% 45%, #000 20%, transparent 78%);
+            animation: gridDrift 12s linear infinite;
+        }
+        @keyframes gridDrift {
+            from { background-position: 0 0, 0 0; }
+            to   { background-position: 0 32px, 32px 0; }
+        }
+        .scanlines {
+            position: fixed; inset: 0; z-index: 2; pointer-events: none;
+            background: repeating-linear-gradient(
+                to bottom,
+                rgba(0, 20, 50, 0.05) 0px,
+                rgba(0, 20, 50, 0.05) 1px,
+                transparent 1px,
+                transparent 3px
+            );
+            opacity: 0.55; mix-blend-mode: multiply;
+        }
+        [data-theme="dark"] .scanlines {
+            background: repeating-linear-gradient(
+                to bottom,
+                rgba(0, 0, 0, 0.16) 0px,
+                rgba(0, 0, 0, 0.16) 1px,
+                transparent 1px,
+                transparent 3px
+            );
+            mix-blend-mode: normal; opacity: 0.4;
+        }
+
         /* ===== LOADING ===== */
         .loading-screen {
             position: fixed; inset: 0; background: var(--loading-bg); z-index: 10000;
@@ -117,23 +173,28 @@
         }
         .loading-screen.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
         .loading-orb {
-            width: 56px; height: 56px; position: relative; margin-bottom: 24px;
+            width: 48px; height: 48px; position: relative; margin-bottom: 26px;
+            display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr);
+            gap: 4px; image-rendering: pixelated;
         }
-        .loading-orb::before, .loading-orb::after {
-            content: ''; position: absolute; inset: 0; border-radius: 50%;
+        .loading-orb i {
+            display: block; background: var(--accent); border-radius: 1px;
+            box-shadow: 0 0 10px var(--accent-glow);
+            animation: pixelBlink 1.2s steps(1, end) infinite;
         }
-        .loading-orb::before {
-            border: 2px solid rgba(124,77,255,0.15);
+        .loading-orb i:nth-child(1) { animation-delay: 0s; }
+        .loading-orb i:nth-child(2) { animation-delay: 0.15s; }
+        .loading-orb i:nth-child(3) { animation-delay: 0.3s; }
+        .loading-orb i:nth-child(4) { animation-delay: 0.9s; }
+        .loading-orb i:nth-child(5) { animation-delay: 0.45s; background: var(--cyan); }
+        .loading-orb i:nth-child(6) { animation-delay: 0.75s; }
+        .loading-orb i:nth-child(7) { animation-delay: 0.6s; }
+        @keyframes pixelBlink { 0%,45%{opacity:1; transform:scale(1);} 46%,100%{opacity:0.12; transform:scale(0.82);} }
+        .loading-text {
+            font-family: var(--font-pixel); font-size: 9px; color: var(--accent-light);
+            letter-spacing: 0.12em; animation: pulse 2s steps(6, end) infinite; direction: ltr;
         }
-        .loading-orb::after {
-            border: 2px solid transparent;
-            border-top-color: var(--accent);
-            border-right-color: var(--accent-light);
-            animation: orbSpin 1s cubic-bezier(0.68,-0.55,0.27,1.55) infinite;
-        }
-        @keyframes orbSpin { to { transform: rotate(360deg); } }
-        .loading-text { font-size: 13px; color: var(--text-tertiary); letter-spacing: 0.08em; animation: pulse 2s ease infinite; }
-        @keyframes pulse { 0%,100%{opacity:0.5;} 50%{opacity:1;} }
+        @keyframes pulse { 0%,100%{opacity:0.45;} 50%{opacity:1;} }
 
         /* ===== NAVBAR WRAPPER ===== */
         .navbar-wrap {
@@ -145,7 +206,7 @@
 
         /* ===== THEME TOGGLE ===== */
         .theme-toggle {
-            width: 44px; height: 44px; border-radius: 14px; flex-shrink: 0;
+            width: 44px; height: 44px; border-radius: var(--r-md); flex-shrink: 0;
             border: 1px solid var(--border-default);
             background: var(--bg-glass-nav);
             backdrop-filter: var(--nav-blur); -webkit-backdrop-filter: var(--nav-blur);
@@ -153,8 +214,8 @@
             display: flex; align-items: center; justify-content: center;
             transition: all 0.4s var(--ease-bounce); box-shadow: var(--shadow-md);
         }
-        .theme-toggle:hover { transform: scale(1.1) rotate(12deg); border-color: var(--accent); box-shadow: 0 8px 32px var(--accent-glow); }
-        .theme-toggle:active { transform: scale(0.9); }
+        .theme-toggle:hover { transform: translate(-2px,-2px); border-color: var(--accent); box-shadow: var(--pixel-shadow), 0 0 24px var(--accent-glow); }
+        .theme-toggle:active { transform: translate(1px,1px); box-shadow: none; }
         .theme-icon { transition: transform 0.4s var(--ease-bounce), opacity 0.3s ease; }
 
         /* ===== NAVBAR ===== */
@@ -166,22 +227,22 @@
             backdrop-filter: var(--nav-blur);
             -webkit-backdrop-filter: var(--nav-blur);
             border: 1px solid var(--border-default);
-            border-radius: 22px; padding: 5px;
+            border-radius: var(--r-xl); padding: 5px;
             display: flex; align-items: center; position: relative; gap: 3px;
-            box-shadow: var(--shadow-md), 0 0 0 1px rgba(255,255,255,0.03) inset;
+            box-shadow: var(--shadow-md), 0 0 0 1px rgba(120,190,255,0.05) inset;
             overflow: hidden;
         }
         .navbar-inner::before {
             content: ''; position: absolute; top: 0; left: 20%; width: 60%; height: 1px;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
+            background: linear-gradient(90deg, transparent, rgba(150,210,255,0.16), transparent);
         }
 
         .nav-indicator {
             position: absolute; top: 5px; height: calc(100% - 10px);
-            background: linear-gradient(135deg, var(--accent), var(--accent-dark));
-            border-radius: 17px;
-            box-shadow: 0 4px 20px var(--accent-glow), 0 0 0 1px rgba(255,255,255,0.1) inset;
-            transition: left 0.45s var(--ease-bounce), width 0.45s var(--ease-bounce);
+            background: linear-gradient(135deg, var(--accent-light), var(--accent-dark));
+            border-radius: var(--r-md);
+            box-shadow: 0 0 18px var(--accent-glow), 0 0 0 1px rgba(200,235,255,0.22) inset, inset 0 -3px 0 rgba(0,20,60,0.3);
+            transition: left 0.4s steps(8, end), width 0.4s steps(8, end);
             z-index: 0; pointer-events: none;
         }
         .nav-indicator::after {
@@ -190,7 +251,7 @@
         }
 
         .nav-btn {
-            flex: 1; padding: 12px 16px; border-radius: 17px; border: none;
+            flex: 1; padding: 12px 16px; border-radius: var(--r-md); border: none;
             background: transparent; color: var(--text-secondary);
             font-family: var(--font-main); font-size: 13px; font-weight: 600;
             cursor: pointer; white-space: nowrap; position: relative; z-index: 1;
@@ -221,12 +282,16 @@
         .section-header { text-align: center; margin-bottom: 44px; padding-top: 80px; }
         .section-label {
             display: inline-flex; align-items: center; gap: 6px;
-            padding: 5px 18px; border-radius: 20px;
-            background: rgba(124,77,255,0.08); border: 1px solid var(--border-accent);
+            padding: 7px 16px; border-radius: var(--r-sm);
+            background: rgba(var(--accent-rgb), 0.1); border: 1px solid var(--border-accent);
             font-size: 11px; font-weight: 700; color: var(--accent-light);
-            letter-spacing: 0.08em; margin-bottom: 14px;
+            letter-spacing: 0.08em; margin-bottom: 16px;
+            box-shadow: inset 0 -2px 0 rgba(var(--accent-rgb), 0.25);
         }
-        .section-title { font-size: clamp(26px, 4vw, 36px); font-weight: 900; letter-spacing: -0.025em; margin-bottom: 6px; }
+        .section-title {
+            font-size: clamp(26px, 4vw, 36px); font-weight: 900; letter-spacing: -0.025em; margin-bottom: 10px;
+            text-shadow: 3px 3px 0 rgba(var(--accent-rgb), 0.22);
+        }
         .section-subtitle { color: var(--text-tertiary); font-size: 13px; }
 
         /* ===== HERO ===== */
@@ -261,31 +326,75 @@
 
         .hero-status-bar {
             display: inline-flex; align-items: center; gap: 9px;
-            padding: 7px 20px; border-radius: 30px;
+            padding: 9px 20px; border-radius: var(--r-sm);
             background: var(--bg-glass); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
             border: 1px solid var(--border-accent); font-size: 12px;
-            font-weight: 600; color: var(--accent-light); margin-bottom: 32px;
+            font-weight: 700; color: var(--accent-light); margin-bottom: 32px;
+            box-shadow: var(--pixel-shadow);
             animation: fadeInUp 0.8s var(--ease-expo) 0.3s both;
         }
-        /*.hero-status-dot {
-            width: 8px; height: 8px; border-radius: 50%;
-            background: #22c55e;
-            box-shadow: 0 0 0 0 rgba(34,197,94,0.5);
-            animation: statusPing 2.5s ease infinite;
-        }*/
-        
+        /* Pixel status dot — color driven by server status (see JS) */
         .hero-status-dot {
-            width: 8px; height: 8px; border-radius: 50%;
-            background: #ff0000;
-            box-shadow: 0 0 0 0 rgba(680,11,16,0.5);
-            animation: statusPing 2.5s ease infinite;
+            width: 9px; height: 9px; border-radius: 2px; flex-shrink: 0;
+            background: var(--status-color, #22c55e);
+            box-shadow: 0 0 0 0 var(--status-ring, rgba(34,197,94,0.6)), 0 0 10px var(--status-color, #22c55e);
+            animation: statusPing 2.4s steps(12, end) infinite;
         }
-        
         @keyframes statusPing {
-            0%  { box-shadow: 0 0 0 0 rgba(34,197,94,0.7);}
-            70% { box-shadow: 0 0 0 8px rgba(34,197,94,0); }
-            100%{ box-shadow: 0 0 0 0 rgba(34,197,94,0); }
+            0%  { box-shadow: 0 0 0 0 var(--status-ring, rgba(34,197,94,0.7)), 0 0 10px var(--status-color, #22c55e); }
+            70% { box-shadow: 0 0 0 8px rgba(0,0,0,0), 0 0 10px var(--status-color, #22c55e); }
+            100%{ box-shadow: 0 0 0 0 rgba(0,0,0,0), 0 0 10px var(--status-color, #22c55e); }
         }
+
+        /* ===== SERVER STATUS PANEL ===== */
+        .server-panel {
+            max-width: 520px; margin: 0 auto 30px; padding: 18px 20px;
+            background: var(--bg-card); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+            border: 1px solid var(--border-default); border-radius: var(--r-lg);
+            box-shadow: var(--pixel-shadow);
+            animation: fadeInUp 0.8s var(--ease-expo) 0.6s both;
+            position: relative; overflow: hidden; text-align: right;
+        }
+        .server-panel::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+            background: var(--status-color, var(--accent));
+            box-shadow: 0 0 14px var(--status-color, var(--accent));
+        }
+        .server-panel-head {
+            display: flex; align-items: center; justify-content: space-between;
+            gap: 10px; flex-wrap: wrap; margin-bottom: 14px;
+        }
+        .server-panel-title {
+            font-family: var(--font-pixel); font-size: 9px; color: var(--text-tertiary);
+            letter-spacing: 0.1em; direction: ltr;
+        }
+        .server-badge {
+            display: inline-flex; align-items: center; gap: 7px;
+            padding: 6px 13px; border-radius: var(--r-xs); font-size: 12px; font-weight: 800;
+            color: #fff; background: var(--status-color, #22c55e);
+            box-shadow: inset 0 -3px 0 rgba(0,0,0,0.24);
+        }
+        .server-note {
+            font-size: 12.5px; color: var(--text-secondary); line-height: 1.9;
+            padding: 10px 13px; margin-bottom: 13px;
+            background: var(--bg-chip); border-radius: var(--r-sm);
+            border-right: 3px solid var(--status-color, var(--accent));
+        }
+        .server-note:empty { display: none; }
+        .server-meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 9px; }
+        .server-meta-item {
+            background: var(--bg-chip); border: 1px solid var(--border-subtle);
+            border-radius: var(--r-sm); padding: 10px 12px;
+        }
+        .server-meta-label {
+            font-size: 9px; color: var(--text-tertiary); font-weight: 700;
+            letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 4px;
+        }
+        .server-meta-value {
+            font-size: 13px; font-weight: 800; color: var(--text-primary);
+            word-break: break-all; direction: ltr; text-align: right;
+        }
+        .server-meta-value.mono { font-family: 'Courier New', monospace; font-size: 12.5px; color: var(--accent-light); }
 
         .hero-desc {
             font-size: 14px; color: var(--text-secondary);
@@ -296,12 +405,12 @@
         /* Connect Button */
         .connect-btn {
             display: inline-flex; align-items: center; gap: 10px;
-            padding: 16px 40px; border-radius: 50px;
-            background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+            padding: 15px 38px; border-radius: var(--r-md);
+            background: linear-gradient(180deg, var(--accent-light), var(--accent-dark));
             border: none; color: #fff; font-family: var(--font-main);
-            font-size: 15px; font-weight: 700; cursor: pointer; text-decoration: none;
-            transition: all 0.35s var(--ease-expo);
-            box-shadow: 0 8px 32px var(--accent-glow), 0 0 0 1px rgba(255,255,255,0.1) inset;
+            font-size: 15px; font-weight: 800; cursor: pointer; text-decoration: none;
+            transition: transform 0.15s steps(3, end), box-shadow 0.25s ease;
+            box-shadow: 5px 5px 0 rgba(6, 30, 70, 0.45), inset 0 -4px 0 rgba(0, 20, 60, 0.32), inset 0 2px 0 rgba(220, 240, 255, 0.28);
             position: relative; overflow: hidden;
             animation: fadeInUp 0.8s var(--ease-expo) 0.7s both;
             -webkit-tap-highlight-color: transparent; user-select: none;
@@ -311,9 +420,9 @@
             background: linear-gradient(135deg, rgba(255,255,255,0.15), transparent);
             opacity: 0; transition: opacity 0.3s ease;
         }
-        .connect-btn:hover { transform: translateY(-3px) scale(1.02); box-shadow: 0 16px 48px var(--accent-glow); }
+        .connect-btn:hover { transform: translate(-2px,-2px); box-shadow: 7px 7px 0 rgba(6, 30, 70, 0.5), 0 0 32px var(--accent-glow), inset 0 -4px 0 rgba(0, 20, 60, 0.32); }
         .connect-btn:hover::before { opacity: 1; }
-        .connect-btn:active { transform: scale(0.95); }
+        .connect-btn:active { transform: translate(3px,3px); box-shadow: 1px 1px 0 rgba(6, 30, 70, 0.4), inset 0 -2px 0 rgba(0,20,60,0.3); }
         .connect-btn-icon { font-size: 18px; }
 
         @keyframes fadeInUp {
@@ -325,89 +434,100 @@
         .stats-row { display: flex; justify-content: center; gap: 14px; flex-wrap: wrap; margin-top: 44px; width: 100%; }
         .stat-chip {
             display: flex; align-items: center; gap: 14px;
-            padding: 20px 28px; background: var(--bg-chip);
+            padding: 20px 26px; background: var(--bg-chip);
             backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-            border: 1px solid var(--border-subtle); border-radius: 22px;
+            border: 1px solid var(--border-subtle); border-radius: var(--r-lg);
             flex: 1; min-width: 170px; max-width: 240px;
-            transition: all 0.35s var(--ease-expo);
+            transition: transform 0.2s steps(3, end), border-color 0.3s ease, box-shadow 0.3s ease;
             position: relative; overflow: hidden;
         }
         .stat-chip::before {
             content: ''; position: absolute; top: 0; right: 0; left: 0; height: 1px;
             background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
         }
-        .stat-chip:hover { border-color: var(--border-accent); transform: translateY(-3px); box-shadow: var(--shadow-md); }
+        .stat-chip:hover { border-color: var(--accent); transform: translate(-2px,-2px); box-shadow: var(--pixel-shadow); }
         .stat-chip-icon {
-            width: 48px; height: 48px; border-radius: 14px;
+            width: 48px; height: 48px; border-radius: var(--r-sm);
             display: flex; align-items: center; justify-content: center;
             font-size: 22px; background: var(--bg-glass);
             border: 1px solid var(--border-subtle); flex-shrink: 0;
         }
         .stat-chip-info { text-align: right; }
-        .stat-chip-value { font-size: 28px; font-weight: 900; line-height: 1; letter-spacing: -0.03em; }
+        .stat-chip-value { font-size: 28px; font-weight: 900; line-height: 1; letter-spacing: -0.03em; text-shadow: 2px 2px 0 rgba(var(--accent-rgb), 0.25); }
         .stat-chip-label { font-size: 10px; color: var(--text-tertiary); font-weight: 600; margin-top: 3px; letter-spacing: 0.06em; text-transform: uppercase; }
 
         /* ===== FLAGS ===== */
-        .team-flag-img { width: 34px; height: 34px; border-radius: 10px; object-fit: cover; border: 1px solid var(--border-subtle); flex-shrink: 0; background: rgba(0,0,0,0.2); }
-        .state-flag-img { width: 24px; height: 24px; border-radius: 6px; object-fit: cover; border: 1px solid var(--border-subtle); flex-shrink: 0; background: rgba(0,0,0,0.2); }
+        .team-flag-img { width: 34px; height: 34px; border-radius: var(--r-xs); image-rendering: pixelated; object-fit: cover; border: 1px solid var(--border-subtle); flex-shrink: 0; background: rgba(0,0,0,0.2); }
+        .state-flag-img { width: 24px; height: 24px; border-radius: var(--r-xs); image-rendering: pixelated; object-fit: cover; border: 1px solid var(--border-subtle); flex-shrink: 0; background: rgba(0,0,0,0.2); }
 
         /* ===== LIMIT BAR ===== */
         .team-limit-bar { display: flex; align-items: center; gap: 10px; padding: 0 20px 16px; }
-        .team-limit-track { flex: 1; height: 5px; background: rgba(255,255,255,0.04); border-radius: 5px; overflow: hidden; }
-        .team-limit-fill { height: 100%; border-radius: 5px; transition: width 0.6s var(--ease-expo); }
-        .team-limit-fill.safe { background: linear-gradient(90deg, #16a34a, #22c55e); }
-        .team-limit-fill.warning { background: linear-gradient(90deg, #d97706, #fbbf24); }
-        .team-limit-fill.full { background: linear-gradient(90deg, #b91c1c, #ef4444); }
+        .team-limit-track {
+            flex: 1; height: 8px; background: rgba(var(--accent-rgb), 0.09);
+            border-radius: 2px; overflow: hidden; border: 1px solid var(--border-subtle);
+        }
+        .team-limit-fill {
+            height: 100%; border-radius: 1px; transition: width 0.5s steps(10, end);
+            background-image: linear-gradient(90deg, currentColor 0 6px, transparent 6px 8px);
+            background-size: 8px 100%;
+        }
+        .team-limit-fill.safe { color: #22c55e; }
+        .team-limit-fill.warning { color: #fbbf24; }
+        .team-limit-fill.full { color: #ef4444; }
         .team-limit-text { font-size: 10px; color: var(--text-tertiary); white-space: nowrap; font-weight: 700; }
 
         /* ===== TEAM CARDS ===== */
         .teams-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px; }
         .team-card {
             background: var(--bg-card); backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px);
-            border: 1px solid var(--border-subtle); border-radius: 24px; overflow: hidden;
-            transition: all 0.35s var(--ease-expo); position: relative;
+            border: 1px solid var(--border-subtle); border-radius: var(--r-lg); overflow: hidden;
+            transition: transform 0.2s steps(3, end), border-color 0.3s ease, box-shadow 0.3s ease; position: relative;
         }
         .team-card::after {
             content: ''; position: absolute; inset: 0; border-radius: inherit;
-            background: linear-gradient(135deg, rgba(255,255,255,0.04), transparent);
+            background: linear-gradient(135deg, rgba(150,210,255,0.05), transparent);
             pointer-events: none;
         }
-        .team-card:hover { border-color: var(--border-accent); transform: translateY(-4px); box-shadow: var(--shadow-lg), 0 0 40px rgba(124,77,255,0.08); }
-        .team-card-accent { height: 3px; background: linear-gradient(90deg, var(--accent), var(--accent-light), var(--gold)); }
+        .team-card:hover { border-color: var(--accent); transform: translate(-3px,-3px); box-shadow: var(--pixel-shadow), 0 0 34px rgba(var(--accent-rgb), 0.16); }
+        .team-card-accent {
+            height: 4px;
+            background-image: linear-gradient(90deg, var(--accent) 0 8px, var(--accent-light) 8px 16px, var(--cyan) 16px 24px, var(--accent-dark) 24px 32px);
+            background-size: 32px 100%;
+        }
         .team-card-head { padding: 18px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-subtle); gap: 10px; }
         .team-card-name { font-size: 16px; font-weight: 800; display: flex; align-items: center; gap: 8px; min-width: 0; }
         .team-card-name span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .team-card-badge { padding: 5px 14px; border-radius: 12px; font-size: 11px; font-weight: 700; background: linear-gradient(135deg, var(--accent), var(--accent-dark)); color: #fff; flex-shrink: 0; letter-spacing: 0.02em; }
-        .team-card-badge.state { background: linear-gradient(135deg, var(--gold), var(--gold-dark)); }
-        .team-card-badge.full-badge { background: linear-gradient(135deg, #ef4444, #b91c1c); }
+        .team-card-badge { padding: 5px 13px; border-radius: var(--r-xs); font-size: 11px; font-weight: 800; background: linear-gradient(180deg, var(--accent-light), var(--accent-dark)); color: #fff; flex-shrink: 0; letter-spacing: 0.02em; box-shadow: inset 0 -3px 0 rgba(0,20,60,0.25); }
+        .team-card-badge.state { background: linear-gradient(180deg, var(--gold), var(--gold-dark)); }
+        .team-card-badge.full-badge { background: linear-gradient(180deg, #ef4444, #b91c1c); }
         .team-card-body { padding: 14px 20px 20px; }
-        .member-row { display: flex; align-items: center; padding: 8px 12px; margin: 2px 0; border-radius: 11px; font-size: 13px; border: 1px solid transparent; transition: all 0.2s ease; }
-        .member-row:hover { background: var(--bg-chip); }
-        .member-row.leader { background: rgba(255,179,71,0.06); border-color: rgba(255,179,71,0.14); }
+        .member-row { display: flex; align-items: center; padding: 8px 12px; margin: 3px 0; border-radius: var(--r-xs); font-size: 13px; border: 1px solid transparent; transition: background 0.2s ease, border-color 0.2s ease; }
+        .member-row:hover { background: var(--bg-chip); border-color: var(--border-subtle); }
+        .member-row.leader { background: rgba(255,201,74,0.07); border-color: rgba(255,201,74,0.18); }
         .member-name { display: flex; align-items: center; gap: 6px; font-weight: 500; }
         .member-row.leader .member-name { color: var(--gold); font-weight: 700; }
         .member-crown { font-size: 13px; }
-        .state-block { margin: 12px 0; padding: 14px; background: var(--bg-chip); border-radius: 14px; border: 1px solid var(--border-subtle); }
+        .state-block { margin: 12px 0; padding: 14px; background: var(--bg-chip); border-radius: var(--r-sm); border: 1px solid var(--border-subtle); }
         .state-block-title { font-size: 12px; font-weight: 700; color: var(--gold); margin-bottom: 8px; display: flex; align-items: center; gap: 5px; }
 
         /* ===== RULES ===== */
         .rules-feed { display: flex; flex-direction: column; gap: 10px; }
         .rule-card {
             background: var(--bg-card); backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px);
-            border: 1px solid var(--border-subtle); border-radius: 20px; padding: 22px 24px;
-            border-right: 3px solid var(--accent); transition: all 0.35s var(--ease-expo);
+            border: 1px solid var(--border-subtle); border-radius: var(--r-lg); padding: 22px 24px;
+            border-right: 4px solid var(--accent); transition: transform 0.2s steps(3, end), border-color 0.3s ease, box-shadow 0.3s ease;
             position: relative; overflow: hidden;
         }
         .rule-card::before {
             content: ''; position: absolute; inset: 0; border-radius: inherit;
-            background: linear-gradient(135deg, rgba(124,77,255,0.03), transparent);
+            background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.04), transparent);
             pointer-events: none;
         }
-        .rule-card:hover { transform: translateX(-4px); border-color: var(--border-accent); box-shadow: var(--shadow-md); }
+        .rule-card:hover { transform: translateX(-4px); border-color: var(--accent); box-shadow: var(--pixel-shadow); }
         .rule-card-title { font-size: 16px; font-weight: 800; color: var(--gold); margin-bottom: 12px; display: flex; align-items: center; gap: 10px; }
-        .rule-card-num { width: 30px; height: 30px; border-radius: 9px; background: linear-gradient(135deg, var(--accent), var(--accent-dark)); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 900; flex-shrink: 0; }
+        .rule-card-num { width: 30px; height: 30px; border-radius: var(--r-xs); background: linear-gradient(180deg, var(--accent-light), var(--accent-dark)); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 900; flex-shrink: 0; box-shadow: inset 0 -3px 0 rgba(0,20,60,0.28); }
         .rule-item { padding: 5px 0; padding-right: 18px; position: relative; color: var(--text-secondary); font-size: 13px; line-height: 1.9; }
-        .rule-item::before { content: ''; position: absolute; right: 0; top: 12px; width: 5px; height: 5px; border-radius: 50%; background: var(--accent-light); opacity: 0.5; }
+        .rule-item::before { content: ''; position: absolute; right: 0; top: 12px; width: 6px; height: 6px; border-radius: 1px; background: var(--accent-light); opacity: 0.65; }
 
         /* ===== FOOTER ===== */
         .footer { text-align: center; padding: 24px; color: var(--text-tertiary); font-size: 11px; margin-top: 40px; border-top: 1px solid var(--border-subtle); letter-spacing: 0.04em; }
@@ -426,16 +546,16 @@
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         .modal-box {
             background: var(--bg-body);
-            border: 1px solid var(--border-accent);
-            border-radius: 32px;
+            border: 2px solid var(--accent);
+            border-radius: var(--r-xl);
             padding: 40px 36px;
             max-width: 480px;
             width: 90%;
-            box-shadow: var(--shadow-lg), 0 0 60px var(--accent-glow);
+            box-shadow: 8px 8px 0 rgba(4, 20, 50, 0.5), 0 0 60px var(--accent-glow);
             position: relative;
-            animation: scaleIn 0.4s var(--ease-bounce);
+            animation: scaleIn 0.3s steps(5, end);
         }
-        @keyframes scaleIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        @keyframes scaleIn { from { transform: scale(0.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
         .modal-close {
             position: absolute; top: 14px; left: 18px;
             background: none; border: none; color: var(--text-tertiary);
@@ -444,7 +564,7 @@
         .modal-close:hover { color: var(--text-primary); }
         .modal-title { font-size: 22px; font-weight: 800; margin-bottom: 24px; text-align: center; }
         .modal-address {
-            background: var(--bg-chip); border-radius: 16px; padding: 16px 20px;
+            background: var(--bg-chip); border-radius: var(--r-sm); padding: 16px 20px;
             margin-bottom: 16px; border: 1px solid var(--border-subtle);
             display: flex; justify-content: space-between; align-items: center;
             gap: 12px; flex-wrap: wrap;
@@ -456,24 +576,27 @@
         }
         .modal-copy-btn {
             background: var(--accent); border: none; color: #fff;
-            padding: 6px 14px; border-radius: 10px; font-size: 12px;
-            font-weight: 600; cursor: pointer; transition: all 0.2s;
+            padding: 7px 14px; border-radius: var(--r-xs); font-size: 12px;
+            font-weight: 700; cursor: pointer;
+            transition: transform 0.15s steps(2, end), background 0.2s ease;
             font-family: var(--font-main);
+            box-shadow: 3px 3px 0 rgba(4, 20, 50, 0.4), inset 0 -3px 0 rgba(0,20,60,0.28);
         }
-        .modal-copy-btn:hover { background: var(--accent-dark); transform: scale(1.05); }
-        .modal-copy-btn:active { transform: scale(0.95); }
+        .modal-copy-btn:hover { background: var(--accent-light); transform: translate(-1px,-1px); }
+        .modal-copy-btn:active { transform: translate(2px,2px); box-shadow: none; }
         .modal-divider { height: 1px; background: var(--border-subtle); margin: 20px 0; }
         .modal-bedrock-btn {
             display: block; width: 100%; text-align: center;
-            padding: 14px; border-radius: 16px;
-            background: linear-gradient(135deg, #16a34a, #22c55e);
-            color: #fff; font-weight: 700; font-size: 16px;
-            border: none; cursor: pointer; transition: all 0.3s;
+            padding: 14px; border-radius: var(--r-md);
+            background: linear-gradient(180deg, #29c76f, #12894a);
+            color: #fff; font-weight: 800; font-size: 16px;
+            border: none; cursor: pointer;
+            transition: transform 0.15s steps(3, end), box-shadow 0.25s ease;
             font-family: var(--font-main); text-decoration: none;
-            box-shadow: 0 4px 20px rgba(34,197,94,0.3);
+            box-shadow: 5px 5px 0 rgba(4, 40, 25, 0.4), inset 0 -4px 0 rgba(0,50,25,0.3);
         }
-        .modal-bedrock-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(34,197,94,0.4); }
-        .modal-bedrock-btn:active { transform: scale(0.97); }
+        .modal-bedrock-btn:hover { transform: translate(-2px,-2px); box-shadow: 7px 7px 0 rgba(4, 40, 25, 0.45), 0 0 26px rgba(34,197,94,0.35), inset 0 -4px 0 rgba(0,50,25,0.3); }
+        .modal-bedrock-btn:active { transform: translate(3px,3px); box-shadow: 1px 1px 0 rgba(4,40,25,0.4); }
         .modal-sub { font-size: 12px; color: var(--text-tertiary); text-align: center; margin-top: 14px; }
 
         /* ===== RESPONSIVE ===== */
@@ -499,10 +622,37 @@
             .theme-toggle { width: 38px; height: 38px; font-size: 14px; border-radius: 11px; }
         }
 
-        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: rgba(124,77,255,0.25); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background: rgba(var(--accent-rgb), 0.35); border-radius: 0; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(var(--accent-rgb), 0.6); }
         ::selection { background: var(--accent); color: #fff; }
+
+        /* ===== BACKGROUND SWITCHER ===== */
+        .bg-switch {
+            width: 44px; height: 44px; border-radius: var(--r-md); flex-shrink: 0;
+            border: 1px solid var(--border-default);
+            background: var(--bg-glass-nav);
+            backdrop-filter: var(--nav-blur); -webkit-backdrop-filter: var(--nav-blur);
+            color: var(--text-primary); cursor: pointer; font-size: 17px;
+            display: flex; align-items: center; justify-content: center;
+            transition: transform 0.2s steps(3, end), border-color 0.3s ease, box-shadow 0.3s ease;
+            box-shadow: var(--shadow-md);
+            -webkit-tap-highlight-color: transparent; user-select: none;
+        }
+        .bg-switch:hover { transform: translate(-2px,-2px); border-color: var(--accent); box-shadow: var(--pixel-shadow), 0 0 24px var(--accent-glow); }
+        .bg-switch:active { transform: translate(1px,1px); box-shadow: none; }
+        .bg-switch-label {
+            position: fixed; top: 74px; left: 50%; transform: translateX(-50%);
+            z-index: 1002; pointer-events: none;
+            font-family: var(--font-pixel); font-size: 8px; direction: ltr;
+            color: var(--accent-light); background: var(--bg-glass-nav);
+            border: 1px solid var(--border-accent); border-radius: var(--r-xs);
+            padding: 7px 12px; letter-spacing: 0.08em;
+            opacity: 0; transition: opacity 0.3s ease;
+            box-shadow: var(--pixel-shadow);
+        }
+        .bg-switch-label.show { opacity: 1; }
 
         /* Swipe hint */
         .swipe-hint {
@@ -519,11 +669,13 @@
 
 <canvas id="spaceCanvas"></canvas>
 <div class="nebula-layer"></div>
+<div class="pixel-grid"></div>
+<div class="scanlines"></div>
 
 <!-- Loading -->
 <div class="loading-screen" id="loadingScreen">
-    <div class="loading-orb"></div>
-    <div class="loading-text">در حال بارگذاری...</div>
+    <div class="loading-orb"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    <div class="loading-text">LOADING...</div>
 </div>
 
 <!-- Navbar + Theme Toggle -->
@@ -545,7 +697,11 @@
     <button class="theme-toggle" id="themeToggle" title="تغییر تم">
         <span class="theme-icon" id="themeIcon">🌙</span>
     </button>
+    <button class="bg-switch" id="bgSwitch" title="تغییر پس‌زمینه سه‌بعدی">
+        <span id="bgSwitchIcon">🧊</span>
+    </button>
 </div>
+<div class="bg-switch-label" id="bgSwitchLabel"></div>
 
 <!-- Swipe Hint -->
 <div class="swipe-hint" id="swipeHint"></div>
@@ -561,17 +717,30 @@
                     <div class="hero-logo-glow"></div>
                     <img class="hero-logo" id="heroLogo" src="" alt="Netheraxia" style="display:none;">
                 </div>
-                <div class="hero-status-bar">
-                    <span class="hero-status-dot"></span>سیزن ۱ - در حال برگزاری
+                <div class="hero-status-bar" id="heroStatusBar">
+                    <span class="hero-status-dot"></span><span id="heroStatusText">سیزن ۱ - در حال برگزاری</span>
                 </div>
                 <p class="hero-desc">
                     سرور وایت‌لیستی و کاملاً خصوصی بر پایه احترام، صداقت و سرگرمی.
                     تجربه‌ای ناب و منحصر به فرد از دنیای ماینکرفت.
                 </p>
-                <!--<button class="connect-btn" id="connectBtn">
+
+                <!-- Server status panel (managed from admin panel) -->
+                <div class="server-panel" id="serverPanel">
+                    <div class="server-panel-head">
+                        <span class="server-panel-title">SERVER STATUS</span>
+                        <span class="server-badge" id="serverBadge">
+                            <span class="hero-status-dot"></span><span id="serverBadgeText">آنلاین</span>
+                        </span>
+                    </div>
+                    <div class="server-note" id="serverNote"></div>
+                    <div class="server-meta" id="serverMeta"></div>
+                </div>
+
+                <button class="connect-btn" id="connectBtn">
                     <span class="connect-btn-icon">🎮</span>بزن بریم!
-                </button>-->
-                <div class="stats-row" id="homeStats"></div>
+                </button>
+                <div class="stats-row" id="homeStats" style="margin-top:36px;"></div>
             </div>
             <div class="footer"><p>© <span class="footer-year"></span> Netheraxia</p></div>
         </div>
@@ -624,12 +793,12 @@
             <button class="modal-copy-btn" data-copy="bedrockAddr">📋 کپی</button>
         </div>
         <div style="text-align:center; font-size:13px; color:var(--text-tertiary); margin-top:-8px; margin-bottom:12px;">
-            پورت: <span style="font-family:monospace; color:var(--text-primary);">28416</span>
+            پورت: <span id="bedrockPortVal" style="font-family:monospace; color:var(--text-primary);">28416</span>
         </div>
 
         <div class="modal-divider"></div>
 
-        <a href="minecraft://?addExternalServer=Netheraxia|sv3.tgmc.ir:28416" class="modal-bedrock-btn">
+        <a href="minecraft://?addExternalServer=Netheraxia|sv3.tgmc.ir:28416" class="modal-bedrock-btn" id="bedrockDeepLink">
             🚀 ورود مستقیم (بدراک)
         </a>
         <div class="modal-sub">با کلیک، بازی باز شده و به سرور متصل می‌شوید</div>
@@ -640,202 +809,400 @@
 // ==================== Year ====================
 document.querySelectorAll('.footer-year').forEach(el => el.textContent = new Date().getFullYear());
 
-// ==================== Space Background (Enhanced 3D) ====================
+// ==================== 3D Background Engine (Voxel Tunnel + Wire Terrain) ====================
+// Two interchangeable 3D scenes rendered on a single canvas:
+//   1) "voxel"  → Minecraft-style cubes flying toward the camera through a blue pixel tunnel
+//   2) "grid"   → retro wireframe terrain waves with perspective projection
+// Switch with the 🧊 / 🌐 button in the navbar. Choice is stored in localStorage.
+
 const spaceCanvas = document.getElementById('spaceCanvas');
 const spaceCtx = spaceCanvas.getContext('2d');
-let stars3D = [], nebulaClouds = [], shootingStars = [];
+
+const BG_MODES = ['voxel', 'grid'];
+const BG_META = {
+    voxel: { icon: '🧊', label: 'VOXEL TUNNEL' },
+    grid:  { icon: '🌐', label: 'WIRE TERRAIN' }
+};
+let bgMode = localStorage.getItem('nthx_bg') || 'voxel';
+if (!BG_MODES.includes(bgMode)) bgMode = 'voxel';
+
+let VW = 0, VH = 0, DPR = 1;
+let reduceMotion = false;
+try { reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) {}
+const isMobile = () => VW < 700;
+
+function isDarkTheme() { return document.documentElement.getAttribute('data-theme') === 'dark'; }
 
 function resizeSpace() {
-    spaceCanvas.width = window.innerWidth;
-    spaceCanvas.height = window.innerHeight;
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    VW = window.innerWidth;
+    VH = window.innerHeight;
+    spaceCanvas.width = Math.floor(VW * DPR);
+    spaceCanvas.height = Math.floor(VH * DPR);
+    spaceCanvas.style.width = VW + 'px';
+    spaceCanvas.style.height = VH + 'px';
+    spaceCtx.setTransform(DPR, 0, 0, DPR, 0, 0);
     initScene();
 }
 
-// Enhanced Star with color & trails
-class Star3D {
+/* ---------------------------------------------------------------
+   Shared helpers
+--------------------------------------------------------------- */
+const FOV = 620;
+
+function project(x, y, z) {
+    const scale = FOV / (FOV + z);
+    return { x: x * scale + VW / 2, y: y * scale + VH / 2, s: scale };
+}
+
+// Blue palette (hue, saturation, lightness) tuned per theme
+function bluePalette(dark) {
+    return dark
+        ? [
+            [212, 92, 62],  // bright azure
+            [204, 88, 55],  // sky blue
+            [222, 80, 58],  // indigo blue
+            [190, 90, 60],  // cyan
+            [230, 70, 55],  // deep blue-violet
+            [200, 100, 68]  // vivid light blue
+          ]
+        : [
+            [212, 78, 48],
+            [204, 72, 44],
+            [222, 66, 46],
+            [190, 74, 44],
+            [230, 60, 46],
+            [200, 82, 52]
+          ];
+}
+
+/* ---------------------------------------------------------------
+   SCENE 1 — Voxel Tunnel
+--------------------------------------------------------------- */
+class Voxel {
     constructor(randomZ = true) {
-        this.reset();
-        if (randomZ) this.z = Math.random() * 2000 + 50;
-        this.colorIndex = Math.floor(Math.random() * 6);
-        this.twinkleOffset = Math.random() * Math.PI * 2;
-        this.trail = [];
+        this.reset(randomZ);
     }
-    reset() {
-        this.x = (Math.random() - 0.5) * 3000;
-        this.y = (Math.random() - 0.5) * 2000;
-        this.z = 2000;
+    reset(randomZ = false) {
+        // Spawn on a rectangular "tunnel wall" so the centre stays readable
+        const spreadX = Math.max(VW, 900) * 0.95;
+        const spreadY = Math.max(VH, 700) * 0.9;
+        const edge = Math.random();
+        if (edge < 0.62) {
+            // walls: left / right bias
+            this.x = (Math.random() < 0.5 ? -1 : 1) * (spreadX * (0.28 + Math.random() * 0.5));
+            this.y = (Math.random() - 0.5) * spreadY * 1.5;
+        } else {
+            // floor / ceiling
+            this.x = (Math.random() - 0.5) * spreadX * 1.6;
+            this.y = (Math.random() < 0.5 ? -1 : 1) * (spreadY * (0.25 + Math.random() * 0.5));
+        }
+        this.z = randomZ ? Math.random() * 2400 + 40 : 2400 + Math.random() * 400;
+        this.size = 16 + Math.random() * 46;
         this.colorIndex = Math.floor(Math.random() * 6);
-        this.trail = [];
+        this.rot = Math.random() * Math.PI * 2;
+        this.rotSpeed = (Math.random() - 0.5) * 0.006;
+        this.spinPhase = Math.random() * Math.PI * 2;
+        this.isGlow = Math.random() < 0.14; // a few "glowstone" blocks
     }
     update(speed) {
         this.z -= speed;
-        if (this.z <= 1) this.reset();
-        const proj = this.project();
-        if (proj) {
-            this.trail.unshift({ x: proj.px, y: proj.py });
-            if (this.trail.length > 5) this.trail.pop();
-        }
+        this.rot += this.rotSpeed;
+        if (this.z <= 20) this.reset(false);
     }
-    project() {
-        const fov = 700;
-        const scale = fov / (fov + this.z);
-        const px = this.x * scale + spaceCanvas.width / 2;
-        const py = this.y * scale + spaceCanvas.height / 2;
-        const size = Math.max(0.2, 2.5 * (1 - this.z / 2000));
-        const alpha = Math.max(0.05, Math.min(1, 1 - this.z / 2000));
-        return { px, py, size, alpha };
-    }
-    draw(ctx) {
-        const proj = this.project();
-        if (!proj) return;
-        const { px, py, size, alpha } = proj;
-        if (px < -30 || px > spaceCanvas.width + 30 || py < -30 || py > spaceCanvas.height + 30) return;
+    draw(ctx, dark, palette) {
+        const p = project(this.x, this.y, this.z);
+        if (p.s <= 0) return;
+        const s = this.size * p.s;
+        if (s < 0.6) return;
+        if (p.x < -s * 3 || p.x > VW + s * 3 || p.y < -s * 3 || p.y > VH + s * 3) return;
 
-        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-        const colorSets = isDark
-            ? [[220,210,255],[180,170,240],[200,190,255],[255,235,210],[160,200,255],[255,220,180]]
-            : [[80,50,140],[100,70,160],[60,80,180],[140,100,60],[50,80,140],[120,80,50]];
+        const depth = 1 - this.z / 2400;                 // 0 far → 1 near
+        const alpha = Math.max(0, Math.min(1, depth * 1.35)) * (dark ? 0.92 : 0.72);
+        if (alpha < 0.02) return;
 
-        const t = Date.now() * 0.001;
-        const twinkle = 0.7 + 0.3 * Math.sin(t * 2 + this.twinkleOffset);
-        const finalAlpha = alpha * twinkle;
-        const col = colorSets[this.colorIndex];
+        const [h, sat, li] = palette[this.colorIndex];
+        // Isometric-ish cube: top face, left face, right face
+        const w = s;             // half-width of the cube footprint
+        const hh = s * 0.56;     // half-height of the top rhombus
+        const bodyH = s * 0.92;  // vertical body height
+        const cx = p.x, cy = p.y;
 
-        if (this.trail.length > 1 && size > 0.8) {
-            for (let i = 1; i < this.trail.length; i++) {
-                const t0 = this.trail[i-1], t1 = this.trail[i];
-                ctx.beginPath();
-                ctx.moveTo(t0.x, t0.y);
-                ctx.lineTo(t1.x, t1.y);
-                ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${finalAlpha * 0.2 * (1 - i / this.trail.length)})`;
-                ctx.lineWidth = size * 0.5;
-                ctx.stroke();
-            }
+        const wobble = Math.sin(this.rot + this.spinPhase) * s * 0.06;
+
+        const topL  = `hsla(${h}, ${sat}%, ${Math.min(96, li + (dark ? 22 : 16))}%, ${alpha})`;
+        const leftL = `hsla(${h}, ${sat}%, ${Math.max(6, li - 14)}%, ${alpha})`;
+        const rightL= `hsla(${h}, ${sat}%, ${Math.max(4, li - 26)}%, ${alpha})`;
+
+        ctx.save();
+        if (this.isGlow && dark && depth > 0.25) {
+            ctx.shadowColor = `hsla(${h}, 100%, 70%, ${alpha * 0.85})`;
+            ctx.shadowBlur = s * 1.1;
         }
 
-        if (size > 1.2) {
-            const grd = ctx.createRadialGradient(px, py, 0, px, py, size * 4);
-            grd.addColorStop(0, `rgba(${col[0]},${col[1]},${col[2]},${finalAlpha * 0.25})`);
-            grd.addColorStop(1, 'rgba(0,0,0,0)');
+        // Top face
+        ctx.beginPath();
+        ctx.moveTo(cx + wobble, cy - hh - bodyH * 0.5);
+        ctx.lineTo(cx + w + wobble, cy - bodyH * 0.5);
+        ctx.lineTo(cx + wobble, cy + hh - bodyH * 0.5);
+        ctx.lineTo(cx - w + wobble, cy - bodyH * 0.5);
+        ctx.closePath();
+        ctx.fillStyle = topL;
+        ctx.fill();
+
+        ctx.shadowBlur = 0;
+
+        // Left face
+        ctx.beginPath();
+        ctx.moveTo(cx - w + wobble, cy - bodyH * 0.5);
+        ctx.lineTo(cx + wobble, cy + hh - bodyH * 0.5);
+        ctx.lineTo(cx + wobble, cy + hh + bodyH * 0.5);
+        ctx.lineTo(cx - w + wobble, cy + bodyH * 0.5);
+        ctx.closePath();
+        ctx.fillStyle = leftL;
+        ctx.fill();
+
+        // Right face
+        ctx.beginPath();
+        ctx.moveTo(cx + w + wobble, cy - bodyH * 0.5);
+        ctx.lineTo(cx + wobble, cy + hh - bodyH * 0.5);
+        ctx.lineTo(cx + wobble, cy + hh + bodyH * 0.5);
+        ctx.lineTo(cx + w + wobble, cy + bodyH * 0.5);
+        ctx.closePath();
+        ctx.fillStyle = rightL;
+        ctx.fill();
+
+        // Pixel edge highlight on close blocks
+        if (s > 9) {
+            ctx.lineWidth = Math.max(1, s * 0.045);
+            ctx.strokeStyle = `hsla(${h}, ${sat}%, ${dark ? 88 : 34}%, ${alpha * 0.5})`;
             ctx.beginPath();
-            ctx.arc(px, py, size * 4, 0, Math.PI * 2);
-            ctx.fillStyle = grd;
-            ctx.fill();
+            ctx.moveTo(cx + wobble, cy - hh - bodyH * 0.5);
+            ctx.lineTo(cx + w + wobble, cy - bodyH * 0.5);
+            ctx.lineTo(cx + wobble, cy + hh - bodyH * 0.5);
+            ctx.lineTo(cx - w + wobble, cy - bodyH * 0.5);
+            ctx.closePath();
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(cx + wobble, cy + hh - bodyH * 0.5);
+            ctx.lineTo(cx + wobble, cy + hh + bodyH * 0.5);
+            ctx.stroke();
         }
-
-        ctx.beginPath();
-        ctx.arc(px, py, size, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(${col[0]},${col[1]},${col[2]},${finalAlpha})`;
-        ctx.fill();
+        ctx.restore();
     }
 }
 
-class NebulaDust {
-    constructor() { this.reset(); }
-    reset() {
-        this.x = Math.random() * spaceCanvas.width;
-        this.y = Math.random() * spaceCanvas.height;
-        this.r = Math.random() * 180 + 80;
-        this.hue = [260, 220, 200, 280, 300][Math.floor(Math.random() * 5)];
-        this.alpha = Math.random() * 0.04 + 0.01;
-        this.vx = (Math.random() - 0.5) * 0.05;
-        this.vy = (Math.random() - 0.5) * 0.05;
-        this.phase = Math.random() * Math.PI * 2;
+// Distant pixel "stars" shared by both scenes
+class PixelStar {
+    constructor() {
+        this.reset(true);
+        this.twinkle = Math.random() * Math.PI * 2;
     }
-    update() {
-        this.x += this.vx;
-        this.y += this.vy;
-        if (this.x < -this.r * 2) this.x = spaceCanvas.width + this.r;
-        if (this.x > spaceCanvas.width + this.r * 2) this.x = -this.r;
-        if (this.y < -this.r * 2) this.y = spaceCanvas.height + this.r;
-        if (this.y > spaceCanvas.height + this.r * 2) this.y = -this.r;
+    reset(randomZ = false) {
+        this.x = (Math.random() - 0.5) * 3400;
+        this.y = (Math.random() - 0.5) * 2400;
+        this.z = randomZ ? Math.random() * 2600 + 100 : 2600;
+        this.hue = 190 + Math.random() * 45;
     }
-    draw(ctx) {
-        if (document.documentElement.getAttribute('data-theme') !== 'dark') return;
-        const t = Date.now() * 0.0003;
-        const a = this.alpha * (0.6 + 0.4 * Math.sin(t + this.phase));
-        const grd = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.r);
-        grd.addColorStop(0, `hsla(${this.hue},80%,60%,${a})`);
-        grd.addColorStop(1, 'hsla(0,0%,0%,0)');
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
-        ctx.fillStyle = grd;
-        ctx.fill();
+    update(speed) {
+        this.z -= speed;
+        if (this.z <= 10) this.reset(false);
+    }
+    draw(ctx, dark) {
+        const p = project(this.x, this.y, this.z);
+        if (p.x < 0 || p.x > VW || p.y < 0 || p.y > VH) return;
+        const depth = 1 - this.z / 2600;
+        const size = Math.max(1, Math.round(depth * 3.2));
+        const tw = 0.65 + 0.35 * Math.sin(Date.now() * 0.002 + this.twinkle);
+        const a = depth * tw * (dark ? 0.9 : 0.4);
+        if (a < 0.03) return;
+        ctx.fillStyle = `hsla(${this.hue}, 95%, ${dark ? 82 : 42}%, ${a})`;
+        // Pixel-snapped square = crisp retro look
+        ctx.fillRect(Math.round(p.x), Math.round(p.y), size, size);
     }
 }
 
-class ShootingStar {
-    constructor() { this.spawn(); }
-    spawn() {
-        this.x = Math.random() * spaceCanvas.width * 1.5 - spaceCanvas.width * 0.25;
-        this.y = Math.random() * spaceCanvas.height * 0.5;
-        this.len = Math.random() * 140 + 60;
-        this.speed = Math.random() * 8 + 4;
-        this.angle = Math.PI / 4 + (Math.random() - 0.5) * 0.4;
-        this.alpha = 1;
-        this.active = true;
+/* ---------------------------------------------------------------
+   SCENE 2 — Wireframe Terrain
+--------------------------------------------------------------- */
+const GRID_COLS = 26;
+const GRID_ROWS = 22;
+const GRID_SPACING = 120;
+let gridOffset = 0;
+
+function terrainHeight(gx, gz, t) {
+    // Layered sine waves → rolling hills; flattened near the horizon centre
+    const d = Math.abs(gx);
+    const valley = Math.min(1, d / 5.5);
+    return (
+        Math.sin(gx * 0.55 + t * 0.8) * 42 +
+        Math.cos(gz * 0.42 - t * 0.6) * 36 +
+        Math.sin((gx + gz) * 0.28 + t * 0.35) * 26
+    ) * (0.35 + valley * 0.9);
+}
+
+function drawWireTerrain(ctx, dark, t) {
+    const halfC = GRID_COLS / 2;
+    const camY = VH * 0.16;
+    const pts = [];
+
+    for (let r = 0; r < GRID_ROWS; r++) {
+        const row = [];
+        const zBase = r * GRID_SPACING - (gridOffset % GRID_SPACING);
+        for (let c = -halfC; c <= halfC; c++) {
+            const gz = r + Math.floor(gridOffset / GRID_SPACING);
+            const y = terrainHeight(c, gz, t) + camY;
+            const p = project(c * GRID_SPACING, y, zBase + 130);
+            row.push({ x: p.x, y: p.y, s: p.s, z: zBase, gx: c });
+        }
+        pts.push(row);
     }
-    update() {
-        if (!this.active) return;
-        this.x += Math.cos(this.angle) * this.speed;
-        this.y += Math.sin(this.angle) * this.speed;
-        this.alpha -= 0.025;
-        if (this.alpha <= 0) this.active = false;
-    }
-    draw(ctx) {
-        if (!this.active) return;
-        const tailX = this.x - Math.cos(this.angle) * this.len;
-        const tailY = this.y - Math.sin(this.angle) * this.len;
-        const grd = ctx.createLinearGradient(tailX, tailY, this.x, this.y);
-        grd.addColorStop(0, 'rgba(255,255,255,0)');
-        grd.addColorStop(1, `rgba(220,200,255,${this.alpha})`);
+
+    // Horizontal lines (depth-faded)
+    for (let r = 0; r < pts.length; r++) {
+        const row = pts[r];
+        const fade = 1 - r / GRID_ROWS;
+        const a = Math.pow(fade, 1.6) * (dark ? 0.85 : 0.5);
+        if (a < 0.015) continue;
+        const hue = 196 + (1 - fade) * 34;
         ctx.beginPath();
-        ctx.moveTo(tailX, tailY);
-        ctx.lineTo(this.x, this.y);
-        ctx.strokeStyle = grd;
-        ctx.lineWidth = 1.5;
+        for (let i = 0; i < row.length; i++) {
+            const p = row[i];
+            if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+        }
+        ctx.strokeStyle = `hsla(${hue}, 96%, ${dark ? 62 : 40}%, ${a})`;
+        ctx.lineWidth = Math.max(0.8, fade * 2.1);
         ctx.stroke();
     }
+
+    // Vertical lines
+    for (let c = 0; c < pts[0].length; c++) {
+        ctx.beginPath();
+        for (let r = 0; r < pts.length; r++) {
+            const p = pts[r][c];
+            if (r === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+        }
+        const edgeFade = 1 - Math.abs(c - pts[0].length / 2) / (pts[0].length / 2);
+        ctx.strokeStyle = `hsla(206, 96%, ${dark ? 58 : 38}%, ${(0.10 + edgeFade * 0.22) * (dark ? 1 : 0.7)})`;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+    }
+
+    // Glowing vertex pixels on the nearest rows
+    for (let r = 0; r < Math.min(9, pts.length); r++) {
+        const fade = 1 - r / 9;
+        const a = fade * (dark ? 0.75 : 0.35);
+        if (a < 0.04) continue;
+        ctx.fillStyle = `hsla(190, 100%, ${dark ? 74 : 44}%, ${a})`;
+        for (const p of pts[r]) {
+            const sz = Math.max(1, Math.round(fade * 3));
+            ctx.fillRect(Math.round(p.x) - (sz >> 1), Math.round(p.y) - (sz >> 1), sz, sz);
+        }
+    }
+
+    // Horizon glow line
+    const hy = project(0, camY, GRID_ROWS * GRID_SPACING).y;
+    const hgrd = ctx.createLinearGradient(0, hy - 60, 0, hy + 30);
+    hgrd.addColorStop(0, 'rgba(0,0,0,0)');
+    hgrd.addColorStop(0.65, dark ? 'rgba(56, 190, 255, 0.16)' : 'rgba(30, 120, 220, 0.10)');
+    hgrd.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = hgrd;
+    ctx.fillRect(0, hy - 60, VW, 90);
 }
+
+/* ---------------------------------------------------------------
+   Scene state
+--------------------------------------------------------------- */
+let voxels = [], pixelStars = [];
 
 function initScene() {
-    stars3D = Array.from({ length: 350 }, () => new Star3D());
-    nebulaClouds = Array.from({ length: 12 }, () => new NebulaDust());
-    shootingStars = [];
+    const area = Math.max(1, VW * VH);
+    const voxelCount = reduceMotion ? 24 : Math.round(Math.min(120, Math.max(38, area / 15000)));
+    const starCount = reduceMotion ? 60 : (isMobile() ? 140 : 260);
+    voxels = Array.from({ length: voxelCount }, () => new Voxel(true));
+    pixelStars = Array.from({ length: starCount }, () => new PixelStar());
+    voxels.sort((a, b) => b.z - a.z);
 }
 
-let lastShoot = 0;
-function animateSpace(ts = 0) {
-    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    spaceCtx.clearRect(0, 0, spaceCanvas.width, spaceCanvas.height);
-
-    const bgGrd = spaceCtx.createRadialGradient(
-        spaceCanvas.width * 0.45, spaceCanvas.height * 0.4, 0,
-        spaceCanvas.width * 0.5, spaceCanvas.height * 0.5, spaceCanvas.width * 0.8
+function drawBackdrop(ctx, dark) {
+    const grd = ctx.createRadialGradient(
+        VW * 0.5, VH * 0.44, 0,
+        VW * 0.5, VH * 0.5, Math.max(VW, VH) * 0.85
     );
-    if (isDark) {
-        bgGrd.addColorStop(0, 'rgba(12,6,30,0.85)');
-        bgGrd.addColorStop(0.5, 'rgba(6,3,15,0.9)');
-        bgGrd.addColorStop(1, 'rgba(2,1,8,0.95)');
+    if (dark) {
+        grd.addColorStop(0, 'rgba(8, 30, 68, 0.92)');
+        grd.addColorStop(0.5, 'rgba(4, 16, 40, 0.94)');
+        grd.addColorStop(1, 'rgba(1, 6, 18, 0.97)');
     } else {
-        bgGrd.addColorStop(0, 'rgba(235,228,255,0.3)');
-        bgGrd.addColorStop(1, 'rgba(220,215,255,0.1)');
+        grd.addColorStop(0, 'rgba(232, 243, 255, 0.55)');
+        grd.addColorStop(1, 'rgba(206, 228, 252, 0.35)');
     }
-    spaceCtx.fillStyle = bgGrd;
-    spaceCtx.fillRect(0, 0, spaceCanvas.width, spaceCanvas.height);
+    ctx.fillStyle = grd;
+    ctx.fillRect(0, 0, VW, VH);
+}
 
-    nebulaClouds.forEach(n => { n.update(); n.draw(spaceCtx); });
-    stars3D.forEach(s => { s.update(1.5); s.draw(spaceCtx); });
+let lastTs = 0;
+function animateSpace(ts = 0) {
+    const dt = Math.min(3, Math.max(0.2, (ts - lastTs) / 16.67)) || 1;
+    lastTs = ts;
+    const dark = isDarkTheme();
+    const t = ts * 0.001;
 
-    if (isDark && ts - lastShoot > 3000 + Math.random() * 5000) {
-        shootingStars.push(new ShootingStar());
-        lastShoot = ts;
+    spaceCtx.clearRect(0, 0, VW, VH);
+    drawBackdrop(spaceCtx, dark);
+
+    const speedMul = reduceMotion ? 0.25 : 1;
+    const palette = bluePalette(dark);
+
+    // Distant stars in both scenes
+    pixelStars.forEach(s => { s.update(1.4 * dt * speedMul); s.draw(spaceCtx, dark); });
+
+    if (bgMode === 'voxel') {
+        voxels.sort((a, b) => b.z - a.z); // painter's algorithm
+        voxels.forEach(v => { v.update(5.2 * dt * speedMul); v.draw(spaceCtx, dark, palette); });
+    } else {
+        gridOffset += 1.9 * dt * speedMul;
+        drawWireTerrain(spaceCtx, dark, t);
     }
-    shootingStars = shootingStars.filter(s => s.active);
-    shootingStars.forEach(s => { s.update(); s.draw(spaceCtx); });
+
+    // Soft vignette so foreground text stays readable
+    const vg = spaceCtx.createRadialGradient(VW / 2, VH / 2, Math.min(VW, VH) * 0.28, VW / 2, VH / 2, Math.max(VW, VH) * 0.78);
+    vg.addColorStop(0, 'rgba(0,0,0,0)');
+    vg.addColorStop(1, dark ? 'rgba(1, 5, 15, 0.55)' : 'rgba(180, 205, 235, 0.28)');
+    spaceCtx.fillStyle = vg;
+    spaceCtx.fillRect(0, 0, VW, VH);
 
     requestAnimationFrame(animateSpace);
 }
+
+/* ---------------------------------------------------------------
+   Background switcher UI
+--------------------------------------------------------------- */
+const bgSwitchBtn = document.getElementById('bgSwitch');
+const bgSwitchIcon = document.getElementById('bgSwitchIcon');
+const bgSwitchLabel = document.getElementById('bgSwitchLabel');
+let bgLabelTimer = null;
+
+function applyBgMode(showLabel) {
+    if (bgSwitchIcon) bgSwitchIcon.textContent = BG_META[bgMode].icon;
+    if (bgSwitchBtn) bgSwitchBtn.title = 'پس‌زمینه: ' + BG_META[bgMode].label;
+    if (showLabel && bgSwitchLabel) {
+        bgSwitchLabel.textContent = BG_META[bgMode].label;
+        bgSwitchLabel.classList.add('show');
+        clearTimeout(bgLabelTimer);
+        bgLabelTimer = setTimeout(() => bgSwitchLabel.classList.remove('show'), 1600);
+    }
+}
+
+if (bgSwitchBtn) {
+    bgSwitchBtn.addEventListener('click', () => {
+        bgMode = BG_MODES[(BG_MODES.indexOf(bgMode) + 1) % BG_MODES.length];
+        localStorage.setItem('nthx_bg', bgMode);
+        initScene();
+        applyBgMode(true);
+    });
+}
+applyBgMode(false);
 
 // ==================== Theme ====================
 const themeToggle = document.getElementById('themeToggle');
@@ -866,6 +1233,30 @@ let imagesData = { logo: '' };
 let currentSection = 'home';
 const sectionOrder = ['home', 'teams', 'rules'];
 
+// ---- Server status (managed from the admin panel: data/status.json) ----
+const STATUS_PRESETS = {
+    online:      { label: 'آنلاین',   color: '#22c55e', ring: 'rgba(34,197,94,0.65)',  icon: '🟢' },
+    offline:     { label: 'آفلاین',   color: '#ef4444', ring: 'rgba(239,68,68,0.65)',  icon: '🔴' },
+    maintenance: { label: 'تعمیرات',  color: '#f59e0b', ring: 'rgba(245,158,11,0.65)', icon: '🛠️' },
+    whitelist:   { label: 'وایت‌لیست', color: '#38bdf8', ring: 'rgba(56,189,248,0.65)', icon: '📋' },
+    starting:    { label: 'در حال راه‌اندازی', color: '#a855f7', ring: 'rgba(168,85,247,0.65)', icon: '⏳' }
+};
+
+let statusData = {
+    status: 'online',
+    headline: 'سیزن ۱ - در حال برگزاری',
+    message: '',
+    javaAddress: 'sv3.tgmc.ir:28416',
+    bedrockAddress: 'sv3.tgmc.ir',
+    bedrockPort: '19132',
+    version: '1.21',
+    playersOnline: 0,
+    maxPlayers: 60,
+    showPlayers: true,
+    showPanel: true,
+    updatedAt: ''
+};
+
 async function loadApp() {
     await loadData();
     setTimeout(() => {
@@ -880,6 +1271,78 @@ async function loadData() {
     try { const r = await fetch('data/images.json'); if (r.ok) { imagesData = await r.json(); setLogo(); } } catch(e) {}
     try { const r = await fetch('data/teams.json'); if (r.ok) teamsData = await r.json(); } catch(e) {}
     try { const r = await fetch('data/rules.json'); if (r.ok) rulesData = await r.json(); } catch(e) {}
+    try {
+        const r = await fetch('data/status.json', { cache: 'no-store' });
+        if (r.ok) statusData = Object.assign(statusData, await r.json());
+    } catch(e) {}
+    // Admin panel preview override (same browser, before publishing the JSON file)
+    try {
+        const local = localStorage.getItem('nthx_status');
+        if (local) statusData = Object.assign(statusData, JSON.parse(local));
+    } catch(e) {}
+}
+
+// ==================== Render Server Status ====================
+function esc(v) {
+    return String(v == null ? '' : v)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function renderServerStatus() {
+    const preset = STATUS_PRESETS[statusData.status] || STATUS_PRESETS.online;
+    const root = document.documentElement;
+    root.style.setProperty('--status-color', preset.color);
+    root.style.setProperty('--status-ring', preset.ring);
+
+    const headline = document.getElementById('heroStatusText');
+    if (headline) headline.textContent = statusData.headline || preset.label;
+
+    const badgeText = document.getElementById('serverBadgeText');
+    if (badgeText) badgeText.textContent = preset.icon + ' ' + preset.label;
+
+    const note = document.getElementById('serverNote');
+    if (note) note.textContent = statusData.message || '';
+
+    const panel = document.getElementById('serverPanel');
+    if (panel) panel.style.display = (statusData.showPanel === false) ? 'none' : '';
+
+    const meta = document.getElementById('serverMeta');
+    if (meta) {
+        const items = [];
+        if (statusData.javaAddress)
+            items.push({ label: 'Java Edition', value: statusData.javaAddress, mono: true });
+        if (statusData.bedrockAddress) {
+            const bed = statusData.bedrockPort
+                ? statusData.bedrockAddress + ':' + statusData.bedrockPort
+                : statusData.bedrockAddress;
+            items.push({ label: 'Bedrock Edition', value: bed, mono: true });
+        }
+        if (statusData.version)
+            items.push({ label: 'نسخه', value: statusData.version, mono: true });
+        if (statusData.showPlayers !== false)
+            items.push({
+                label: 'بازیکن آنلاین',
+                value: (statusData.playersOnline || 0) + ' / ' + (statusData.maxPlayers || 0),
+                mono: true
+            });
+        meta.innerHTML = items.map(i =>
+            '<div class="server-meta-item"><div class="server-meta-label">' + esc(i.label) + '</div>' +
+            '<div class="server-meta-value' + (i.mono ? ' mono' : '') + '">' + esc(i.value) + '</div></div>'
+        ).join('');
+    }
+
+    // Keep the connect modal in sync with the addresses set in the admin panel
+    const javaEl = document.getElementById('javaAddr');
+    if (javaEl && statusData.javaAddress) javaEl.textContent = statusData.javaAddress;
+    const bedEl = document.getElementById('bedrockAddr');
+    if (bedEl && statusData.bedrockAddress) bedEl.textContent = statusData.bedrockAddress;
+    const bedPortEl = document.getElementById('bedrockPortVal');
+    if (bedPortEl && statusData.bedrockPort) bedPortEl.textContent = statusData.bedrockPort;
+    const deepLink = document.getElementById('bedrockDeepLink');
+    if (deepLink && statusData.javaAddress) {
+        deepLink.href = 'minecraft://?addExternalServer=Netheraxia|' + statusData.javaAddress;
+    }
 }
 
 function setLogo() {
@@ -1160,7 +1623,7 @@ function renderRules() {
 
 function renderAll() {
     const stats = calcStats(); renderStats('homeStats', stats); renderStats('teamsStats', stats);
-    renderTeams(); renderRules();
+    renderTeams(); renderRules(); renderServerStatus();
 }
 
 // ==================== Modal ====================
@@ -1168,14 +1631,15 @@ const modalOverlay = document.getElementById('connectModal');
 const modalClose = document.getElementById('modalClose');
 const connectBtn = document.getElementById('connectBtn');
 
-function openModal() { modalOverlay.classList.add('active'); }
-function closeModal() { modalOverlay.classList.remove('active'); }
+function openModal() { if (modalOverlay) modalOverlay.classList.add('active'); }
+function closeModal() { if (modalOverlay) modalOverlay.classList.remove('active'); }
 
-connectBtn.addEventListener('click', openModal);
-modalClose.addEventListener('click', closeModal);
-modalOverlay.addEventListener('click', (e) => {
+if (connectBtn) connectBtn.addEventListener('click', openModal);
+if (modalClose) modalClose.addEventListener('click', closeModal);
+if (modalOverlay) modalOverlay.addEventListener('click', (e) => {
     if (e.target === modalOverlay) closeModal();
 });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
 
 // Copy functionality
 document.querySelectorAll('[data-copy]').forEach(btn => {

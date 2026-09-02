@@ -4,30 +4,51 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>پنل مدیریت Netheraxia</title>
+    <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary: #6a0dad;
-            --secondary: #9b59b6;
-            --accent: #d4a0ff;
-            --dark: #0a0015;
-            --glass: rgba(45, 0, 77, 0.7);
-            --glass-border: rgba(180, 100, 255, 0.25);
-            --gold: #ffd700;
-            --success: #2ecc71;
-            --danger: #e74c3c;
-            --warning: #f39c12;
-            --info: #3498db;
+            --primary: #0f52c7;
+            --secondary: #2f86ff;
+            --accent: #6fb8ff;
+            --cyan: #38e6ff;
+            --dark: #030a18;
+            --glass: rgba(6, 20, 46, 0.72);
+            --glass-border: rgba(90, 175, 255, 0.22);
+            --gold: #ffc94a;
+            --success: #22c55e;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --info: #38bdf8;
+            --font-pixel: 'Press Start 2P', monospace;
+            --pixel-shadow: 4px 4px 0 rgba(2, 12, 32, 0.55);
+            --r-xs: 3px; --r-sm: 5px; --r-md: 8px; --r-lg: 10px; --r-xl: 12px;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
-            font-family: 'Segoe UI', 'Vazirmatn', Tahoma, sans-serif;
-            background: linear-gradient(135deg, #0a0015 0%, #1a0033 50%, #0d0020 100%);
-            color: #e0d0ff;
+            font-family: 'Vazirmatn', 'Segoe UI', Tahoma, sans-serif;
+            background: linear-gradient(140deg, #020814 0%, #06162f 45%, #03101f 100%);
+            color: #d8ebff;
             min-height: 100vh;
             position: relative;
             overflow-x: hidden;
+        }
+        /* Pixel grid + scanline overlay for the admin panel */
+        body::before {
+            content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+            background-image:
+                linear-gradient(rgba(70,160,255,0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(70,160,255,0.05) 1px, transparent 1px);
+            background-size: 32px 32px, 32px 32px;
+        }
+        body::after {
+            content: ''; position: fixed; inset: 0; z-index: 3; pointer-events: none;
+            background: repeating-linear-gradient(to bottom, rgba(0,0,0,0.14) 0 1px, transparent 1px 3px);
+            opacity: 0.4;
         }
 
         /* Background Particles */
@@ -65,7 +86,7 @@
             backdrop-filter: blur(30px);
             -webkit-backdrop-filter: blur(30px);
             border: 1px solid var(--glass-border);
-            border-radius: 25px;
+            border-radius: var(--r-xl);
             padding: 25px 35px;
             margin-bottom: 25px;
             display: flex;
@@ -75,9 +96,10 @@
             gap: 20px;
         }
         .header-title {
-            font-size: 28px;
+            font-size: 26px;
             font-weight: 800;
-            background: linear-gradient(135deg, var(--accent), var(--gold));
+            text-shadow: 3px 3px 0 rgba(15, 82, 199, 0.35);
+            background: linear-gradient(135deg, var(--accent), var(--cyan));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
@@ -87,7 +109,7 @@
         /* Buttons */
         .btn {
             padding: 12px 24px;
-            border-radius: 12px;
+            border-radius: var(--r-sm);
             border: none;
             font-size: 14px;
             font-weight: 600;
@@ -115,15 +137,16 @@
         .btn:active::after { width: 300px; height: 300px; }
         .btn:focus { outline: none !important; box-shadow: none !important; }
 
-        .btn-primary { background: linear-gradient(135deg, #6a0dad, #9b59b6); }
-        .btn-success { background: linear-gradient(135deg, #27ae60, #2ecc71); }
-        .btn-danger { background: linear-gradient(135deg, #c0392b, #e74c3c); }
-        .btn-warning { background: linear-gradient(135deg, #e67e22, #f39c12); }
-        .btn-info { background: linear-gradient(135deg, #2980b9, #3498db); }
+        .btn-primary { background: linear-gradient(135deg, #0f52c7, #2f86ff); }
+        .btn-success { background: linear-gradient(135deg, #12894a, #22c55e); }
+        .btn-danger { background: linear-gradient(135deg, #b91c1c, #ef4444); }
+        .btn-warning { background: linear-gradient(135deg, #d97706, #f59e0b); }
+        .btn-info { background: linear-gradient(135deg, #0d7fbf, #38bdf8); }
         .btn-outline { background: transparent; border: 2px solid var(--glass-border); color: var(--accent); }
-        .btn-sm { padding: 8px 16px; font-size: 12px; border-radius: 8px; }
-        .btn:hover { transform: translateY(-2px); box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
-        .btn:active { transform: translateY(0); }
+        .btn-sm { padding: 8px 16px; font-size: 12px; border-radius: var(--r-xs); }
+        .btn { box-shadow: 4px 4px 0 rgba(2, 12, 32, 0.45), inset 0 -3px 0 rgba(0, 15, 45, 0.28); }
+        .btn:hover { transform: translate(-2px, -2px); box-shadow: 6px 6px 0 rgba(2, 12, 32, 0.5), inset 0 -3px 0 rgba(0, 15, 45, 0.28); }
+        .btn:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 rgba(2, 12, 32, 0.4); }
         .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
         /* Tabs */
@@ -133,17 +156,17 @@
             background: var(--glass);
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
-            border-radius: 20px;
+            border-radius: var(--r-lg);
             padding: 8px;
             border: 1px solid var(--glass-border);
             flex-wrap: wrap;
         }
         .tab-btn {
             padding: 14px 28px;
-            border-radius: 15px;
+            border-radius: var(--r-md);
             border: none;
             background: transparent;
-            color: #b0a0c0;
+            color: #8bb4dc;
             cursor: pointer;
             transition: all 0.3s ease;
             font-size: 15px;
@@ -153,11 +176,11 @@
             text-align: center;
         }
         .tab-btn.active {
-            background: linear-gradient(135deg, rgba(106,13,173,0.6), rgba(155,89,182,0.4));
+            background: linear-gradient(135deg, rgba(15,82,199,0.6), rgba(47,134,255,0.4));
             color: white;
-            box-shadow: 0 5px 20px rgba(106,13,173,0.3);
+            box-shadow: 0 5px 20px rgba(15,82,199,0.3);
         }
-        .tab-btn:hover:not(.active) { background: rgba(106,13,173,0.2); color: var(--accent); }
+        .tab-btn:hover:not(.active) { background: rgba(15,82,199,0.2); color: var(--accent); }
 
         /* Panels */
         .panel { display: none; animation: slideIn 0.4s ease; }
@@ -173,7 +196,7 @@
             backdrop-filter: blur(30px);
             -webkit-backdrop-filter: blur(30px);
             border: 1px solid var(--glass-border);
-            border-radius: 25px;
+            border-radius: var(--r-xl);
             padding: 30px;
             margin-bottom: 20px;
         }
@@ -201,25 +224,25 @@
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
             border: 1px solid var(--glass-border);
-            border-radius: 20px;
+            border-radius: var(--r-lg);
             padding: 20px;
             text-align: center;
         }
-        .stat-value { font-size: 32px; font-weight: 800; color: var(--gold); }
+        .stat-value { font-size: 32px; font-weight: 800; color: var(--gold); text-shadow: 2px 2px 0 rgba(2,12,32,0.5); }
         .stat-label { color: var(--accent); margin-top: 6px; font-size: 13px; }
 
         /* Teams */
         .teams-list { display: grid; gap: 18px; }
         .team-item {
-            background: rgba(30, 0, 50, 0.5);
+            background: rgba(6, 22, 48, 0.5);
             border: 1px solid var(--glass-border);
-            border-radius: 20px;
+            border-radius: var(--r-lg);
             overflow: hidden;
             transition: all 0.3s ease;
         }
-        .team-item:hover { border-color: var(--accent); box-shadow: 0 10px 30px rgba(106,13,173,0.2); }
+        .team-item:hover { border-color: var(--accent); box-shadow: 0 10px 30px rgba(15,82,199,0.2); }
         .team-item-header {
-            background: rgba(106, 13, 173, 0.2);
+            background: rgba(15, 82, 199, 0.2);
             padding: 20px 25px;
             display: flex;
             justify-content: space-between;
@@ -230,7 +253,7 @@
             flex-wrap: wrap;
             gap: 12px;
         }
-        .team-item-header:hover { background: rgba(106, 13, 173, 0.3); }
+        .team-item-header:hover { background: rgba(15, 82, 199, 0.3); }
         .team-item-title {
             font-size: 18px;
             font-weight: 700;
@@ -242,22 +265,22 @@
         }
         .team-flag-preview {
             width: 36px; height: 36px;
-            border-radius: 8px;
+            border-radius: var(--r-xs);
             object-fit: cover;
             border: 2px solid var(--glass-border);
             background: rgba(0,0,0,0.3);
             flex-shrink: 0;
         }
         .team-item-badge {
-            background: rgba(106,13,173,0.5);
+            background: rgba(15,82,199,0.5);
             padding: 6px 14px;
-            border-radius: 20px;
+            border-radius: var(--r-lg);
             font-size: 13px;
-            border: 1px solid rgba(180,100,255,0.3);
+            border: 1px solid rgba(90,175,255,0.3);
             white-space: nowrap;
         }
-        .team-item-badge.full { background: rgba(231,76,60,0.5); border-color: rgba(231,76,60,0.5); }
-        .team-item-badge.state-badge { background: rgba(255,215,0,0.2); border-color: rgba(255,215,0,0.4); }
+        .team-item-badge.full { background: rgba(239,68,68,0.5); border-color: rgba(239,68,68,0.5); }
+        .team-item-badge.state-badge { background: rgba(255,201,74,0.2); border-color: rgba(255,201,74,0.4); }
         .team-item-actions { display: flex; gap: 6px; flex-wrap: wrap; }
         .team-item-body { padding: 25px; display: none; }
         .team-item-body.open { display: block; animation: slideDown 0.3s ease; }
@@ -268,9 +291,9 @@
 
         /* Limit Bar */
         .limit-bar {
-            background: rgba(139,92,246,0.08);
-            border: 1px solid var(--border-accent, rgba(139,92,246,0.2));
-            border-radius: 12px;
+            background: rgba(47,134,255,0.08);
+            border: 1px solid var(--border-accent, rgba(47,134,255,0.2));
+            border-radius: var(--r-sm);
             padding: 10px 16px;
             margin-bottom: 16px;
             display: flex;
@@ -281,13 +304,13 @@
         .limit-bar-track {
             flex: 1;
             background: rgba(255,255,255,0.05);
-            border-radius: 8px;
+            border-radius: var(--r-xs);
             height: 6px;
             overflow: hidden;
         }
         .limit-bar-fill {
             height: 100%;
-            border-radius: 8px;
+            border-radius: var(--r-xs);
             transition: all 0.4s ease;
         }
         .limit-bar-fill.green { background: var(--success); }
@@ -302,13 +325,13 @@
             justify-content: space-between;
             align-items: center;
             padding: 12px 18px;
-            background: rgba(106,13,173,0.1);
-            border-radius: 12px;
+            background: rgba(15,82,199,0.1);
+            border-radius: var(--r-sm);
             border-right: 3px solid transparent;
             transition: all 0.3s ease;
         }
-        .member-item:hover { background: rgba(106,13,173,0.2); border-right-color: var(--accent); }
-        .member-item.leader { background: rgba(255,215,0,0.1); border-right-color: var(--gold); }
+        .member-item:hover { background: rgba(15,82,199,0.2); border-right-color: var(--accent); }
+        .member-item.leader { background: rgba(255,201,74,0.1); border-right-color: var(--gold); }
         .member-name { display: flex; align-items: center; gap: 10px; }
         .member-actions { display: flex; gap: 5px; }
 
@@ -316,14 +339,14 @@
         .states-container {
             margin-top: 20px;
             padding: 20px;
-            background: rgba(106,13,173,0.08);
-            border-radius: 15px;
+            background: rgba(15,82,199,0.08);
+            border-radius: var(--r-md);
             border: 1px solid var(--glass-border);
         }
         .state-item {
-            background: rgba(30,0,50,0.4);
+            background: rgba(6,22,48,0.4);
             border: 1px solid var(--glass-border);
-            border-radius: 15px;
+            border-radius: var(--r-md);
             padding: 20px;
             margin-bottom: 15px;
         }
@@ -349,9 +372,9 @@
             text-align: center;
             padding: 12px;
             margin-top: 10px;
-            background: rgba(231,76,60,0.1);
-            border: 1px solid rgba(231,76,60,0.3);
-            border-radius: 12px;
+            background: rgba(239,68,68,0.1);
+            border: 1px solid rgba(239,68,68,0.3);
+            border-radius: var(--r-sm);
             color: var(--danger);
             font-size: 13px;
         }
@@ -359,9 +382,9 @@
         /* Rules */
         .rules-list { display: grid; gap: 12px; }
         .rule-card {
-            background: rgba(30,0,50,0.5);
+            background: rgba(6,22,48,0.5);
             border: 1px solid var(--glass-border);
-            border-radius: 20px;
+            border-radius: var(--r-lg);
             padding: 25px;
             transition: all 0.3s ease;
         }
@@ -381,8 +404,8 @@
             align-items: center;
             padding: 10px 15px;
             margin: 5px 0;
-            background: rgba(106,13,173,0.1);
-            border-radius: 10px;
+            background: rgba(15,82,199,0.1);
+            border-radius: var(--r-sm);
         }
 
         /* Modal */
@@ -400,15 +423,15 @@
         }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         .modal {
-            background: linear-gradient(135deg, #1a0033, #2d004d);
+            background: linear-gradient(135deg, #06162f, #0a2450);
             border: 2px solid var(--accent);
-            border-radius: 25px;
+            border-radius: var(--r-xl);
             padding: 35px;
             width: 90%;
             max-width: 550px;
             max-height: 85vh;
             overflow-y: auto;
-            box-shadow: 0 25px 80px rgba(106,13,173,0.5);
+            box-shadow: 0 25px 80px rgba(15,82,199,0.5);
             animation: modalPop 0.4s cubic-bezier(0.4, 0, 0.2, 1);
         }
         @keyframes modalPop {
@@ -421,21 +444,21 @@
         .form-input {
             width: 100%;
             padding: 14px 18px;
-            background: rgba(30,0,50,0.6);
+            background: rgba(6,22,48,0.6);
             border: 2px solid var(--glass-border);
-            border-radius: 12px;
+            border-radius: var(--r-sm);
             color: white;
             font-size: 15px;
             transition: all 0.3s ease;
             font-family: inherit;
         }
-        .form-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 20px rgba(106,13,173,0.3); }
+        .form-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 20px rgba(15,82,199,0.3); }
         .form-textarea {
             width: 100%;
             padding: 14px 18px;
-            background: rgba(30,0,50,0.6);
+            background: rgba(6,22,48,0.6);
             border: 2px solid var(--glass-border);
-            border-radius: 12px;
+            border-radius: var(--r-sm);
             color: white;
             font-size: 15px;
             resize: vertical;
@@ -446,9 +469,9 @@
         .form-checkbox input { width: 20px; height: 20px; accent-color: var(--primary); }
         .form-actions { display: flex; gap: 10px; margin-top: 25px; justify-content: flex-end; flex-wrap: wrap; }
         .form-info {
-            background: rgba(139,92,246,0.1);
+            background: rgba(47,134,255,0.1);
             border: 1px solid var(--accent);
-            border-radius: 12px;
+            border-radius: var(--r-sm);
             padding: 12px 16px;
             margin-bottom: 15px;
             text-align: center;
@@ -459,19 +482,19 @@
         /* Flag Upload */
         .flag-upload-area {
             border: 2px dashed var(--glass-border);
-            border-radius: 16px;
+            border-radius: var(--r-md);
             padding: 20px;
             text-align: center;
             cursor: pointer;
             transition: all 0.3s;
-            background: rgba(30,0,50,0.4);
+            background: rgba(6,22,48,0.4);
         }
-        .flag-upload-area:hover { border-color: var(--accent); background: rgba(106,13,173,0.2); }
+        .flag-upload-area:hover { border-color: var(--accent); background: rgba(15,82,199,0.2); }
         .flag-upload-area.has-image { border-style: solid; border-color: var(--success); }
         .flag-preview-img {
             max-width: 120px;
             max-height: 80px;
-            border-radius: 8px;
+            border-radius: var(--r-xs);
             object-fit: cover;
             margin: 10px auto;
             display: block;
@@ -488,7 +511,7 @@
         .toast-container { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 2000; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
         .toast {
             padding: 16px 30px;
-            border-radius: 15px;
+            border-radius: var(--r-md);
             font-weight: 600;
             pointer-events: auto;
             animation: toastIn 0.4s ease, toastOut 0.4s ease 2.8s forwards;
@@ -500,10 +523,10 @@
         }
         @keyframes toastIn { from { transform: translateY(-100px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
         @keyframes toastOut { from { transform: translateY(0); opacity: 1; } to { transform: translateY(-100px); opacity: 0; } }
-        .toast-success { background: rgba(46,204,113,0.9); color: white; border: 1px solid #2ecc71; }
-        .toast-error { background: rgba(231,76,60,0.9); color: white; border: 1px solid #e74c3c; }
-        .toast-info { background: rgba(52,152,219,0.9); color: white; border: 1px solid #3498db; }
-        .toast-warning { background: rgba(243,156,18,0.9); color: white; border: 1px solid #f39c12; }
+        .toast-success { background: rgba(34,197,94,0.9); color: white; border: 1px solid #22c55e; }
+        .toast-error { background: rgba(239,68,68,0.9); color: white; border: 1px solid #ef4444; }
+        .toast-info { background: rgba(56,189,248,0.9); color: white; border: 1px solid #38bdf8; }
+        .toast-warning { background: rgba(245,158,11,0.9); color: white; border: 1px solid #f59e0b; }
 
         /* Responsive */
         @media (max-width: 768px) {
@@ -522,8 +545,113 @@
 
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: rgba(139,92,246,0.3); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background: rgba(47,134,255,0.3); border-radius: var(--r-sm); }
         ::selection { background: var(--primary); color: white; }
+
+        /* ===== SERVER STATUS PANEL (admin) ===== */
+        .status-hero {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+            gap: 15px; margin-bottom: 22px;
+        }
+        .status-current {
+            background: var(--glass); border: 1px solid var(--glass-border);
+            border-radius: var(--r-lg); padding: 22px; position: relative; overflow: hidden;
+            box-shadow: var(--pixel-shadow);
+        }
+        .status-current::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px;
+            background: var(--cur-color, var(--success));
+            box-shadow: 0 0 16px var(--cur-color, var(--success));
+        }
+        .status-current-label {
+            font-family: var(--font-pixel); font-size: 8px; color: #7ba3cc;
+            letter-spacing: 0.1em; margin-bottom: 12px; direction: ltr;
+        }
+        .status-current-value {
+            font-size: 24px; font-weight: 900; color: var(--cur-color, var(--success));
+            display: flex; align-items: center; gap: 10px;
+        }
+        .status-dot-big {
+            width: 14px; height: 14px; border-radius: var(--r-xs);
+            background: var(--cur-color, var(--success));
+            box-shadow: 0 0 14px var(--cur-color, var(--success));
+            animation: dotBlink 1.8s steps(1, end) infinite;
+        }
+        @keyframes dotBlink { 0%,60%{opacity:1;} 61%,100%{opacity:0.35;} }
+        .status-updated { margin-top: 10px; font-size: 12px; color: #7ba3cc; }
+
+        /* Status option grid */
+        .status-options {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 12px; margin-bottom: 8px;
+        }
+        .status-option {
+            background: rgba(6,22,48,0.55); border: 2px solid var(--glass-border);
+            border-radius: var(--r-md); padding: 16px 12px; cursor: pointer;
+            text-align: center; user-select: none;
+            transition: transform 0.15s steps(2,end), border-color 0.25s ease, background 0.25s ease;
+        }
+        .status-option:hover { transform: translate(-2px,-2px); border-color: var(--accent); background: rgba(15,82,199,0.2); }
+        .status-option.selected {
+            border-color: var(--opt-color, var(--accent));
+            background: rgba(15,82,199,0.28);
+            box-shadow: 4px 4px 0 rgba(2,12,32,0.45), inset 0 0 0 1px var(--opt-color, var(--accent));
+        }
+        .status-option-icon { font-size: 26px; display: block; margin-bottom: 8px; }
+        .status-option-name { font-weight: 800; font-size: 14px; color: #d8ebff; }
+        .status-option-desc { font-size: 11px; color: #7ba3cc; margin-top: 4px; }
+
+        .status-grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+        .switch-row {
+            display: flex; align-items: center; justify-content: space-between; gap: 12px;
+            padding: 13px 16px; background: rgba(15,82,199,0.1);
+            border: 1px solid var(--glass-border); border-radius: var(--r-sm); margin-bottom: 10px;
+        }
+        .switch-row label { font-size: 14px; font-weight: 600; cursor: pointer; }
+        .switch-row input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--secondary); cursor: pointer; }
+
+        /* Live preview of the site status bar */
+        .status-preview {
+            margin-top: 6px; padding: 18px; border-radius: var(--r-md);
+            background: linear-gradient(140deg, #030a18, #06162f);
+            border: 1px solid var(--glass-border);
+        }
+        .status-preview-title {
+            font-family: var(--font-pixel); font-size: 8px; color: #7ba3cc;
+            letter-spacing: 0.1em; margin-bottom: 14px; direction: ltr;
+        }
+        .preview-bar {
+            display: inline-flex; align-items: center; gap: 9px;
+            padding: 9px 20px; border-radius: var(--r-sm);
+            background: rgba(5,14,32,0.7); border: 1px solid rgba(47,134,255,0.28);
+            font-size: 13px; font-weight: 700; color: #6fb8ff;
+            box-shadow: var(--pixel-shadow);
+        }
+        .preview-dot {
+            width: 9px; height: 9px; border-radius: 2px;
+            background: var(--cur-color, var(--success));
+            box-shadow: 0 0 10px var(--cur-color, var(--success));
+        }
+        .preview-meta {
+            margin-top: 14px; display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px;
+        }
+        .preview-meta-item {
+            background: rgba(8,24,54,0.6); border: 1px solid rgba(90,175,255,0.12);
+            border-radius: var(--r-xs); padding: 9px 11px;
+        }
+        .preview-meta-label { font-size: 9px; color: #6a8fb5; text-transform: uppercase; letter-spacing: 0.07em; }
+        .preview-meta-value { font-size: 12.5px; font-weight: 800; color: #e6f2ff; direction: ltr; text-align: right; font-family: monospace; margin-top: 3px; word-break: break-all; }
+        .preview-note {
+            margin-top: 12px; font-size: 12.5px; color: #9dc2ea; line-height: 1.9;
+            padding: 10px 13px; background: rgba(8,24,54,0.55);
+            border-radius: var(--r-xs); border-right: 3px solid var(--cur-color, var(--success));
+        }
+        .preview-note:empty { display: none; }
+
+        .players-row { display: flex; align-items: center; gap: 10px; }
+        .players-row .form-input { text-align: center; }
+        .hint-text { font-size: 12px; color: #7ba3cc; margin-top: 6px; line-height: 1.8; }
     </style>
 </head>
 <body>
@@ -542,18 +670,123 @@
                 <button class="btn btn-primary" onclick="selectDataFolder()">📂 اتصال به پوشه data</button>
                 <button class="btn btn-success" onclick="saveAllToFiles()">💾 ذخیره همه</button>
                 <button class="btn btn-warning" onclick="downloadAllFiles()">📥 دانلود فایل‌ها</button>
+                <button class="btn btn-info" onclick="downloadStatusFile()">🖥️ دانلود status.json</button>
             </div>
         </div>
 
         <!-- Tabs -->
         <div class="tabs">
-            <button class="tab-btn active" onclick="switchTab('teams')">👥 مدیریت تیم‌ها</button>
-            <button class="tab-btn" onclick="switchTab('rules')">⚖️ مدیریت قوانین</button>
-            <button class="tab-btn" onclick="switchTab('images')">🖼️ مدیریت تصاویر</button>
+            <button class="tab-btn active" onclick="switchTab('status', this)">🖥️ وضعیت سرور</button>
+            <button class="tab-btn" onclick="switchTab('teams', this)">👥 مدیریت تیم‌ها</button>
+            <button class="tab-btn" onclick="switchTab('rules', this)">⚖️ مدیریت قوانین</button>
+            <button class="tab-btn" onclick="switchTab('images', this)">🖼️ مدیریت تصاویر</button>
+        </div>
+
+        <!-- Server Status Panel -->
+        <div id="statusPanel" class="panel active">
+            <div class="status-hero">
+                <div class="status-current" id="statusCurrentCard">
+                    <div class="status-current-label">CURRENT STATUS</div>
+                    <div class="status-current-value">
+                        <span class="status-dot-big"></span>
+                        <span id="statusCurrentText">آنلاین</span>
+                    </div>
+                    <div class="status-updated" id="statusUpdatedAt">هنوز ذخیره نشده</div>
+                </div>
+                <div class="status-current">
+                    <div class="status-current-label">PLAYERS ONLINE</div>
+                    <div class="status-current-value" id="statusPlayersSummary">0 / 60</div>
+                    <div class="status-updated">تعداد بازیکنان نمایش داده شده در سایت</div>
+                </div>
+                <div class="status-current">
+                    <div class="status-current-label">SERVER ADDRESS</div>
+                    <div class="status-current-value" style="font-size:15px; font-family:monospace; direction:ltr; word-break:break-all;" id="statusAddrSummary">sv3.tgmc.ir:28416</div>
+                    <div class="status-updated">آدرس نمایش داده شده در سایت</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">🖥️ تنظیم وضعیت سرور</div>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                        <button class="btn btn-info btn-sm" onclick="resetStatusForm()">↩️ بازگردانی</button>
+                        <button class="btn btn-success" onclick="saveStatus()">💾 ذخیره وضعیت</button>
+                    </div>
+                </div>
+
+                <div class="form-info">
+                    💡 پس از زدن «ذخیره وضعیت»، تغییر بلافاصله در مرورگر خودتان اعمال می‌شود.
+                    برای اینکه <b>همه بازیکنان</b> آن را ببینند، یکی از این کارها را انجام دهید:
+                    «📂 اتصال به پوشه data» (ذخیره مستقیم در فایل) یا «🖥️ دانلود status.json» و آپلود آن در پوشه <code>data/</code> سایت.
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">وضعیت فعلی سرور:</label>
+                    <div class="status-options" id="statusOptions"></div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">متن نوار وضعیت (بالای صفحه اصلی):</label>
+                    <input type="text" class="form-input" id="statusHeadline" placeholder="مثال: سیزن ۱ - در حال برگزاری">
+                    <div class="hint-text">اگر خالی باشد، نام وضعیت انتخاب شده نمایش داده می‌شود.</div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">پیام / توضیح وضعیت (اختیاری):</label>
+                    <textarea class="form-textarea" id="statusMessage" rows="3" placeholder="مثال: سرور تا ساعت ۲۰ برای بروزرسانی در حال تعمیر است."></textarea>
+                </div>
+
+                <div class="status-grid-2">
+                    <div class="form-group">
+                        <label class="form-label">آدرس جاوا ادیشن:</label>
+                        <input type="text" class="form-input" id="statusJava" placeholder="sv3.tgmc.ir:28416" style="direction:ltr; text-align:left;">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">آدرس بدراک ادیشن:</label>
+                        <input type="text" class="form-input" id="statusBedrock" placeholder="sv3.tgmc.ir" style="direction:ltr; text-align:left;">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">پورت بدراک:</label>
+                        <input type="text" class="form-input" id="statusBedrockPort" placeholder="19132" style="direction:ltr; text-align:left;">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">نسخه سرور:</label>
+                        <input type="text" class="form-input" id="statusVersion" placeholder="1.21.4" style="direction:ltr; text-align:left;">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">تعداد بازیکنان:</label>
+                    <div class="players-row">
+                        <input type="number" min="0" class="form-input" id="statusPlayersOnline" placeholder="آنلاین">
+                        <span style="color:var(--accent); font-weight:800;">/</span>
+                        <input type="number" min="0" class="form-input" id="statusMaxPlayers" placeholder="ظرفیت">
+                    </div>
+                </div>
+
+                <div class="switch-row">
+                    <label for="statusShowPlayers">نمایش تعداد بازیکنان در سایت</label>
+                    <input type="checkbox" id="statusShowPlayers" checked>
+                </div>
+                <div class="switch-row">
+                    <label for="statusShowPanel">نمایش کل پنل وضعیت در صفحه اصلی</label>
+                    <input type="checkbox" id="statusShowPanel" checked>
+                </div>
+
+                <div class="status-preview">
+                    <div class="status-preview-title">LIVE PREVIEW</div>
+                    <div class="preview-bar">
+                        <span class="preview-dot"></span>
+                        <span id="previewHeadline">سیزن ۱ - در حال برگزاری</span>
+                    </div>
+                    <div class="preview-note" id="previewNote"></div>
+                    <div class="preview-meta" id="previewMeta"></div>
+                </div>
+            </div>
         </div>
 
         <!-- Teams Panel -->
-        <div id="teamsPanel" class="panel active">
+        <div id="teamsPanel" class="panel">
             <div class="stats-grid" id="teamsStats"></div>
             <div class="card">
                 <div class="card-header">
@@ -598,16 +831,41 @@
     <script>
         // ==================== Constants ====================
         const MAX_MEMBERS = 10;
-        const FILE_NAMES = { teams: 'teams.json', rules: 'rules.json', images: 'images.json' };
+        const FILE_NAMES = { teams: 'teams.json', rules: 'rules.json', images: 'images.json', status: 'status.json' };
+
+        // Server status presets (must stay in sync with index.html)
+        const STATUS_PRESETS = {
+            online:      { label: 'آنلاین',           color: '#22c55e', icon: '🟢', desc: 'سرور در دسترس است' },
+            offline:     { label: 'آفلاین',           color: '#ef4444', icon: '🔴', desc: 'سرور خاموش است' },
+            maintenance: { label: 'تعمیرات',          color: '#f59e0b', icon: '🛠️', desc: 'در حال بروزرسانی' },
+            whitelist:   { label: 'وایت‌لیست',        color: '#38bdf8', icon: '📋', desc: 'فقط اعضای مجاز' },
+            starting:    { label: 'در حال راه‌اندازی', color: '#a855f7', icon: '⏳', desc: 'به‌زودی بالا می‌آید' }
+        };
+
+        const DEFAULT_STATUS = {
+            status: 'online',
+            headline: 'سیزن ۱ - در حال برگزاری',
+            message: '',
+            javaAddress: 'sv3.tgmc.ir:28416',
+            bedrockAddress: 'sv3.tgmc.ir',
+            bedrockPort: '19132',
+            version: '1.21',
+            playersOnline: 0,
+            maxPlayers: 60,
+            showPlayers: true,
+            showPanel: true,
+            updatedAt: ''
+        };
 
         // ==================== Data ====================
         let appData = {
             teams: { teams: [] },
             rules: { rules: [] },
-            images: { logo: '' }
+            images: { logo: '' },
+            status: Object.assign({}, DEFAULT_STATUS)
         };
         let directoryHandle = null;
-        let fileHandles = { teams: null, rules: null, images: null };
+        let fileHandles = { teams: null, rules: null, images: null, status: null };
 
         // ==================== Background Particles ====================
         (function createParticles() {
@@ -838,16 +1096,18 @@
                 if (!directoryHandle) return;
             }
             let count = 0;
+            const total = Object.keys(fileHandles).length;
             for (const key of Object.keys(fileHandles)) {
                 if (await saveFileFromHandle(key)) count++;
             }
             saveLocal();
-            if (count === 3) showToast('✅ همه فایل‌ها ذخیره شدند', 'success');
-            else showToast(`⚠️ ${count}/3 فایل ذخیره شد`, 'warning');
+            if (count === total) showToast('✅ همه فایل‌ها ذخیره شدند', 'success');
+            else showToast(`⚠️ ${count}/${total} فایل ذخیره شد`, 'warning');
         }
 
         function downloadAllFiles() {
             const files = [
+                { name: 'status.json', data: appData.status },
                 { name: 'teams.json', data: appData.teams },
                 { name: 'rules.json', data: appData.rules },
                 { name: 'images.json', data: appData.images }
@@ -870,6 +1130,7 @@
             localStorage.setItem('nthx_teams', JSON.stringify(appData.teams));
             localStorage.setItem('nthx_rules', JSON.stringify(appData.rules));
             localStorage.setItem('nthx_images', JSON.stringify(appData.images));
+            localStorage.setItem('nthx_status', JSON.stringify(appData.status));
         }
 
         function loadLocal() {
@@ -880,7 +1141,22 @@
                 if (r) appData.rules = JSON.parse(r);
                 const i = localStorage.getItem('nthx_images');
                 if (i) appData.images = JSON.parse(i);
+                const st = localStorage.getItem('nthx_status');
+                if (st) appData.status = Object.assign({}, DEFAULT_STATUS, JSON.parse(st));
             } catch(e) {}
+        }
+
+        // Fetch existing JSON files over HTTP so the panel opens with live values
+        async function loadFromHttp() {
+            for (const [key, filename] of Object.entries(FILE_NAMES)) {
+                try {
+                    const r = await fetch('data/' + filename, { cache: 'no-store' });
+                    if (!r.ok) continue;
+                    const json = await r.json();
+                    if (key === 'status') appData.status = Object.assign({}, DEFAULT_STATUS, json);
+                    else appData[key] = json;
+                } catch(e) {}
+            }
         }
 
         // ==================== Render Teams ====================
@@ -1327,33 +1603,211 @@
             }
         }
 
+        // ==================== Server Status Management ====================
+        function escHtml(v) {
+            return String(v == null ? '' : v)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        }
+
+        let selectedStatus = 'online';
+
+        function renderStatusOptions() {
+            const box = document.getElementById('statusOptions');
+            if (!box) return;
+            box.innerHTML = Object.entries(STATUS_PRESETS).map(([key, p]) => `
+                <div class="status-option ${key === selectedStatus ? 'selected' : ''}"
+                     style="--opt-color:${p.color};"
+                     onclick="selectStatus('${key}')">
+                    <span class="status-option-icon">${p.icon}</span>
+                    <div class="status-option-name" style="color:${key === selectedStatus ? p.color : ''}">${p.label}</div>
+                    <div class="status-option-desc">${p.desc}</div>
+                </div>
+            `).join('');
+        }
+
+        function selectStatus(key) {
+            if (!STATUS_PRESETS[key]) return;
+            selectedStatus = key;
+            renderStatusOptions();
+            updateStatusPreview();
+        }
+
+        function readStatusForm() {
+            const num = (id, def) => {
+                const v = parseInt(document.getElementById(id).value, 10);
+                return isNaN(v) || v < 0 ? def : v;
+            };
+            return {
+                status: selectedStatus,
+                headline: document.getElementById('statusHeadline').value.trim(),
+                message: document.getElementById('statusMessage').value.trim(),
+                javaAddress: document.getElementById('statusJava').value.trim(),
+                bedrockAddress: document.getElementById('statusBedrock').value.trim(),
+                bedrockPort: document.getElementById('statusBedrockPort').value.trim(),
+                version: document.getElementById('statusVersion').value.trim(),
+                playersOnline: num('statusPlayersOnline', 0),
+                maxPlayers: num('statusMaxPlayers', 0),
+                showPlayers: document.getElementById('statusShowPlayers').checked,
+                showPanel: document.getElementById('statusShowPanel').checked,
+                updatedAt: appData.status.updatedAt || ''
+            };
+        }
+
+        function fillStatusForm() {
+            const st = Object.assign({}, DEFAULT_STATUS, appData.status || {});
+            selectedStatus = STATUS_PRESETS[st.status] ? st.status : 'online';
+            document.getElementById('statusHeadline').value = st.headline || '';
+            document.getElementById('statusMessage').value = st.message || '';
+            document.getElementById('statusJava').value = st.javaAddress || '';
+            document.getElementById('statusBedrock').value = st.bedrockAddress || '';
+            document.getElementById('statusBedrockPort').value = st.bedrockPort || '';
+            document.getElementById('statusVersion').value = st.version || '';
+            document.getElementById('statusPlayersOnline').value = st.playersOnline ?? 0;
+            document.getElementById('statusMaxPlayers').value = st.maxPlayers ?? 0;
+            document.getElementById('statusShowPlayers').checked = st.showPlayers !== false;
+            document.getElementById('statusShowPanel').checked = st.showPanel !== false;
+            renderStatusOptions();
+            updateStatusPreview();
+        }
+
+        function resetStatusForm() {
+            fillStatusForm();
+            showToast('↩️ فرم به آخرین مقدار ذخیره‌شده بازگشت', 'info');
+        }
+
+        function updateStatusPreview() {
+            const st = readStatusForm();
+            const p = STATUS_PRESETS[st.status] || STATUS_PRESETS.online;
+
+            document.querySelectorAll('.status-current, .status-preview').forEach(el => {
+                el.style.setProperty('--cur-color', p.color);
+            });
+
+            const curText = document.getElementById('statusCurrentText');
+            if (curText) curText.textContent = p.icon + ' ' + p.label;
+
+            const playersSummary = document.getElementById('statusPlayersSummary');
+            if (playersSummary) {
+                playersSummary.textContent = st.showPlayers
+                    ? `${st.playersOnline} / ${st.maxPlayers}`
+                    : 'مخفی';
+            }
+
+            const addrSummary = document.getElementById('statusAddrSummary');
+            if (addrSummary) addrSummary.textContent = st.javaAddress || '—';
+
+            const upd = document.getElementById('statusUpdatedAt');
+            if (upd) {
+                upd.textContent = appData.status.updatedAt
+                    ? 'آخرین ذخیره: ' + appData.status.updatedAt
+                    : 'هنوز ذخیره نشده';
+            }
+
+            const headline = document.getElementById('previewHeadline');
+            if (headline) headline.textContent = st.headline || p.label;
+
+            const note = document.getElementById('previewNote');
+            if (note) note.textContent = st.message || '';
+
+            const meta = document.getElementById('previewMeta');
+            if (meta) {
+                const items = [];
+                if (st.javaAddress) items.push(['Java Edition', st.javaAddress]);
+                if (st.bedrockAddress) items.push(['Bedrock Edition', st.bedrockPort ? st.bedrockAddress + ':' + st.bedrockPort : st.bedrockAddress]);
+                if (st.version) items.push(['نسخه', st.version]);
+                if (st.showPlayers) items.push(['بازیکن آنلاین', st.playersOnline + ' / ' + st.maxPlayers]);
+                meta.innerHTML = items.map(([l, v]) =>
+                    `<div class="preview-meta-item"><div class="preview-meta-label">${escHtml(l)}</div><div class="preview-meta-value">${escHtml(v)}</div></div>`
+                ).join('');
+            }
+        }
+
+        function faNow() {
+            try {
+                return new Date().toLocaleString('fa-IR', {
+                    year: 'numeric', month: '2-digit', day: '2-digit',
+                    hour: '2-digit', minute: '2-digit'
+                });
+            } catch (e) {
+                return new Date().toISOString().slice(0, 16).replace('T', ' ');
+            }
+        }
+
+        async function saveStatus() {
+            const st = readStatusForm();
+            if (!st.javaAddress && !st.bedrockAddress) {
+                showToast('⚠️ حداقل یکی از آدرس‌های سرور را وارد کنید', 'warning');
+            }
+            st.updatedAt = faNow();
+            appData.status = st;
+            saveLocal();
+            updateStatusPreview();
+
+            // Try to persist straight into data/status.json when the folder is connected
+            if (fileHandles.status) {
+                const ok = await saveFileFromHandle('status');
+                showToast(ok ? '✅ وضعیت سرور در status.json ذخیره شد' : '⚠️ ذخیره در فایل ناموفق بود (فقط محلی ذخیره شد)', ok ? 'success' : 'warning');
+            } else {
+                showToast('✅ وضعیت ذخیره شد — برای انتشار، «اتصال به پوشه data» یا «دانلود فایل‌ها» را بزنید', 'success');
+            }
+        }
+
+        function downloadStatusFile() {
+            const blob = new Blob([JSON.stringify(appData.status, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = 'status.json';
+            document.body.appendChild(a); a.click();
+            document.body.removeChild(a); URL.revokeObjectURL(url);
+            showToast('📥 status.json دانلود شد', 'success');
+        }
+
+        function bindStatusInputs() {
+            ['statusHeadline','statusMessage','statusJava','statusBedrock','statusBedrockPort',
+             'statusVersion','statusPlayersOnline','statusMaxPlayers'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.addEventListener('input', updateStatusPreview);
+            });
+            ['statusShowPlayers','statusShowPanel'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.addEventListener('change', updateStatusPreview);
+            });
+        }
+
         // ==================== Tabs ====================
-        function switchTab(name) {
+        function switchTab(name, btn) {
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-            event.target.classList.add('active');
+            const target = btn || (typeof event !== 'undefined' && event ? event.target : null);
+            if (target) target.classList.add('active');
             const panel = document.getElementById(name + 'Panel');
             if (panel) panel.classList.add('active');
+            if (name === 'status') fillStatusForm();
             if (name === 'teams') renderTeams();
             if (name === 'rules') renderRules();
             if (name === 'images') renderImages();
         }
 
         function renderAll() {
+            fillStatusForm();
             renderTeams();
             renderRules();
             renderImages();
         }
 
         // ==================== Init ====================
-        function init() {
+        async function init() {
             loadLocal();
+            bindStatusInputs();
             renderAll();
             updateStats();
-            // تلاش برای اتصال خودکار به پوشه
-            selectDataFolder().catch(() => {
-                console.log('اتصال خودکار به پوشه انجام نشد. از دکمه اتصال استفاده کنید.');
-            });
+            // Load the published JSON files (if the panel is served over http)
+            if (location.protocol === 'http:' || location.protocol === 'https:') {
+                await loadFromHttp();
+                renderAll();
+                updateStats();
+            }
         }
 
         // ذخیره خودکار قبل از بستن صفحه
