@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تبدیل عکس به Base64 - موبایل</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #0a0a0a;
+            color: #fff;
+            font-family: 'Vazirmatn', sans-serif;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            background: #1a1a1a;
+            border: 2px solid #9333EA;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 0 30px #9333EA40;
+        }
+        h1 {
+            color: #A855F7;
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+        }
+        .upload-area {
+            border: 2px dashed #9333EA;
+            border-radius: 10px;
+            padding: 30px;
+            text-align: center;
+            margin: 20px 0;
+            background: #0a0a0a;
+            cursor: pointer;
+        }
+        .upload-area:active {
+            background: #1a0030;
+        }
+        input[type="file"] {
+            display: none;
+        }
+        .btn {
+            background: #9333EA;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            width: 100%;
+            margin: 10px 0;
+            font-family: 'Vazirmatn', sans-serif;
+        }
+        .btn:active {
+            background: #A855F7;
+        }
+        #preview {
+            max-width: 100%;
+            max-height: 200px;
+            margin: 15px auto;
+            display: none;
+            border-radius: 8px;
+            border: 1px solid #9333EA;
+        }
+        textarea {
+            width: 100%;
+            height: 150px;
+            background: #0a0a0a;
+            color: #A855F7;
+            border: 1px solid #9333EA;
+            border-radius: 8px;
+            padding: 10px;
+            font-size: 0.7rem;
+            font-family: monospace;
+            margin: 10px 0;
+            resize: vertical;
+        }
+        .copy-btn {
+            background: #10b981;
+        }
+        .copy-btn:active {
+            background: #059669;
+        }
+        .info {
+            color: #aaa;
+            font-size: 0.8rem;
+            text-align: center;
+            margin-top: 10px;
+        }
+        .size-info {
+            color: #fbbf24;
+            font-size: 0.9rem;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🟣 تبدیل عکس به کد Base64</h1>
+        
+        <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+            <div>📁 برای انتخاب عکس ضربه بزنید</div>
+            <div style="color: #aaa; font-size: 0.8rem; margin-top: 10px;">از گالری یا دوربین</div>
+        </div>
+        
+        <input type="file" id="fileInput" accept="image/*" capture="environment" onchange="handleFile(this)">
+        
+        <img id="preview" alt="پیش‌نمایش">
+        
+        <div class="size-info" id="sizeInfo"></div>
+        
+        <textarea id="base64Output" placeholder="کد Base64 اینجا نمایش داده می‌شود..." readonly></textarea>
+        
+        <button class="btn copy-btn" onclick="copyToClipboard()">📋 کپی کد</button>
+        <button class="btn" onclick="shareCode()">📤 اشتراک‌گذاری</button>
+        <button class="btn" onclick="location.reload()">🔄 تبدیل عکس جدید</button>
+        
+        <div class="info">
+            💡 کد کپی شده را در تگ img جایگذاری کنید:<br>
+            <code style="color: #A855F7; font-size: 0.75rem;">&lt;img src="کد-بیس-64"&gt;</code>
+        </div>
+    </div>
+
+    <script>
+        function handleFile(input) {
+            const file = input.files[0];
+            if (!file) return;
+            
+            // نمایش پیش‌نمایش
+            const preview = document.getElementById('preview');
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                preview.src = e.target.result;
+                preview.style.display = 'block';
+                
+                // نمایش حجم فایل
+                const sizeKB = (file.size / 1024).toFixed(2);
+                document.getElementById('sizeInfo').textContent = 
+                    `📦 حجم فایل: ${sizeKB} KB | 📊 طول کد: ${e.target.result.length} کاراکتر`;
+                
+                // نمایش کد در textarea
+                document.getElementById('base64Output').value = e.target.result;
+            };
+            
+            reader.readAsDataURL(file);
+        }
+        
+        function copyToClipboard() {
+            const textarea = document.getElementById('base64Output');
+            textarea.select();
+            textarea.setSelectionRange(0, 99999);
+            
+            try {
+                document.execCommand('copy');
+                alert('✅ کد با موفقیت کپی شد!');
+            } catch (err) {
+                // روش جایگزین
+                navigator.clipboard.writeText(textarea.value).then(() => {
+                    alert('✅ کد با موفقیت کپی شد!');
+                }).catch(() => {
+                    alert('❌ خطا در کپی کردن! لطفاً دستی کپی کنید.');
+                });
+            }
+        }
+        
+        function shareCode() {
+            const code = document.getElementById('base64Output').value;
+            if (navigator.share) {
+                navigator.share({
+                    title: 'کد Base64 عکس',
+                    text: code.substring(0, 100) + '...',
+                }).catch(() => {});
+            } else {
+                alert('امکان اشتراک‌گذاری در این مرورگر وجود ندارد.');
+            }
+        }
+    </script>
+</body>
+</html>

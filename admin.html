@@ -1,0 +1,1367 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>پنل مدیریت Netheraxia</title>
+    <style>
+        :root {
+            --primary: #6a0dad;
+            --secondary: #9b59b6;
+            --accent: #d4a0ff;
+            --dark: #0a0015;
+            --glass: rgba(45, 0, 77, 0.7);
+            --glass-border: rgba(180, 100, 255, 0.25);
+            --gold: #ffd700;
+            --success: #2ecc71;
+            --danger: #e74c3c;
+            --warning: #f39c12;
+            --info: #3498db;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', 'Vazirmatn', Tahoma, sans-serif;
+            background: linear-gradient(135deg, #0a0015 0%, #1a0033 50%, #0d0020 100%);
+            color: #e0d0ff;
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Background Particles */
+        .bg-particles {
+            position: fixed; top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none; z-index: 0;
+        }
+        .bg-particle {
+            position: absolute;
+            background: var(--accent);
+            border-radius: 50%;
+            filter: blur(3px);
+            opacity: 0.08;
+            animation: floatAround 20s infinite ease-in-out;
+        }
+        @keyframes floatAround {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            25% { transform: translate(100px, -50px) scale(1.5); }
+            50% { transform: translate(-50px, -100px) scale(0.8); }
+            75% { transform: translate(-100px, 50px) scale(1.3); }
+        }
+
+        .container {
+            max-width: 1500px;
+            margin: 0 auto;
+            padding: 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Header */
+        .header {
+            background: var(--glass);
+            backdrop-filter: blur(30px);
+            -webkit-backdrop-filter: blur(30px);
+            border: 1px solid var(--glass-border);
+            border-radius: 25px;
+            padding: 25px 35px;
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        .header-title {
+            font-size: 28px;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--accent), var(--gold));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .header-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+        /* Buttons */
+        .btn {
+            padding: 12px 24px;
+            border-radius: 12px;
+            border: none;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: white;
+            position: relative;
+            overflow: hidden;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+        }
+        .btn::after {
+            content: '';
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 0; height: 0;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.15);
+            transform: translate(-50%, -50%);
+            transition: width 0.5s, height 0.5s;
+        }
+        .btn:active::after { width: 300px; height: 300px; }
+        .btn:focus { outline: none !important; box-shadow: none !important; }
+
+        .btn-primary { background: linear-gradient(135deg, #6a0dad, #9b59b6); }
+        .btn-success { background: linear-gradient(135deg, #27ae60, #2ecc71); }
+        .btn-danger { background: linear-gradient(135deg, #c0392b, #e74c3c); }
+        .btn-warning { background: linear-gradient(135deg, #e67e22, #f39c12); }
+        .btn-info { background: linear-gradient(135deg, #2980b9, #3498db); }
+        .btn-outline { background: transparent; border: 2px solid var(--glass-border); color: var(--accent); }
+        .btn-sm { padding: 8px 16px; font-size: 12px; border-radius: 8px; }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
+        .btn:active { transform: translateY(0); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+        /* Tabs */
+        .tabs {
+            display: flex; gap: 5px;
+            margin-bottom: 25px;
+            background: var(--glass);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 8px;
+            border: 1px solid var(--glass-border);
+            flex-wrap: wrap;
+        }
+        .tab-btn {
+            padding: 14px 28px;
+            border-radius: 15px;
+            border: none;
+            background: transparent;
+            color: #b0a0c0;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 15px;
+            font-weight: 600;
+            flex: 1;
+            min-width: 120px;
+            text-align: center;
+        }
+        .tab-btn.active {
+            background: linear-gradient(135deg, rgba(106,13,173,0.6), rgba(155,89,182,0.4));
+            color: white;
+            box-shadow: 0 5px 20px rgba(106,13,173,0.3);
+        }
+        .tab-btn:hover:not(.active) { background: rgba(106,13,173,0.2); color: var(--accent); }
+
+        /* Panels */
+        .panel { display: none; animation: slideIn 0.4s ease; }
+        .panel.active { display: block; }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Cards */
+        .card {
+            background: var(--glass);
+            backdrop-filter: blur(30px);
+            -webkit-backdrop-filter: blur(30px);
+            border: 1px solid var(--glass-border);
+            border-radius: 25px;
+            padding: 30px;
+            margin-bottom: 20px;
+        }
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--glass-border);
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        .card-title { font-size: 22px; font-weight: 700; color: var(--accent); }
+
+        /* Stats */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        .stat-card {
+            background: var(--glass);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 20px;
+            text-align: center;
+        }
+        .stat-value { font-size: 32px; font-weight: 800; color: var(--gold); }
+        .stat-label { color: var(--accent); margin-top: 6px; font-size: 13px; }
+
+        /* Teams */
+        .teams-list { display: grid; gap: 18px; }
+        .team-item {
+            background: rgba(30, 0, 50, 0.5);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        .team-item:hover { border-color: var(--accent); box-shadow: 0 10px 30px rgba(106,13,173,0.2); }
+        .team-item-header {
+            background: rgba(106, 13, 173, 0.2);
+            padding: 20px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.3s;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .team-item-header:hover { background: rgba(106, 13, 173, 0.3); }
+        .team-item-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--accent);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .team-flag-preview {
+            width: 36px; height: 36px;
+            border-radius: 8px;
+            object-fit: cover;
+            border: 2px solid var(--glass-border);
+            background: rgba(0,0,0,0.3);
+            flex-shrink: 0;
+        }
+        .team-item-badge {
+            background: rgba(106,13,173,0.5);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            border: 1px solid rgba(180,100,255,0.3);
+            white-space: nowrap;
+        }
+        .team-item-badge.full { background: rgba(231,76,60,0.5); border-color: rgba(231,76,60,0.5); }
+        .team-item-badge.state-badge { background: rgba(255,215,0,0.2); border-color: rgba(255,215,0,0.4); }
+        .team-item-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+        .team-item-body { padding: 25px; display: none; }
+        .team-item-body.open { display: block; animation: slideDown 0.3s ease; }
+        @keyframes slideDown {
+            from { opacity: 0; max-height: 0; }
+            to { opacity: 1; max-height: 3000px; }
+        }
+
+        /* Limit Bar */
+        .limit-bar {
+            background: rgba(139,92,246,0.08);
+            border: 1px solid var(--border-accent, rgba(139,92,246,0.2));
+            border-radius: 12px;
+            padding: 10px 16px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .limit-bar-label { font-size: 13px; color: var(--accent); white-space: nowrap; }
+        .limit-bar-track {
+            flex: 1;
+            background: rgba(255,255,255,0.05);
+            border-radius: 8px;
+            height: 6px;
+            overflow: hidden;
+        }
+        .limit-bar-fill {
+            height: 100%;
+            border-radius: 8px;
+            transition: all 0.4s ease;
+        }
+        .limit-bar-fill.green { background: var(--success); }
+        .limit-bar-fill.orange { background: var(--warning); }
+        .limit-bar-fill.red { background: var(--danger); }
+        .limit-bar-value { font-size: 13px; font-weight: 700; white-space: nowrap; }
+
+        /* Members */
+        .members-list { display: grid; gap: 6px; }
+        .member-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 18px;
+            background: rgba(106,13,173,0.1);
+            border-radius: 12px;
+            border-right: 3px solid transparent;
+            transition: all 0.3s ease;
+        }
+        .member-item:hover { background: rgba(106,13,173,0.2); border-right-color: var(--accent); }
+        .member-item.leader { background: rgba(255,215,0,0.1); border-right-color: var(--gold); }
+        .member-name { display: flex; align-items: center; gap: 10px; }
+        .member-actions { display: flex; gap: 5px; }
+
+        /* States */
+        .states-container {
+            margin-top: 20px;
+            padding: 20px;
+            background: rgba(106,13,173,0.08);
+            border-radius: 15px;
+            border: 1px solid var(--glass-border);
+        }
+        .state-item {
+            background: rgba(30,0,50,0.4);
+            border: 1px solid var(--glass-border);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 15px;
+        }
+        .state-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--glass-border);
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .state-title {
+            font-weight: 600;
+            color: var(--accent);
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .full-warning {
+            text-align: center;
+            padding: 12px;
+            margin-top: 10px;
+            background: rgba(231,76,60,0.1);
+            border: 1px solid rgba(231,76,60,0.3);
+            border-radius: 12px;
+            color: var(--danger);
+            font-size: 13px;
+        }
+
+        /* Rules */
+        .rules-list { display: grid; gap: 12px; }
+        .rule-card {
+            background: rgba(30,0,50,0.5);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 25px;
+            transition: all 0.3s ease;
+        }
+        .rule-card:hover { border-color: var(--accent); }
+        .rule-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .rule-title { font-weight: 700; color: var(--gold); font-size: 18px; }
+        .rule-item-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 15px;
+            margin: 5px 0;
+            background: rgba(106,13,173,0.1);
+            border-radius: 10px;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.75);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.3s ease;
+        }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .modal {
+            background: linear-gradient(135deg, #1a0033, #2d004d);
+            border: 2px solid var(--accent);
+            border-radius: 25px;
+            padding: 35px;
+            width: 90%;
+            max-width: 550px;
+            max-height: 85vh;
+            overflow-y: auto;
+            box-shadow: 0 25px 80px rgba(106,13,173,0.5);
+            animation: modalPop 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        @keyframes modalPop {
+            from { opacity: 0; transform: scale(0.8) translateY(30px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        .modal-title { font-size: 24px; font-weight: 700; color: var(--accent); margin-bottom: 25px; text-align: center; }
+        .form-group { margin-bottom: 20px; }
+        .form-label { display: block; margin-bottom: 8px; color: var(--accent); font-weight: 600; font-size: 14px; }
+        .form-input {
+            width: 100%;
+            padding: 14px 18px;
+            background: rgba(30,0,50,0.6);
+            border: 2px solid var(--glass-border);
+            border-radius: 12px;
+            color: white;
+            font-size: 15px;
+            transition: all 0.3s ease;
+            font-family: inherit;
+        }
+        .form-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 20px rgba(106,13,173,0.3); }
+        .form-textarea {
+            width: 100%;
+            padding: 14px 18px;
+            background: rgba(30,0,50,0.6);
+            border: 2px solid var(--glass-border);
+            border-radius: 12px;
+            color: white;
+            font-size: 15px;
+            resize: vertical;
+            font-family: inherit;
+        }
+        .form-textarea:focus { outline: none; border-color: var(--accent); }
+        .form-checkbox { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+        .form-checkbox input { width: 20px; height: 20px; accent-color: var(--primary); }
+        .form-actions { display: flex; gap: 10px; margin-top: 25px; justify-content: flex-end; flex-wrap: wrap; }
+        .form-info {
+            background: rgba(139,92,246,0.1);
+            border: 1px solid var(--accent);
+            border-radius: 12px;
+            padding: 12px 16px;
+            margin-bottom: 15px;
+            text-align: center;
+            font-size: 13px;
+            color: var(--accent);
+        }
+
+        /* Flag Upload */
+        .flag-upload-area {
+            border: 2px dashed var(--glass-border);
+            border-radius: 16px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: rgba(30,0,50,0.4);
+        }
+        .flag-upload-area:hover { border-color: var(--accent); background: rgba(106,13,173,0.2); }
+        .flag-upload-area.has-image { border-style: solid; border-color: var(--success); }
+        .flag-preview-img {
+            max-width: 120px;
+            max-height: 80px;
+            border-radius: 8px;
+            object-fit: cover;
+            margin: 10px auto;
+            display: block;
+        }
+        .flag-remove-btn {
+            display: inline-block;
+            margin-top: 8px;
+            color: var(--danger);
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        /* Toast */
+        .toast-container { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 2000; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+        .toast {
+            padding: 16px 30px;
+            border-radius: 15px;
+            font-weight: 600;
+            pointer-events: auto;
+            animation: toastIn 0.4s ease, toastOut 0.4s ease 2.8s forwards;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.4);
+            text-align: center;
+            white-space: nowrap;
+        }
+        @keyframes toastIn { from { transform: translateY(-100px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @keyframes toastOut { from { transform: translateY(0); opacity: 1; } to { transform: translateY(-100px); opacity: 0; } }
+        .toast-success { background: rgba(46,204,113,0.9); color: white; border: 1px solid #2ecc71; }
+        .toast-error { background: rgba(231,76,60,0.9); color: white; border: 1px solid #e74c3c; }
+        .toast-info { background: rgba(52,152,219,0.9); color: white; border: 1px solid #3498db; }
+        .toast-warning { background: rgba(243,156,18,0.9); color: white; border: 1px solid #f39c12; }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header { flex-direction: column; text-align: center; }
+            .team-item-header { flex-direction: column; }
+            .team-item-actions { width: 100%; justify-content: center; }
+            .btn { padding: 10px 18px; font-size: 13px; }
+            .modal { padding: 20px; width: 95%; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 480px) {
+            .container { padding: 10px; }
+            .card { padding: 20px; }
+            .team-item-body { padding: 16px; }
+        }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(139,92,246,0.3); border-radius: 10px; }
+        ::selection { background: var(--primary); color: white; }
+    </style>
+</head>
+<body>
+
+    <div class="bg-particles" id="bgParticles"></div>
+    <div class="toast-container" id="toastContainer"></div>
+    <div id="modalOverlay" class="modal-overlay" style="display: none;">
+        <div class="modal" id="modalContent"></div>
+    </div>
+
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="header-title">🛠️ پنل مدیریت Netheraxia</div>
+            <div class="header-actions">
+                <button class="btn btn-primary" onclick="selectDataFolder()">📂 اتصال به پوشه data</button>
+                <button class="btn btn-success" onclick="saveAllToFiles()">💾 ذخیره همه</button>
+                <button class="btn btn-warning" onclick="downloadAllFiles()">📥 دانلود فایل‌ها</button>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('teams')">👥 مدیریت تیم‌ها</button>
+            <button class="tab-btn" onclick="switchTab('rules')">⚖️ مدیریت قوانین</button>
+            <button class="tab-btn" onclick="switchTab('images')">🖼️ مدیریت تصاویر</button>
+        </div>
+
+        <!-- Teams Panel -->
+        <div id="teamsPanel" class="panel active">
+            <div class="stats-grid" id="teamsStats"></div>
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">👥 لیست تیم‌ها</div>
+                    <button class="btn btn-primary" onclick="openAddTeamModal()">➕ افزودن تیم جدید</button>
+                </div>
+                <div class="teams-list" id="teamsList"></div>
+            </div>
+        </div>
+
+        <!-- Rules Panel -->
+        <div id="rulesPanel" class="panel">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">⚖️ لیست قوانین</div>
+                    <button class="btn btn-primary" onclick="openAddRuleModal()">➕ افزودن ماده جدید</button>
+                </div>
+                <div class="rules-list" id="rulesList"></div>
+            </div>
+        </div>
+
+        <!-- Images Panel -->
+        <div id="imagesPanel" class="panel">
+            <div class="card">
+                <div class="card-header"><div class="card-title">🖼️ مدیریت لوگو</div></div>
+                <div style="text-align: center; padding: 20px;">
+                    <img id="logoPreview" src="" style="max-width:180px;max-height:180px;border-radius:20px;border:3px solid var(--accent);margin-bottom:20px;box-shadow:0 0 30px rgba(139,92,246,0.3);" onerror="this.style.display='none'">
+                    <div class="form-group">
+                        <label class="form-label">کد Base64 لوگو:</label>
+                        <textarea id="logoBase64" class="form-textarea" rows="4" style="direction:ltr;font-family:monospace;font-size:12px;" placeholder="data:image/png;base64,..."></textarea>
+                    </div>
+                    <div class="flag-upload-area" onclick="document.getElementById('logoFileInput').click()" style="margin-bottom:15px;">
+                        📁 یا آپلود عکس لوگو (تبدیل خودکار به Base64)
+                        <input type="file" id="logoFileInput" accept="image/*" style="display:none;" onchange="handleLogoUpload(event)">
+                    </div>
+                    <button class="btn btn-success" onclick="saveLogo()">💾 ذخیره لوگو</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==================== Constants ====================
+        const MAX_MEMBERS = 10;
+        const FILE_NAMES = { teams: 'teams.json', rules: 'rules.json', images: 'images.json' };
+
+        // ==================== Data ====================
+        let appData = {
+            teams: { teams: [] },
+            rules: { rules: [] },
+            images: { logo: '' }
+        };
+        let directoryHandle = null;
+        let fileHandles = { teams: null, rules: null, images: null };
+
+        // ==================== Background Particles ====================
+        (function createParticles() {
+            const container = document.getElementById('bgParticles');
+            for (let i = 0; i < 12; i++) {
+                const p = document.createElement('div');
+                p.className = 'bg-particle';
+                p.style.width = (Math.random() * 120 + 40) + 'px';
+                p.style.height = p.style.width;
+                p.style.left = Math.random() * 100 + '%';
+                p.style.top = Math.random() * 100 + '%';
+                p.style.animationDelay = (Math.random() * 20) + 's';
+                p.style.animationDuration = (Math.random() * 20 + 15) + 's';
+                container.appendChild(p);
+            }
+        })();
+
+        // ==================== Toast ====================
+        function showToast(msg, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.textContent = msg;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        // ==================== Modal ====================
+        function openModal(title, content, onSave) {
+            const overlay = document.getElementById('modalOverlay');
+            document.getElementById('modalContent').innerHTML = `
+                <div class="modal-title">${title}</div>
+                ${content}
+                <div class="form-actions">
+                    <button class="btn btn-outline btn-sm" onclick="closeModal()">❌ انصراف</button>
+                    <button class="btn btn-success btn-sm" id="modalSaveBtn">💾 ذخیره</button>
+                </div>`;
+            overlay.style.display = 'flex';
+            document.getElementById('modalSaveBtn').addEventListener('click', () => { if (onSave) onSave(); });
+        }
+
+        function closeModal() {
+            document.getElementById('modalOverlay').style.display = 'none';
+        }
+
+        document.getElementById('modalOverlay').addEventListener('click', function(e) {
+            if (e.target === this) closeModal();
+        });
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+        // ==================== Image to Base64 ====================
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function handleLogoUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            fileToBase64(file).then(base64 => {
+                document.getElementById('logoBase64').value = base64;
+                document.getElementById('logoPreview').src = base64;
+                document.getElementById('logoPreview').style.display = 'block';
+                showToast('✅ لوگو بارگذاری شد', 'success');
+            });
+        }
+
+        // ==================== Flag Upload ====================
+        function createFlagUploadHTML(prefix, currentFlag) {
+            const flagId = prefix + 'FlagPreview';
+            const inputId = prefix + 'FlagInput';
+            const hiddenId = prefix + 'FlagBase64';
+            return `
+                <input type="hidden" id="${hiddenId}" value="${currentFlag || ''}">
+                <div class="flag-upload-area ${currentFlag ? 'has-image' : ''}" id="${prefix}FlagArea" onclick="document.getElementById('${inputId}').click()">
+                    ${currentFlag ? `<img src="${currentFlag}" class="flag-preview-img" id="${flagId}">` : '<p>📁 کلیک کنید یا عکس پرچم را انتخاب کنید</p>'}
+                    ${currentFlag ? '<span class="flag-remove-btn" onclick="event.stopPropagation();removeFlag(\'' + prefix + '\')">🗑️ حذف پرچم</span>' : ''}
+                    <input type="file" id="${inputId}" accept="image/*" style="display:none;" onchange="handleFlagUpload(event, '${prefix}')">
+                </div>`;
+        }
+
+        function handleFlagUpload(event, prefix) {
+            const file = event.target.files[0];
+            if (!file) return;
+            fileToBase64(file).then(base64 => {
+                document.getElementById(prefix + 'FlagBase64').value = base64;
+                const preview = document.getElementById(prefix + 'FlagPreview');
+                const area = document.getElementById(prefix + 'FlagArea');
+                if (preview) {
+                    preview.src = base64;
+                } else {
+                    const p = area.querySelector('p');
+                    if (p) p.remove();
+                    const img = document.createElement('img');
+                    img.src = base64;
+                    img.className = 'flag-preview-img';
+                    img.id = prefix + 'FlagPreview';
+                    area.insertBefore(img, area.firstChild);
+                }
+                area.classList.add('has-image');
+                if (!area.querySelector('.flag-remove-btn')) {
+                    const btn = document.createElement('span');
+                    btn.className = 'flag-remove-btn';
+                    btn.textContent = '🗑️ حذف پرچم';
+                    btn.onclick = function(e) { e.stopPropagation(); removeFlag(prefix); };
+                    area.appendChild(btn);
+                }
+            });
+        }
+
+        function removeFlag(prefix) {
+            document.getElementById(prefix + 'FlagBase64').value = '';
+            const preview = document.getElementById(prefix + 'FlagPreview');
+            if (preview) preview.remove();
+            const area = document.getElementById(prefix + 'FlagArea');
+            if (area) {
+                area.classList.remove('has-image');
+                const btn = area.querySelector('.flag-remove-btn');
+                if (btn) btn.remove();
+                if (!area.querySelector('p')) {
+                    const p = document.createElement('p');
+                    p.textContent = '📁 کلیک کنید یا عکس پرچم را انتخاب کنید';
+                    area.appendChild(p);
+                }
+            }
+        }
+
+        function getFlagFromModal(prefix) {
+            const el = document.getElementById(prefix + 'FlagBase64');
+            return el ? el.value : '';
+        }
+
+        function renderFlagPreview(flagData) {
+            if (!flagData) return '';
+            return `<img src="${flagData}" class="team-flag-preview" alt="پرچم">`;
+        }
+
+        // ==================== Stats ====================
+        function updateStats() {
+            let totalTeams = appData.teams.teams.length;
+            let totalMembers = 0, totalStates = 0, stateMembers = 0;
+            appData.teams.teams.forEach(t => {
+                if (t.hasStates && t.states) {
+                    totalStates += t.states.length;
+                    t.states.forEach(s => { if (s.members) stateMembers += s.members.length; });
+                } else if (t.members) totalMembers += t.members.length;
+            });
+            totalMembers += stateMembers;
+            document.getElementById('teamsStats').innerHTML = `
+                <div class="stat-card"><div class="stat-value">${totalTeams}</div><div class="stat-label">👥 تیم</div></div>
+                <div class="stat-card"><div class="stat-value">${totalMembers}</div><div class="stat-label">👤 عضو</div></div>
+                <div class="stat-card"><div class="stat-value">${totalStates}</div><div class="stat-label">🏴 ایالت</div></div>
+                <div class="stat-card"><div class="stat-value">${stateMembers}</div><div class="stat-label">🏳️ عضو ایالتی</div></div>
+            `;
+        }
+
+        // ==================== Limit Helpers ====================
+        function getTeamTotalMembers(team) {
+            if (team.hasStates && team.states) {
+                let total = 0;
+                team.states.forEach(s => { if (s.members) total += s.members.length; });
+                return total;
+            }
+            return team.members ? team.members.length : 0;
+        }
+
+        function canAddMember(team) {
+            return getTeamTotalMembers(team) < MAX_MEMBERS;
+        }
+
+        function getRemainingSlots(team) {
+            return MAX_MEMBERS - getTeamTotalMembers(team);
+        }
+
+        // ==================== File System ====================
+        async function selectDataFolder() {
+            try {
+                directoryHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+                for (const [key, filename] of Object.entries(FILE_NAMES)) {
+                    try {
+                        fileHandles[key] = await directoryHandle.getFileHandle(filename, { create: true });
+                    } catch(e) {
+                        fileHandles[key] = await directoryHandle.getFileHandle(filename, { create: true });
+                    }
+                }
+                await loadAllFilesFromHandles();
+                renderAll();
+                updateStats();
+                showToast('✅ پوشه data با موفقیت متصل شد', 'success');
+            } catch(e) {
+                if (e.name !== 'AbortError') showToast('❌ خطا در انتخاب پوشه', 'error');
+            }
+        }
+
+        async function loadAllFilesFromHandles() {
+            for (const [key, handle] of Object.entries(fileHandles)) {
+                if (handle) {
+                    try {
+                        const file = await handle.getFile();
+                        const text = await file.text();
+                        if (text.trim()) appData[key] = JSON.parse(text);
+                    } catch(e) {
+                        await saveFileFromHandle(key);
+                    }
+                }
+            }
+        }
+
+        async function saveFileFromHandle(key) {
+            if (!fileHandles[key]) return false;
+            try {
+                const writable = await fileHandles[key].createWritable();
+                await writable.write(JSON.stringify(appData[key], null, 2));
+                await writable.close();
+                return true;
+            } catch(e) {
+                return false;
+            }
+        }
+
+        async function saveAllToFiles() {
+            if (!directoryHandle) {
+                await selectDataFolder();
+                if (!directoryHandle) return;
+            }
+            let count = 0;
+            for (const key of Object.keys(fileHandles)) {
+                if (await saveFileFromHandle(key)) count++;
+            }
+            saveLocal();
+            if (count === 3) showToast('✅ همه فایل‌ها ذخیره شدند', 'success');
+            else showToast(`⚠️ ${count}/3 فایل ذخیره شد`, 'warning');
+        }
+
+        function downloadAllFiles() {
+            const files = [
+                { name: 'teams.json', data: appData.teams },
+                { name: 'rules.json', data: appData.rules },
+                { name: 'images.json', data: appData.images }
+            ];
+            files.forEach((f, i) => {
+                setTimeout(() => {
+                    const blob = new Blob([JSON.stringify(f.data, null, 2)], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url; a.download = f.name;
+                    document.body.appendChild(a); a.click();
+                    document.body.removeChild(a); URL.revokeObjectURL(url);
+                }, i * 400);
+            });
+            saveLocal();
+            showToast('📥 فایل‌ها در حال دانلود', 'success');
+        }
+
+        function saveLocal() {
+            localStorage.setItem('nthx_teams', JSON.stringify(appData.teams));
+            localStorage.setItem('nthx_rules', JSON.stringify(appData.rules));
+            localStorage.setItem('nthx_images', JSON.stringify(appData.images));
+        }
+
+        function loadLocal() {
+            try {
+                const t = localStorage.getItem('nthx_teams');
+                if (t) appData.teams = JSON.parse(t);
+                const r = localStorage.getItem('nthx_rules');
+                if (r) appData.rules = JSON.parse(r);
+                const i = localStorage.getItem('nthx_images');
+                if (i) appData.images = JSON.parse(i);
+            } catch(e) {}
+        }
+
+        // ==================== Render Teams ====================
+        function renderTeams() {
+            const container = document.getElementById('teamsList');
+            if (!appData.teams.teams.length) {
+                container.innerHTML = '<div style="text-align:center;padding:60px;color:#b0a0c0;font-size:16px;">👥 هیچ تیمی ثبت نشده است</div>';
+                updateStats();
+                return;
+            }
+
+            container.innerHTML = appData.teams.teams.map((team, index) => {
+                const memberCount = getTeamTotalMembers(team);
+                const teamId = `team-${index}`;
+                const flagImg = renderFlagPreview(team.flag);
+                const isFull = memberCount >= MAX_MEMBERS;
+                
+                return `
+                    <div class="team-item">
+                        <div class="team-item-header" onclick="toggleTeamBody('${teamId}')">
+                            <div class="team-item-title">
+                                ${flagImg || '🏴'}
+                                <span>${team.name}</span>
+                                <span class="team-item-badge ${isFull ? 'full' : ''}">${memberCount}/${MAX_MEMBERS}</span>
+                                ${team.hasStates ? '<span class="team-item-badge state-badge">ایالتی</span>' : ''}
+                                ${isFull ? '<span style="font-size:11px;color:var(--danger);">⚠️ تکمیل</span>' : ''}
+                            </div>
+                            <div class="team-item-actions" onclick="event.stopPropagation();">
+                                <button class="btn btn-info btn-sm" onclick="editTeam(${index})">✏️ ویرایش</button>
+                                <button class="btn btn-warning btn-sm" onclick="toggleTeamType(${index})">${team.hasStates ? '🔄 عادی' : '🏴 ایالتی'}</button>
+                                <button class="btn btn-danger btn-sm" onclick="deleteTeam(${index})">🗑️ حذف</button>
+                            </div>
+                        </div>
+                        <div class="team-item-body" id="${teamId}">
+                            ${renderTeamMembers(team, index)}
+                        </div>
+                    </div>`;
+            }).join('');
+            updateStats();
+        }
+
+        function renderTeamMembers(team, teamIndex) {
+            const currentTotal = getTeamTotalMembers(team);
+            const remaining = getRemainingSlots(team);
+            const fillPercent = (currentTotal / MAX_MEMBERS) * 100;
+            let fillClass = 'green';
+            if (currentTotal >= MAX_MEMBERS) fillClass = 'red';
+            else if (currentTotal >= 8) fillClass = 'orange';
+            
+            const limitBar = `
+                <div class="limit-bar">
+                    <span class="limit-bar-label">👥 ظرفیت:</span>
+                    <div class="limit-bar-track">
+                        <div class="limit-bar-fill ${fillClass}" style="width:${fillPercent}%;"></div>
+                    </div>
+                    <span class="limit-bar-value" style="color:${currentTotal >= MAX_MEMBERS ? 'var(--danger)' : 'var(--accent)'};">${currentTotal}/${MAX_MEMBERS}</span>
+                </div>`;
+
+            if (team.hasStates && team.states) {
+                return `
+                    <div class="states-container">
+                        ${limitBar}
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
+                            <h4 style="color:var(--accent);">🏴 ایالت‌های ${team.name}</h4>
+                            <button class="btn btn-primary btn-sm" onclick="openAddStateModal(${teamIndex})">➕ افزودن ایالت</button>
+                        </div>
+                        ${team.states.map((state, stateIndex) => {
+                            const stateFlag = renderFlagPreview(state.flag);
+                            const stateCount = state.members ? state.members.length : 0;
+                            return `
+                            <div class="state-item">
+                                <div class="state-header">
+                                    <div class="state-title">
+                                        ${stateFlag || '🏳️'}
+                                        ${state.name}
+                                        <span style="font-size:12px;color:var(--text-secondary);">(${stateCount} عضو)</span>
+                                    </div>
+                                    <div style="display:flex;gap:5px;">
+                                        <button class="btn btn-info btn-sm" onclick="editState(${teamIndex},${stateIndex})">✏️</button>
+                                        <button class="btn btn-danger btn-sm" onclick="deleteState(${teamIndex},${stateIndex})">🗑️</button>
+                                    </div>
+                                </div>
+                                <div class="members-list">
+                                    ${state.members && state.members.length ? state.members.map((m,mi) => `
+                                        <div class="member-item ${m.isLeader?'leader':''}">
+                                            <span class="member-name">${m.isLeader?'👑 ':''}${m.name}</span>
+                                            <div class="member-actions">
+                                                <button class="btn btn-warning btn-sm" onclick="toggleMemberLeaderState(${teamIndex},${stateIndex},${mi})">${m.isLeader?'⭐':'👑'}</button>
+                                                <button class="btn btn-info btn-sm" onclick="editMemberState(${teamIndex},${stateIndex},${mi})">✏️</button>
+                                                <button class="btn btn-danger btn-sm" onclick="deleteMemberState(${teamIndex},${stateIndex},${mi})">🗑️</button>
+                                            </div>
+                                        </div>`).join('') : '<div style="text-align:center;padding:20px;color:#b0a0c0;">هیچ عضوی ثبت نشده</div>'}
+                                </div>
+                                ${remaining > 0 ? `<button class="btn btn-success btn-sm" style="margin-top:10px;" onclick="openAddMemberToStateModal(${teamIndex},${stateIndex})">➕ افزودن عضو</button>` : ''}
+                            </div>`;
+                        }).join('')}
+                        ${remaining <= 0 ? `<div class="full-warning">⚠️ ظرفیت تیم تکمیل است (${MAX_MEMBERS}/${MAX_MEMBERS}) — امکان افزودن عضو وجود ندارد</div>` : ''}
+                    </div>`;
+            } else if (team.members) {
+                return `
+                    <div>
+                        ${limitBar}
+                        <div class="members-list">
+                            ${team.members.length ? team.members.map((m,mi) => `
+                                <div class="member-item ${m.isLeader?'leader':''}">
+                                    <span class="member-name">${m.isLeader?'👑 ':''}${m.name}</span>
+                                    <div class="member-actions">
+                                        <button class="btn btn-warning btn-sm" onclick="toggleMemberLeader(${teamIndex},${mi})">${m.isLeader?'⭐':'👑'}</button>
+                                        <button class="btn btn-info btn-sm" onclick="editMember(${teamIndex},${mi})">✏️</button>
+                                        <button class="btn btn-danger btn-sm" onclick="deleteMember(${teamIndex},${mi})">🗑️</button>
+                                    </div>
+                                </div>`).join('') : '<div style="text-align:center;padding:20px;color:#b0a0c0;">هیچ عضوی ثبت نشده</div>'}
+                        </div>
+                        ${remaining > 0 ? `<button class="btn btn-success btn-sm" style="margin-top:15px;" onclick="openAddMemberModal(${teamIndex})">➕ افزودن عضو</button>` : ''}
+                        ${remaining <= 0 ? `<div class="full-warning">⚠️ ظرفیت تیم تکمیل است (${MAX_MEMBERS}/${MAX_MEMBERS}) — امکان افزودن عضو وجود ندارد</div>` : ''}
+                    </div>`;
+            }
+            return '';
+        }
+
+        function toggleTeamBody(teamId) {
+            const el = document.getElementById(teamId);
+            if (el) el.classList.toggle('open');
+        }
+
+        // ==================== Team CRUD ====================
+        function openAddTeamModal() {
+            const content = `
+                <div class="form-group"><label class="form-label">نام تیم:</label><input type="text" class="form-input" id="newTeamName" placeholder="مثال: King Action"></div>
+                ${createFlagUploadHTML('newTeam', '')}`;
+            openModal('➕ افزودن تیم جدید', content, () => {
+                const name = document.getElementById('newTeamName').value.trim();
+                if (!name) { showToast('❌ نام تیم الزامی است', 'error'); return; }
+                const flag = getFlagFromModal('newTeam');
+                appData.teams.teams.push({ name, members: [], flag: flag || undefined });
+                saveLocal(); renderTeams(); closeModal();
+                showToast('✅ تیم جدید اضافه شد', 'success');
+            });
+        }
+
+        function editTeam(index) {
+            const team = appData.teams.teams[index];
+            const content = `
+                <div class="form-group"><label class="form-label">نام تیم:</label><input type="text" class="form-input" id="editTeamName" value="${team.name.replace(/"/g, '&quot;')}"></div>
+                ${createFlagUploadHTML('editTeam', team.flag || '')}`;
+            openModal('✏️ ویرایش تیم', content, () => {
+                const name = document.getElementById('editTeamName').value.trim();
+                if (!name) { showToast('❌ نام تیم الزامی است', 'error'); return; }
+                const flag = getFlagFromModal('editTeam');
+                appData.teams.teams[index].name = name;
+                appData.teams.teams[index].flag = flag || undefined;
+                saveLocal(); renderTeams(); closeModal();
+                showToast('✅ تیم ویرایش شد', 'success');
+            });
+        }
+
+        function deleteTeam(index) {
+            const team = appData.teams.teams[index];
+            if (confirm(`آیا از حذف تیم "${team.name}" و همه اعضای آن اطمینان دارید؟\nاین عمل قابل بازگشت نیست.`)) {
+                appData.teams.teams.splice(index, 1);
+                saveLocal(); renderTeams();
+                showToast('🗑️ تیم حذف شد', 'info');
+            }
+        }
+
+        function toggleTeamType(index) {
+            const team = appData.teams.teams[index];
+            const currentTotal = getTeamTotalMembers(team);
+            const teamFlag = team.flag;
+            
+            if (team.hasStates) {
+                const allMembers = [];
+                if (team.states) team.states.forEach(s => { if (s.members) allMembers.push(...s.members); });
+                team.members = allMembers;
+                team.flag = teamFlag;
+                delete team.hasStates;
+                delete team.states;
+                showToast('🔄 تبدیل به تیم عادی', 'info');
+            } else {
+                if (currentTotal > MAX_MEMBERS) {
+                    showToast(`⚠️ این تیم ${currentTotal} نفر دارد. حداکثر ${MAX_MEMBERS} نفر مجاز است. ابتدا اعضا را کاهش دهید.`, 'error');
+                    return;
+                }
+                team.states = [{ name: 'ایالت اصلی', members: team.members || [], flag: '' }];
+                team.hasStates = true;
+                team.flag = teamFlag;
+                delete team.members;
+                showToast('🔄 تبدیل به تیم ایالتی', 'info');
+            }
+            saveLocal(); renderTeams();
+        }
+
+        // ==================== Member CRUD (Normal) ====================
+        function openAddMemberModal(teamIndex) {
+            const team = appData.teams.teams[teamIndex];
+            if (!canAddMember(team)) {
+                showToast(`⚠️ ظرفیت تیم تکمیل است (${MAX_MEMBERS}/${MAX_MEMBERS})`, 'error');
+                return;
+            }
+            const remaining = getRemainingSlots(team);
+            openModal('➕ افزودن عضو', `
+                <div class="form-info">👥 ظرفیت: ${getTeamTotalMembers(team)}/${MAX_MEMBERS} | ${remaining} جای خالی</div>
+                <div class="form-group"><label class="form-label">نام عضو:</label><input type="text" class="form-input" id="newMemberName" placeholder="مثال: علی"></div>
+                <div class="form-checkbox"><input type="checkbox" id="newMemberLeader"><label>رهبر تیم (👑)</label></div>`, () => {
+                const name = document.getElementById('newMemberName').value.trim();
+                if (!name) { showToast('❌ نام الزامی است', 'error'); return; }
+                if (!appData.teams.teams[teamIndex].members) appData.teams.teams[teamIndex].members = [];
+                if (!canAddMember(appData.teams.teams[teamIndex])) {
+                    showToast(`⚠️ ظرفیت تکمیل است`, 'error');
+                    return;
+                }
+                appData.teams.teams[teamIndex].members.push({ name, isLeader: document.getElementById('newMemberLeader').checked });
+                saveLocal(); renderTeams(); closeModal();
+                showToast('✅ عضو اضافه شد', 'success');
+            });
+        }
+
+        function editMember(teamIndex, memberIndex) {
+            const m = appData.teams.teams[teamIndex].members[memberIndex];
+            openModal('✏️ ویرایش عضو', `
+                <div class="form-group"><label class="form-label">نام:</label><input type="text" class="form-input" id="editMemberName" value="${m.name.replace(/"/g, '&quot;')}"></div>
+                <div class="form-checkbox"><input type="checkbox" id="editMemberLeader" ${m.isLeader?'checked':''}><label>رهبر (👑)</label></div>`, () => {
+                const name = document.getElementById('editMemberName').value.trim();
+                if (!name) return;
+                appData.teams.teams[teamIndex].members[memberIndex].name = name;
+                appData.teams.teams[teamIndex].members[memberIndex].isLeader = document.getElementById('editMemberLeader').checked;
+                saveLocal(); renderTeams(); closeModal();
+            });
+        }
+
+        function deleteMember(teamIndex, memberIndex) {
+            if (confirm('آیا از حذف این عضو اطمینان دارید؟')) {
+                appData.teams.teams[teamIndex].members.splice(memberIndex, 1);
+                saveLocal(); renderTeams();
+                showToast('🗑️ عضو حذف شد', 'info');
+            }
+        }
+
+        function toggleMemberLeader(teamIndex, memberIndex) {
+            appData.teams.teams[teamIndex].members[memberIndex].isLeader = !appData.teams.teams[teamIndex].members[memberIndex].isLeader;
+            saveLocal(); renderTeams();
+        }
+
+        // ==================== State CRUD ====================
+        function openAddStateModal(teamIndex) {
+            const content = `
+                <div class="form-group"><label class="form-label">نام ایالت:</label><input type="text" class="form-input" id="newStateName" placeholder="مثال: Pat & Mat"></div>
+                ${createFlagUploadHTML('newState', '')}`;
+            openModal('🏴 افزودن ایالت جدید', content, () => {
+                const name = document.getElementById('newStateName').value.trim();
+                if (!name) { showToast('❌ نام ایالت الزامی است', 'error'); return; }
+                if (!appData.teams.teams[teamIndex].states) appData.teams.teams[teamIndex].states = [];
+                const flag = getFlagFromModal('newState');
+                appData.teams.teams[teamIndex].states.push({ name, members: [], flag: flag || undefined });
+                saveLocal(); renderTeams(); closeModal();
+                showToast('✅ ایالت جدید اضافه شد', 'success');
+            });
+        }
+
+        function editState(teamIndex, stateIndex) {
+            const state = appData.teams.teams[teamIndex].states[stateIndex];
+            const content = `
+                <div class="form-group"><label class="form-label">نام ایالت:</label><input type="text" class="form-input" id="editStateName" value="${state.name.replace(/"/g, '&quot;')}"></div>
+                ${createFlagUploadHTML('editState', state.flag || '')}`;
+            openModal('✏️ ویرایش ایالت', content, () => {
+                const name = document.getElementById('editStateName').value.trim();
+                if (!name) return;
+                const flag = getFlagFromModal('editState');
+                appData.teams.teams[teamIndex].states[stateIndex].name = name;
+                appData.teams.teams[teamIndex].states[stateIndex].flag = flag || undefined;
+                saveLocal(); renderTeams(); closeModal();
+                showToast('✅ ایالت ویرایش شد', 'success');
+            });
+        }
+
+        function deleteState(teamIndex, stateIndex) {
+            const state = appData.teams.teams[teamIndex].states[stateIndex];
+            const memberCount = state.members ? state.members.length : 0;
+            const msg = memberCount > 0 
+                ? `ایالت "${state.name}" ${memberCount} عضو دارد. با حذف ایالت، همه اعضا حذف می‌شوند. اطمینان دارید؟`
+                : `آیا از حذف ایالت "${state.name}" اطمینان دارید؟`;
+            if (confirm(msg)) {
+                appData.teams.teams[teamIndex].states.splice(stateIndex, 1);
+                saveLocal(); renderTeams();
+                showToast('🗑️ ایالت حذف شد', 'info');
+            }
+        }
+
+        // ==================== State Member CRUD ====================
+        function openAddMemberToStateModal(teamIndex, stateIndex) {
+            const team = appData.teams.teams[teamIndex];
+            if (!canAddMember(team)) {
+                showToast(`⚠️ ظرفیت کل تیم تکمیل است (${MAX_MEMBERS}/${MAX_MEMBERS})`, 'error');
+                return;
+            }
+            const remaining = getRemainingSlots(team);
+            openModal('➕ افزودن عضو به ایالت', `
+                <div class="form-info">👥 ظرفیت کل تیم: ${getTeamTotalMembers(team)}/${MAX_MEMBERS} | ${remaining} جای خالی</div>
+                <div class="form-group"><label class="form-label">نام:</label><input type="text" class="form-input" id="newSMName" placeholder="نام عضو"></div>
+                <div class="form-checkbox"><input type="checkbox" id="newSMLeader"><label>رهبر ایالت (👑)</label></div>`, () => {
+                const name = document.getElementById('newSMName').value.trim();
+                if (!name) return;
+                if (!appData.teams.teams[teamIndex].states[stateIndex].members) appData.teams.teams[teamIndex].states[stateIndex].members = [];
+                if (!canAddMember(appData.teams.teams[teamIndex])) {
+                    showToast(`⚠️ ظرفیت تکمیل است`, 'error');
+                    return;
+                }
+                appData.teams.teams[teamIndex].states[stateIndex].members.push({ name, isLeader: document.getElementById('newSMLeader').checked });
+                saveLocal(); renderTeams(); closeModal();
+                showToast('✅ عضو به ایالت اضافه شد', 'success');
+            });
+        }
+
+        function editMemberState(teamIndex, stateIndex, memberIndex) {
+            const m = appData.teams.teams[teamIndex].states[stateIndex].members[memberIndex];
+            openModal('✏️ ویرایش عضو', `
+                <div class="form-group"><label class="form-label">نام:</label><input type="text" class="form-input" id="editSMName" value="${m.name.replace(/"/g, '&quot;')}"></div>
+                <div class="form-checkbox"><input type="checkbox" id="editSMLeader" ${m.isLeader?'checked':''}><label>رهبر (👑)</label></div>`, () => {
+                const name = document.getElementById('editSMName').value.trim();
+                if (!name) return;
+                appData.teams.teams[teamIndex].states[stateIndex].members[memberIndex].name = name;
+                appData.teams.teams[teamIndex].states[stateIndex].members[memberIndex].isLeader = document.getElementById('editSMLeader').checked;
+                saveLocal(); renderTeams(); closeModal();
+            });
+        }
+
+        function deleteMemberState(teamIndex, stateIndex, memberIndex) {
+            if (confirm('حذف این عضو؟')) {
+                appData.teams.teams[teamIndex].states[stateIndex].members.splice(memberIndex, 1);
+                saveLocal(); renderTeams();
+                showToast('🗑️ عضو حذف شد', 'info');
+            }
+        }
+
+        function toggleMemberLeaderState(teamIndex, stateIndex, memberIndex) {
+            appData.teams.teams[teamIndex].states[stateIndex].members[memberIndex].isLeader = !appData.teams.teams[teamIndex].states[stateIndex].members[memberIndex].isLeader;
+            saveLocal(); renderTeams();
+        }
+
+        // ==================== Rules ====================
+        function renderRules() {
+            const c = document.getElementById('rulesList');
+            if (!appData.rules.rules.length) {
+                c.innerHTML = '<div style="text-align:center;padding:60px;color:#b0a0c0;font-size:16px;">⚖️ هیچ قانونی ثبت نشده است</div>';
+                return;
+            }
+            c.innerHTML = appData.rules.rules.map((r,i) => `
+                <div class="rule-card">
+                    <div class="rule-header">
+                        <div class="rule-title">⚖️ ${r.title}</div>
+                        <div style="display:flex;gap:5px;flex-wrap:wrap;">
+                            <button class="btn btn-info btn-sm" onclick="editRule(${i})">✏️ ویرایش</button>
+                            <button class="btn btn-success btn-sm" onclick="openAddRuleItemModal(${i})">➕ افزودن بند</button>
+                            <button class="btn btn-danger btn-sm" onclick="deleteRule(${i})">🗑️ حذف</button>
+                        </div>
+                    </div>
+                    <div>
+                        ${r.items && r.items.length ? r.items.map((item,ii) => `
+                            <div class="rule-item-row">
+                                <span style="flex:1;">• ${item}</span>
+                                <div style="display:flex;gap:5px;">
+                                    <button class="btn btn-info btn-sm" onclick="editRuleItem(${i},${ii})">✏️</button>
+                                    <button class="btn btn-danger btn-sm" onclick="deleteRuleItem(${i},${ii})">🗑️</button>
+                                </div>
+                            </div>`).join('') : '<div style="text-align:center;padding:20px;color:#b0a0c0;">هیچ بندی ثبت نشده</div>'}
+                    </div>
+                </div>`).join('');
+        }
+
+        function openAddRuleModal() {
+            openModal('⚖️ افزودن ماده جدید', '<div class="form-group"><label class="form-label">عنوان ماده:</label><input type="text" class="form-input" id="newRuleTitle" placeholder="مثال: ماده ۱: اصول بنیادین"></div>', () => {
+                const t = document.getElementById('newRuleTitle').value.trim();
+                if (!t) { showToast('❌ عنوان الزامی است', 'error'); return; }
+                appData.rules.rules.push({ title: t, items: [] });
+                saveLocal(); renderRules(); closeModal();
+                showToast('✅ ماده جدید اضافه شد', 'success');
+            });
+        }
+
+        function editRule(i) {
+            openModal('✏️ ویرایش ماده', `<div class="form-group"><label class="form-label">عنوان:</label><input type="text" class="form-input" id="editRuleTitle" value="${appData.rules.rules[i].title.replace(/"/g, '&quot;')}"></div>`, () => {
+                const t = document.getElementById('editRuleTitle').value.trim();
+                if (!t) return;
+                appData.rules.rules[i].title = t;
+                saveLocal(); renderRules(); closeModal();
+            });
+        }
+
+        function deleteRule(i) {
+            if (confirm('آیا از حذف این ماده و همه بندهای آن اطمینان دارید؟')) {
+                appData.rules.rules.splice(i, 1);
+                saveLocal(); renderRules();
+                showToast('🗑️ ماده حذف شد', 'info');
+            }
+        }
+
+        function openAddRuleItemModal(ri) {
+            openModal('➕ افزودن بند جدید', '<div class="form-group"><label class="form-label">متن بند:</label><textarea class="form-textarea" id="newRuleItem" rows="4" placeholder="متن بند را وارد کنید..."></textarea></div>', () => {
+                const t = document.getElementById('newRuleItem').value.trim();
+                if (!t) { showToast('❌ متن الزامی است', 'error'); return; }
+                if (!appData.rules.rules[ri].items) appData.rules.rules[ri].items = [];
+                appData.rules.rules[ri].items.push(t);
+                saveLocal(); renderRules(); closeModal();
+                showToast('✅ بند اضافه شد', 'success');
+            });
+        }
+
+        function editRuleItem(ri, ii) {
+            openModal('✏️ ویرایش بند', `<div class="form-group"><label class="form-label">متن:</label><textarea class="form-textarea" id="editRuleItem" rows="4">${appData.rules.rules[ri].items[ii].replace(/</g, '&lt;').replace(/>/g, '&gt;')}</textarea></div>`, () => {
+                const t = document.getElementById('editRuleItem').value.trim();
+                if (!t) return;
+                appData.rules.rules[ri].items[ii] = t;
+                saveLocal(); renderRules(); closeModal();
+            });
+        }
+
+        function deleteRuleItem(ri, ii) {
+            if (confirm('حذف این بند؟')) {
+                appData.rules.rules[ri].items.splice(ii, 1);
+                saveLocal(); renderRules();
+                showToast('🗑️ بند حذف شد', 'info');
+            }
+        }
+
+        // ==================== Images ====================
+        function saveLogo() {
+            const b = document.getElementById('logoBase64').value.trim();
+            if (!b) { showToast('❌ لطفاً کد Base64 لوگو را وارد یا آپلود کنید', 'error'); return; }
+            appData.images.logo = b;
+            document.getElementById('logoPreview').src = b;
+            document.getElementById('logoPreview').style.display = 'block';
+            saveLocal();
+            showToast('✅ لوگو ذخیره شد', 'success');
+        }
+
+        function renderImages() {
+            const logo = appData.images.logo || '';
+            document.getElementById('logoBase64').value = logo;
+            if (logo) {
+                document.getElementById('logoPreview').src = logo;
+                document.getElementById('logoPreview').style.display = 'block';
+            } else {
+                document.getElementById('logoPreview').style.display = 'none';
+            }
+        }
+
+        // ==================== Tabs ====================
+        function switchTab(name) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+            event.target.classList.add('active');
+            const panel = document.getElementById(name + 'Panel');
+            if (panel) panel.classList.add('active');
+            if (name === 'teams') renderTeams();
+            if (name === 'rules') renderRules();
+            if (name === 'images') renderImages();
+        }
+
+        function renderAll() {
+            renderTeams();
+            renderRules();
+            renderImages();
+        }
+
+        // ==================== Init ====================
+        function init() {
+            loadLocal();
+            renderAll();
+            updateStats();
+            // تلاش برای اتصال خودکار به پوشه
+            selectDataFolder().catch(() => {
+                console.log('اتصال خودکار به پوشه انجام نشد. از دکمه اتصال استفاده کنید.');
+            });
+        }
+
+        // ذخیره خودکار قبل از بستن صفحه
+        window.addEventListener('beforeunload', () => {
+            saveLocal();
+        });
+
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
