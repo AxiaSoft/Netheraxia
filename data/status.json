@@ -1,6 +1,6 @@
 {
-  "status": "online",
-  "headline": "سیزن ۱ - در حال برگزاری",
+  "status": "maintenance",
+  "headline": "تست انتشار 23:05:39",
   "message": "سرور فعال است. برای عضویت در وایت‌لیست به دیسکورد مراجعه کنید.",
   "javaAddress": "sv3.tgmc.ir:28416",
   "bedrockAddress": "sv3.tgmc.ir",
@@ -10,5 +10,5 @@
   "connectBtnText": "بزن بریم!",
   "showVersion": true,
   "showPanel": true,
-  "updatedAt": ""
+  "updatedAt": "۱۴۰۵/۰۶/۱۱, ۲۳:۰۵"
 }
