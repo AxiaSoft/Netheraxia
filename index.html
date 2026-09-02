@@ -1264,22 +1264,78 @@ async function loadApp() {
         document.getElementById('mainContent').classList.add('visible');
         renderAll();
         initNavIndicator();
+        startLiveRefresh();
     }, 600);
 }
 
+// Every data file is fetched with cache busting. GitHub Pages sends a
+// 10-minute Cache-Control on assets, so without this the browser keeps
+// serving an old images.json/teams.json even after a new commit.
+async function fetchJson(file) {
+    const url = 'data/' + file + '?v=' + Date.now();
+    const r = await fetch(url, { cache: 'no-store' });
+    if (!r.ok) throw new Error(r.status);
+    return await r.json();
+}
+
+// Signature of the currently loaded data, used to detect real changes
+function dataSignature() {
+    return JSON.stringify([
+        imagesData && imagesData.logo ? imagesData.logo.length + ':' + imagesData.logo.slice(-24) : '',
+        statusData, teamsData, rulesData
+    ]);
+}
+
 async function loadData() {
-    try { const r = await fetch('data/images.json'); if (r.ok) { imagesData = await r.json(); setLogo(); } } catch(e) {}
-    try { const r = await fetch('data/teams.json'); if (r.ok) teamsData = await r.json(); } catch(e) {}
-    try { const r = await fetch('data/rules.json'); if (r.ok) rulesData = await r.json(); } catch(e) {}
+    try { imagesData = await fetchJson('images.json'); setLogo(); } catch(e) {}
+    try { teamsData  = await fetchJson('teams.json'); } catch(e) {}
+    try { rulesData  = await fetchJson('rules.json'); } catch(e) {}
+    try { statusData = Object.assign({}, statusData, await fetchJson('status.json')); } catch(e) {}
+
+    // Admin preview override: only for whoever is actually editing in this
+    // browser, and only until the published file catches up. It must never
+    // make a visitor (or the admin after publishing) see stale content.
     try {
-        const r = await fetch('data/status.json', { cache: 'no-store' });
-        if (r.ok) statusData = Object.assign(statusData, await r.json());
+        const raw = localStorage.getItem('nthx_status');
+        const isAdminPreview = localStorage.getItem('nthx_preview') === '1';
+        if (raw && isAdminPreview) {
+            statusData = Object.assign({}, statusData, JSON.parse(raw));
+        } else if (raw && !isAdminPreview) {
+            localStorage.removeItem('nthx_status');   // clear the old trap
+        }
     } catch(e) {}
-    // Admin panel preview override (same browser, before publishing the JSON file)
-    try {
-        const local = localStorage.getItem('nthx_status');
-        if (local) statusData = Object.assign(statusData, JSON.parse(local));
-    } catch(e) {}
+}
+
+// ==================== Live refresh ====================
+// Poll the published files so an open tab picks up admin changes without a
+// manual reload, and refresh immediately when the tab regains focus.
+let liveTimer = null;
+let lastSignature = '';
+
+async function refreshFromServer(force) {
+    const before = lastSignature || dataSignature();
+    await loadData();
+    const after = dataSignature();
+    if (force || after !== before) {
+        lastSignature = after;
+        renderAll();
+        return true;
+    }
+    lastSignature = after;
+    return false;
+}
+
+function startLiveRefresh() {
+    lastSignature = dataSignature();
+    const tick = async () => {
+        if (document.hidden) return;            // don't poll a hidden tab
+        try { await refreshFromServer(false); } catch(e) {}
+    };
+    clearInterval(liveTimer);
+    liveTimer = setInterval(tick, 20000);       // every 20s while visible
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) tick(); });
+    window.addEventListener('focus', tick);
+    window.addEventListener('online', tick);
 }
 
 // ==================== Render Server Status ====================

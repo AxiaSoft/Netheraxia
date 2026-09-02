@@ -7,7 +7,9 @@ let exitCode = 0;
   const { reg, rootStyle } = installDom();
   const S = loadPage('index.html', `globalThis.__X={resize:resizeSpace,anim:animateSpace,
     setMode:m=>{bgMode=m;initScene();}, render:renderServerStatus, load:loadData,
-    setStatus:o=>Object.assign(statusData,o), open:openModal, ov:()=>modalOverlay}`);
+    setStatus:o=>Object.assign(statusData,o), open:openModal, ov:()=>modalOverlay,
+    refresh:refreshFromServer, imgs:()=>imagesData, sig:dataSignature,
+    setImgs:o=>{imagesData=o;}}`);
 
   R.section('A. 3D backgrounds render');
   S.resize();
@@ -60,6 +62,59 @@ let exitCode = 0;
   R.check('version can be hidden', reg['serverMeta'].style.display === 'none');
 }
 
+/* ============ H. SITE: cache-busting + live refresh ============ */
+{
+  const { reg, store } = installDom();
+  const served = {
+    'images.json': { logo: 'data:image/png;base64,AAAA' },
+    'teams.json' : { teams: [] },
+    'rules.json' : { rules: [] },
+    'status.json': { status:'online', headline:'اولیه', version:'1.21' },
+  };
+  const seen = [];
+  globalThis.fetch = async (url, opt={}) => {
+    seen.push({ url, cache: opt.cache });
+    const name = String(url).split('/').pop().split('?')[0];
+    if (!served[name]) return { ok:false, status:404 };
+    return { ok:true, status:200, json:async()=>JSON.parse(JSON.stringify(served[name])) };
+  };
+
+  const S = loadPage('index.html', `globalThis.__X={load:loadData,refresh:refreshFromServer,
+    imgs:()=>imagesData, status:()=>statusData, render:renderServerStatus, sig:dataSignature}`);
+
+  R.section('H. cache-busting');
+  await S.load();
+  R.check('all four files requested', ['images','teams','rules','status']
+    .every(n => seen.some(s => s.url.includes(n + '.json'))));
+  R.check('every request sends cache:no-store', seen.every(s => s.cache === 'no-store'));
+  R.check('every request is cache-busted with ?v=', seen.every(s => /\?v=\d+/.test(s.url)));
+  R.check('logo loaded from images.json', S.imgs().logo === 'data:image/png;base64,AAAA');
+
+  R.section('I. live refresh picks up a new logo');
+  served['images.json'] = { logo: 'data:image/png;base64,BBBB' };
+  const changed = await S.refresh(false);
+  R.check('refresh detects the change', changed === true);
+  R.check('new logo applied', S.imgs().logo === 'data:image/png;base64,BBBB');
+  R.check('img element updated', reg['heroLogo'].src === 'data:image/png;base64,BBBB');
+  const again = await S.refresh(false);
+  R.check('no redundant re-render when unchanged', again === false);
+
+  served['status.json'] = { status:'offline', headline:'آفلاین شد', version:'1.21' };
+  await S.refresh(false);
+  R.check('status changes also picked up live', S.status().status === 'offline');
+
+  R.section('J. stale localStorage must not override published data');
+  store['nthx_status'] = JSON.stringify({ status:'maintenance', headline:'کهنه' });
+  delete store['nthx_preview'];                 // a normal visitor
+  await S.load();
+  R.check('visitor ignores stale localStorage', S.status().headline === 'آفلاین شد');
+  R.check('stale key is cleared', !store['nthx_status']);
+  store['nthx_status'] = JSON.stringify({ headline:'پیش‌نمایش ادمین' });
+  store['nthx_preview'] = '1';                  // the admin, mid-edit
+  await S.load();
+  R.check('admin still sees their own preview', S.status().headline === 'پیش‌نمایش ادمین');
+}
+
 /* ============ E. ADMIN: form + GitHub sync ============ */
 {
   const { reg, store, gid } = installDom();
@@ -84,12 +139,12 @@ let exitCode = 0;
     return { ok:true, status:200, json:async()=>({ content:{ sha } }) };
   };
 
-  const A = loadPage('admin.html', `globalThis.__X={fill:fillStatusForm,read:readStatusForm,
+  const A = loadPage('admin.html', `globalThis.__X={saveLogo,fill:fillStatusForm,read:readStatusForm,
     select:selectStatus,save:saveStatus,preview:updateStatusPreview,bind:bindStatusInputs,
     tab:switchTab,cfg:o=>Object.assign(ghConfig,o),getCfg:()=>ghConfig,ready:ghReady,
     test:ghTestConnection,pull:ghPullAll,publish:publishAll,put:ghPutFile,
     setSha:(f,v)=>{ghShas[f]=v},b64:utf8ToBase64,unb64:base64ToUtf8,
-    data:()=>appData,saveLocal,dl:downloadStatusFile}`);
+    data:()=>appData,saveLocal,dl:downloadStatusFile,getCfg:()=>ghConfig}`);
 
   R.section('E. admin status form');
   A.bind(); A.fill();
@@ -164,6 +219,21 @@ let exitCode = 0;
   calls = []; await A.publish('status');
   R.check('no network calls without a token', calls.length === 0);
   R.check('local save still works offline', (A.saveLocal(), !!store['nthx_status']));
+
+  R.section('K. logo publishing');
+  A.cfg({ token:'good-token' });        // an earlier test cleared it on purpose
+  const uniqueLogo = 'data:image/png;base64,LOGO' + Date.now();
+  gid('logoBase64').value = uniqueLogo;
+  calls = [];
+  await A.saveLogo();
+  const logoPuts = calls.filter(c => c.method === 'PUT');
+  R.check('saveLogo publishes to the repo', logoPuts.length === 1);
+  R.check('it writes images.json', logoPuts[0] && logoPuts[0].url.includes('images.json'));
+  R.check('logo content committed',
+    JSON.parse(repo['data/images.json'].content).logo === uniqueLogo);
+  calls = [];
+  await A.saveLogo();
+  R.check('unchanged logo makes no commit', calls.filter(c=>c.method==='PUT').length === 0);
 
   R.section('G. tabs');
   let threw = null;
