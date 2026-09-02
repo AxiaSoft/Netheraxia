@@ -1789,14 +1789,19 @@
             try {
                 const res = await ghRequest('');
                 if (res.status === 401) { if (!silent) showToast('❌ توکن نامعتبر است یا منقضی شده', 'error'); return false; }
-                if (res.status === 404) { if (!silent) showToast('❌ مخزن پیدا نشد یا توکن دسترسی ندارد', 'error'); return false; }
+                if (res.status === 404) { if (!silent) showToast('❌ مخزن پیدا نشد یا توکن به آن دسترسی ندارد', 'error'); return false; }
                 if (!res.ok) { if (!silent) showToast('❌ خطای گیت‌هاب: ' + res.status, 'error'); return false; }
+
+                // NOTE: fine-grained tokens report permissions.push === false even when
+                // Contents:write is granted, so that flag must NOT gate publishing.
+                // Reaching the repo is enough here; a failing write reports its own error.
                 const repo = await res.json();
-                if (!repo.permissions || !repo.permissions.push) {
-                    if (!silent) showToast('⚠️ توکن اجازه نوشتن (Contents: write) ندارد', 'warning');
-                    return false;
+                if (!silent) {
+                    const classic = repo.permissions && repo.permissions.push;
+                    showToast(classic
+                        ? '✅ اتصال برقرار است و دسترسی نوشتن تأیید شد'
+                        : '✅ اتصال به مخزن برقرار است', 'success');
                 }
-                if (!silent) showToast('✅ اتصال به گیت‌هاب برقرار است', 'success');
                 return true;
             } catch (e) {
                 if (!silent) showToast('❌ خطای شبکه در اتصال به گیت‌هاب', 'error');
@@ -1840,9 +1845,16 @@
             }
 
             if (!res.ok) {
-                let detail = res.status;
-                try { detail = (await res.json()).message || detail; } catch (e) {}
-                throw new Error(detail);
+                let detail = '';
+                try { detail = (await res.json()).message || ''; } catch (e) {}
+                const hint = {
+                    401: 'توکن نامعتبر یا منقضی است',
+                    403: 'توکن اجازه نوشتن ندارد (Contents: Read and write لازم است)',
+                    404: 'مسیر/شاخه پیدا نشد یا توکن به مخزن دسترسی ندارد',
+                    409: 'تداخل نسخه‌ها',
+                    422: 'داده نامعتبر یا شاخه اشتباه'
+                }[res.status];
+                throw new Error(`${res.status}${hint ? ' - ' + hint : ''}${detail ? ' (' + detail + ')' : ''}`);
             }
             const json = await res.json();
             if (json.content && json.content.sha) ghShas[filename] = json.content.sha;
@@ -1917,7 +1929,10 @@
 
             renderPublishLog(results);
 
-            if (errCount) showToast(`❌ ${errCount} فایل منتشر نشد`, 'error');
+            if (errCount) {
+                const first = results.find(r => r.state === 'err');
+                showToast(`❌ انتشار ناموفق: ${first ? first.error : errCount + ' فایل'}`, 'error');
+            }
             else if (okCount) showToast(`🚀 ${okCount} فایل روی سرور منتشر شد`, 'success');
             else showToast('✅ همه‌چیز از قبل به‌روز بود — چیزی برای انتشار نبود', 'info');
 
@@ -1928,6 +1943,7 @@
         function renderPublishLog(results) {
             const box = document.getElementById('publishLog');
             if (!box) return;
+            box.style.display = '';
             const icon = { ok: '✅', skip: '⏭️', err: '❌' };
             const word = { ok: 'منتشر شد', skip: 'بدون تغییر', err: 'خطا' };
             box.innerHTML = results.map(r =>

@@ -33,7 +33,11 @@ export function installDom({ protocol='https:', width=1280, height=800 } = {}){
   globalThis.TextEncoder = TextEncoder; globalThis.TextDecoder = TextDecoder;
   globalThis.btoa = s => Buffer.from(s,'binary').toString('base64');
   globalThis.atob = s => Buffer.from(s,'base64').toString('binary');
-  globalThis.URL = { createObjectURL:()=>'b', revokeObjectURL(){} };
+  // Keep the real URL constructor (fetch needs it); only add the blob helpers.
+  if (!globalThis.URL.createObjectURL) {
+    globalThis.URL.createObjectURL = () => 'blob:stub';
+    globalThis.URL.revokeObjectURL = () => {};
+  }
   globalThis.Blob = class { constructor(p){ this.p=p; } };
   globalThis.FileReader = class { readAsDataURL(){ this.onload&&this.onload(); } };
   globalThis.fetch = async () => ({ ok:false, status:404 });

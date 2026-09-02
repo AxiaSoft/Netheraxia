@@ -114,6 +114,19 @@ let exitCode = 0;
   A.cfg({ token:'good-token' });
   R.check('valid token accepted', (await A.test(true)) === true);
 
+  // Regression: GitHub reports permissions.push === false for fine-grained
+  // tokens even when Contents:write is granted. That flag must never gate
+  // publishing, otherwise nothing is ever committed.
+  const savedFetch = globalThis.fetch;
+  globalThis.fetch = async (url, opt={}) => {
+    if (/\/repos\/[^/]+\/[^/]+$/.test(url))
+      return { ok:true, status:200, json:async()=>({ permissions:{ push:false, pull:false } }) };
+    return savedFetch(url, opt);
+  };
+  R.check('fine-grained token (push:false) still connects', (await A.test(true)) === true);
+  globalThis.fetch = savedFetch;
+  R.check('and can still publish', (await A.publish('status')) !== false);
+
   R.check('first publish succeeds', (await A.publish()) === true);
   R.check('all 4 JSON files created',
     ['status','teams','rules','images'].every(f => !!repo[`data/${f}.json`]));
