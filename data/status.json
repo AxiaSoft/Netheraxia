@@ -1,14 +1,14 @@
 {
-  "status": "online",
-  "headline": "سیزن ۱ - در حال برگزاری",
-  "message": "سرور فعال است. برای عضویت در وایت‌لیست به دیسکورد مراجعه کنید.",
+  "status": "starting",
+  "headline": "آماده سازی سیزن ۲",
+  "message": "سرور بزودی شروع میشود. برای اطلاعات بیشتر در تلگرام به آی دی @HyraxMC پیغام دهید.",
   "javaAddress": "sv3.tgmc.ir:28416",
   "bedrockAddress": "sv3.tgmc.ir",
   "bedrockPort": "28416",
-  "version": "1.21.4",
-  "showConnectBtn": true,
-  "connectBtnText": "بزن بریم!",
+  "version": "26.3",
+  "showConnectBtn": false,
+  "connectBtnText": "بزن بریم",
   "showVersion": true,
   "showPanel": true,
-  "updatedAt": "۱۴۰۵/۰۶/۱۱, ۲۳:۰۵"
+  "updatedAt": "۱۴۰۵/۰۶/۱۲, ۰۲:۴۷"
 }
