@@ -1982,7 +1982,14 @@
             const errCount = results.filter(r => r.state === 'err').length;
 
             // Everything is published, so the local preview override is stale.
-            if (!errCount) localStorage.removeItem('nthx_preview');
+            if (!errCount) {
+                localStorage.removeItem('nthx_preview');
+                // Nudge any open site tab in this browser to refresh immediately
+                if (okCount) {
+                    try { localStorage.setItem('nthx_published_at', String(Date.now())); } catch(e) {}
+                    try { new BroadcastChannel('nthx_sync').postMessage('published'); } catch(e) {}
+                }
+            }
 
             renderPublishLog(results);
 

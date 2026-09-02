@@ -41,6 +41,7 @@ export function installDom({ protocol='https:', width=1280, height=800 } = {}){
   globalThis.Blob = class { constructor(p){ this.p=p; } };
   globalThis.FileReader = class { readAsDataURL(){ this.onload&&this.onload(); } };
   globalThis.fetch = async () => ({ ok:false, status:404 });
+  globalThis.BroadcastChannel = class { constructor(n){ this.name=n; } postMessage(){} close(){} };
   return { reg, store, gid, rootStyle };
 }
 

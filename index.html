@@ -1336,6 +1336,26 @@ function startLiveRefresh() {
     document.addEventListener('visibilitychange', () => { if (!document.hidden) tick(); });
     window.addEventListener('focus', tick);
     window.addEventListener('online', tick);
+
+    // Instant update when the admin panel publishes in this same browser:
+    // retry a few times because GitHub Pages needs a moment to rebuild.
+    const chaseUpdate = () => {
+        let tries = 0;
+        const chase = setInterval(async () => {
+            tries++;
+            let changed = false;
+            try { changed = await refreshFromServer(false); } catch(e) {}
+            if (changed || tries >= 12) clearInterval(chase);   // ~60s max
+        }, 5000);
+        tick();
+    };
+    try {
+        const bc = new BroadcastChannel('nthx_sync');
+        bc.onmessage = (e) => { if (e && e.data === 'published') chaseUpdate(); };
+    } catch(e) {}
+    window.addEventListener('storage', (e) => {
+        if (e.key === 'nthx_published_at') chaseUpdate();
+    });
 }
 
 // ==================== Render Server Status ====================
