@@ -670,6 +670,56 @@
             padding: 11px 18px; border: 1px dashed rgba(239,68,68,0.45);
             border-radius: var(--r-sm); background: rgba(239,68,68,0.07);
         }
+
+        /* ===== GitHub sync ===== */
+        .gh-pill {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 10px 16px; border-radius: var(--r-sm); cursor: pointer;
+            background: rgba(6,22,48,0.6); border: 1px solid var(--glass-border);
+            font-size: 12.5px; font-weight: 700; color: #9dc2ea; user-select: none;
+            transition: border-color 0.25s ease, transform 0.15s steps(2,end);
+        }
+        .gh-pill:hover { border-color: var(--accent); transform: translate(-1px,-1px); }
+        .gh-pill-dot {
+            width: 9px; height: 9px; border-radius: 2px; flex-shrink: 0;
+            background: var(--danger); box-shadow: 0 0 8px var(--danger);
+        }
+        .gh-pill.connected .gh-pill-dot { background: var(--success); box-shadow: 0 0 8px var(--success); }
+        .gh-pill.connected { color: #bfe3ff; }
+        .gh-pill.syncing .gh-pill-dot { background: var(--warning); box-shadow: 0 0 8px var(--warning); animation: dotBlink 0.8s steps(1,end) infinite; }
+
+        .gh-steps { counter-reset: ghstep; margin: 0 0 6px; }
+        .gh-step {
+            position: relative; padding: 0 34px 14px 0; counter-increment: ghstep;
+            font-size: 13px; color: #9dc2ea; line-height: 1.9;
+        }
+        .gh-step::before {
+            content: counter(ghstep); position: absolute; right: 0; top: 1px;
+            width: 24px; height: 24px; border-radius: var(--r-xs);
+            background: linear-gradient(180deg, var(--secondary), var(--primary));
+            color: #fff; font-weight: 900; font-size: 12px;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: inset 0 -2px 0 rgba(0,20,60,0.3);
+        }
+        .gh-step a { color: var(--accent); font-weight: 700; }
+        .gh-step code {
+            background: rgba(15,82,199,0.22); padding: 2px 7px; border-radius: var(--r-xs);
+            font-family: monospace; color: #cfe8ff; font-size: 12px; direction: ltr; display: inline-block;
+        }
+        .gh-warn {
+            background: rgba(245,158,11,0.09); border: 1px solid rgba(245,158,11,0.35);
+            border-radius: var(--r-sm); padding: 12px 15px; margin-bottom: 16px;
+            font-size: 12.5px; color: #ffd79a; line-height: 1.9;
+        }
+        .publish-log {
+            margin-top: 14px; padding: 12px 15px; border-radius: var(--r-sm);
+            background: rgba(3,12,28,0.75); border: 1px solid var(--glass-border);
+            font-size: 12.5px; line-height: 2; max-height: 190px; overflow-y: auto;
+        }
+        .publish-log:empty { display: none; }
+        .publish-log .ok   { color: var(--success); }
+        .publish-log .skip { color: #7ba3cc; }
+        .publish-log .err  { color: var(--danger); }
     </style>
 </head>
 <body>
@@ -685,10 +735,13 @@
         <div class="header">
             <div class="header-title">🛠️ پنل مدیریت Netheraxia</div>
             <div class="header-actions">
-                <button class="btn btn-primary" onclick="selectDataFolder()">📂 اتصال به پوشه data</button>
-                <button class="btn btn-success" onclick="saveAllToFiles()">💾 ذخیره همه</button>
-                <button class="btn btn-warning" onclick="downloadAllFiles()">📥 دانلود فایل‌ها</button>
-                <button class="btn btn-info" onclick="downloadStatusFile()">🖥️ دانلود status.json</button>
+                <span class="gh-pill" id="ghPill" onclick="openGitHubSettings()" title="تنظیمات اتصال به گیت‌هاب">
+                    <span class="gh-pill-dot" id="ghPillDot"></span>
+                    <span id="ghPillText">گیت‌هاب: متصل نیست</span>
+                </span>
+                <button class="btn btn-success" id="publishBtn" onclick="publishAll()">🚀 انتشار روی سرور</button>
+                <button class="btn btn-primary" onclick="openGitHubSettings()">⚙️ اتصال گیت‌هاب</button>
+                <button class="btn btn-outline btn-sm" onclick="openFallbackMenu()">📥 روش‌های دیگر</button>
             </div>
         </div>
 
@@ -728,15 +781,16 @@
                     <div class="card-title">🖥️ تنظیم وضعیت سرور</div>
                     <div style="display:flex; gap:8px; flex-wrap:wrap;">
                         <button class="btn btn-info btn-sm" onclick="resetStatusForm()">↩️ بازگردانی</button>
-                        <button class="btn btn-success" onclick="saveStatus()">💾 ذخیره وضعیت</button>
+                        <button class="btn btn-success" onclick="saveStatus()">💾 ذخیره و انتشار</button>
                     </div>
                 </div>
 
                 <div class="form-info">
-                    💡 پس از زدن «ذخیره وضعیت»، تغییر بلافاصله در مرورگر خودتان اعمال می‌شود.
-                    برای اینکه <b>همه بازیکنان</b> آن را ببینند، یکی از این کارها را انجام دهید:
-                    «📂 اتصال به پوشه data» (ذخیره مستقیم در فایل) یا «🖥️ دانلود status.json» و آپلود آن در پوشه <code>data/</code> سایت.
+                    💡 با زدن «ذخیره و انتشار»، تغییرات مستقیماً روی مخزن گیت‌هاب ثبت و ظرف چند ثانیه
+                    برای همه بازیکنان اعمال می‌شود — نیازی به دانلود و آپلود دستی فایل نیست.
+                    فقط یک‌بار باید از «⚙️ اتصال گیت‌هاب» توکن را وارد کنید.
                 </div>
+                <div class="publish-log" id="publishLog"></div>
 
                 <div class="form-group">
                     <label class="form-label">وضعیت فعلی سرور:</label>
@@ -1160,11 +1214,28 @@
             showToast('📥 فایل‌ها در حال دانلود', 'success');
         }
 
+        // When true, saveLocal() will not trigger a publish (used while pulling)
+        let suppressAutoPublish = false;
+        let autoPublishTimer = null;
+
         function saveLocal() {
             localStorage.setItem('nthx_teams', JSON.stringify(appData.teams));
             localStorage.setItem('nthx_rules', JSON.stringify(appData.rules));
             localStorage.setItem('nthx_images', JSON.stringify(appData.images));
             localStorage.setItem('nthx_status', JSON.stringify(appData.status));
+            scheduleAutoPublish();
+        }
+
+        // Debounced: a burst of edits results in a single commit
+        function scheduleAutoPublish() {
+            if (suppressAutoPublish) return;
+            if (typeof ghReady !== 'function' || !ghReady()) return;
+            if (ghConfig.autoPublish === false) return;
+            clearTimeout(autoPublishTimer);
+            updateGhPill('syncing', 'تغییرات ذخیره نشده...');
+            autoPublishTimer = setTimeout(() => {
+                if (!ghBusy) publishAll();
+            }, 2500);
         }
 
         function loadLocal() {
@@ -1637,6 +1708,355 @@
             }
         }
 
+        // ==================== GitHub Sync ====================
+        // Saves the JSON files straight into the repository through the GitHub
+        // Contents API, so the live site updates without downloading anything.
+        const GH_DEFAULTS = {
+            owner: 'AxiaSoft',
+            repo: 'Netheraxia',
+            branch: 'arena/01a0637e-netheraxia',
+            path: 'data',
+            token: ''
+        };
+
+        let ghConfig = Object.assign({}, GH_DEFAULTS);
+        let ghShas = {};        // remembers each file's blob sha for updates
+        let ghBusy = false;
+
+        function loadGhConfig() {
+            try {
+                const raw = localStorage.getItem('nthx_gh');
+                if (raw) ghConfig = Object.assign({}, GH_DEFAULTS, JSON.parse(raw));
+            } catch (e) {}
+        }
+
+        function saveGhConfig() {
+            localStorage.setItem('nthx_gh', JSON.stringify(ghConfig));
+        }
+
+        function ghReady() {
+            return !!(ghConfig.token && ghConfig.owner && ghConfig.repo && ghConfig.branch);
+        }
+
+        function ghFilePath(filename) {
+            const dir = (ghConfig.path || '').replace(/^\/+|\/+$/g, '');
+            return dir ? dir + '/' + filename : filename;
+        }
+
+        function updateGhPill(state, text) {
+            const pill = document.getElementById('ghPill');
+            const label = document.getElementById('ghPillText');
+            if (!pill || !label) return;
+            pill.classList.remove('connected', 'syncing');
+            if (state) pill.classList.add(state);
+            label.textContent = text;
+        }
+
+        function refreshGhPill() {
+            if (ghBusy) return;
+            if (ghReady()) updateGhPill('connected', `گیت‌هاب: ${ghConfig.owner}/${ghConfig.repo}`);
+            else updateGhPill('', 'گیت‌هاب: متصل نیست');
+        }
+
+        // UTF-8 safe base64 (btoa alone breaks on Persian text)
+        function utf8ToBase64(str) {
+            const bytes = new TextEncoder().encode(str);
+            let bin = '';
+            bytes.forEach(b => { bin += String.fromCharCode(b); });
+            return btoa(bin);
+        }
+        function base64ToUtf8(b64) {
+            const bin = atob(b64.replace(/\s/g, ''));
+            const bytes = Uint8Array.from(bin, c => c.charCodeAt(0));
+            return new TextDecoder().decode(bytes);
+        }
+
+        async function ghRequest(path, options = {}) {
+            const res = await fetch(`https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}${path}`, {
+                ...options,
+                headers: {
+                    'Accept': 'application/vnd.github+json',
+                    'Authorization': 'Bearer ' + ghConfig.token,
+                    'X-GitHub-Api-Version': '2022-11-28',
+                    ...(options.body ? { 'Content-Type': 'application/json' } : {})
+                }
+            });
+            return res;
+        }
+
+        async function ghTestConnection(silent) {
+            if (!ghReady()) { if (!silent) showToast('❌ ابتدا توکن گیت‌هاب را وارد کنید', 'error'); return false; }
+            try {
+                const res = await ghRequest('');
+                if (res.status === 401) { if (!silent) showToast('❌ توکن نامعتبر است یا منقضی شده', 'error'); return false; }
+                if (res.status === 404) { if (!silent) showToast('❌ مخزن پیدا نشد یا توکن دسترسی ندارد', 'error'); return false; }
+                if (!res.ok) { if (!silent) showToast('❌ خطای گیت‌هاب: ' + res.status, 'error'); return false; }
+                const repo = await res.json();
+                if (!repo.permissions || !repo.permissions.push) {
+                    if (!silent) showToast('⚠️ توکن اجازه نوشتن (Contents: write) ندارد', 'warning');
+                    return false;
+                }
+                if (!silent) showToast('✅ اتصال به گیت‌هاب برقرار است', 'success');
+                return true;
+            } catch (e) {
+                if (!silent) showToast('❌ خطای شبکه در اتصال به گیت‌هاب', 'error');
+                return false;
+            }
+        }
+
+        // Pull the current file (if any) to learn its sha and content
+        async function ghGetFile(filename) {
+            const res = await ghRequest(
+                `/contents/${encodeURIComponent(ghFilePath(filename))}?ref=${encodeURIComponent(ghConfig.branch)}`
+            );
+            if (res.status === 404) return { exists: false, sha: null, text: null };
+            if (!res.ok) throw new Error('GET ' + filename + ' → ' + res.status);
+            const json = await res.json();
+            ghShas[filename] = json.sha;
+            return { exists: true, sha: json.sha, text: json.content ? base64ToUtf8(json.content) : '' };
+        }
+
+        async function ghPutFile(filename, contentString, message) {
+            const body = {
+                message: message || `chore(data): update ${filename} via admin panel`,
+                content: utf8ToBase64(contentString),
+                branch: ghConfig.branch
+            };
+            if (ghShas[filename]) body.sha = ghShas[filename];
+
+            let res = await ghRequest(`/contents/${encodeURIComponent(ghFilePath(filename))}`, {
+                method: 'PUT',
+                body: JSON.stringify(body)
+            });
+
+            // Stale sha (someone else committed) → refetch once and retry
+            if (res.status === 409 || res.status === 422) {
+                const cur = await ghGetFile(filename);
+                if (cur.sha) body.sha = cur.sha; else delete body.sha;
+                res = await ghRequest(`/contents/${encodeURIComponent(ghFilePath(filename))}`, {
+                    method: 'PUT',
+                    body: JSON.stringify(body)
+                });
+            }
+
+            if (!res.ok) {
+                let detail = res.status;
+                try { detail = (await res.json()).message || detail; } catch (e) {}
+                throw new Error(detail);
+            }
+            const json = await res.json();
+            if (json.content && json.content.sha) ghShas[filename] = json.content.sha;
+            return json;
+        }
+
+        // Load every JSON straight from the repository
+        async function ghPullAll(silent) {
+            if (!ghReady()) return false;
+            let loaded = 0;
+            for (const [key, filename] of Object.entries(FILE_NAMES)) {
+                try {
+                    const f = await ghGetFile(filename);
+                    if (f.exists && f.text && f.text.trim()) {
+                        const json = JSON.parse(f.text);
+                        if (key === 'status') appData.status = Object.assign({}, DEFAULT_STATUS, json);
+                        else appData[key] = json;
+                        loaded++;
+                    }
+                } catch (e) {}
+            }
+            if (loaded) {
+                suppressAutoPublish = true;
+                saveLocal();
+                suppressAutoPublish = false;
+                renderAll(); updateStats();
+            }
+            if (!silent) showToast(loaded ? `✅ ${loaded} فایل از گیت‌هاب خوانده شد` : 'ℹ️ فایلی در مخزن یافت نشد', loaded ? 'success' : 'info');
+            return true;
+        }
+
+        // Publish everything that actually changed
+        async function publishAll(only) {
+            if (!ghReady()) {
+                showToast('⚠️ ابتدا اتصال گیت‌هاب را تنظیم کنید', 'warning');
+                openGitHubSettings();
+                return false;
+            }
+            if (ghBusy) { showToast('⏳ انتشار قبلی هنوز تمام نشده', 'info'); return false; }
+
+            ghBusy = true;
+            updateGhPill('syncing', 'در حال انتشار...');
+            const btn = document.getElementById('publishBtn');
+            if (btn) btn.disabled = true;
+
+            const keys = only ? [only] : Object.keys(FILE_NAMES);
+            const results = [];
+
+            for (const key of keys) {
+                const filename = FILE_NAMES[key];
+                const payload = JSON.stringify(appData[key], null, 2) + '\n';
+                try {
+                    const current = await ghGetFile(filename);
+                    if (current.exists && current.text === payload) {
+                        results.push({ filename, state: 'skip' });   // nothing changed
+                        continue;
+                    }
+                    await ghPutFile(filename, payload);
+                    results.push({ filename, state: 'ok' });
+                } catch (e) {
+                    results.push({ filename, state: 'err', error: e.message });
+                }
+            }
+
+            ghBusy = false;
+            if (btn) btn.disabled = false;
+            refreshGhPill();
+
+            const okCount = results.filter(r => r.state === 'ok').length;
+            const skipCount = results.filter(r => r.state === 'skip').length;
+            const errCount = results.filter(r => r.state === 'err').length;
+
+            renderPublishLog(results);
+
+            if (errCount) showToast(`❌ ${errCount} فایل منتشر نشد`, 'error');
+            else if (okCount) showToast(`🚀 ${okCount} فایل روی سرور منتشر شد`, 'success');
+            else showToast('✅ همه‌چیز از قبل به‌روز بود — چیزی برای انتشار نبود', 'info');
+
+            appData.__lastPublish = new Date().toISOString();
+            return errCount === 0;
+        }
+
+        function renderPublishLog(results) {
+            const box = document.getElementById('publishLog');
+            if (!box) return;
+            const icon = { ok: '✅', skip: '⏭️', err: '❌' };
+            const word = { ok: 'منتشر شد', skip: 'بدون تغییر', err: 'خطا' };
+            box.innerHTML = results.map(r =>
+                `<div class="${r.state}">${icon[r.state]} <code>${escHtml(r.filename)}</code> — ${word[r.state]}` +
+                (r.error ? `: ${escHtml(r.error)}` : '') + `</div>`
+            ).join('');
+        }
+
+        // ==================== GitHub settings modal ====================
+        function openGitHubSettings() {
+            const c = ghConfig;
+            openModal('⚙️ اتصال به گیت‌هاب', `
+                <div class="gh-warn">
+                    🔒 توکن فقط داخل مرورگر خودتان (localStorage) ذخیره می‌شود و هیچ‌جا ارسال نمی‌گردد.
+                    از رایانه عمومی استفاده نکنید و به توکن فقط دسترسی <b>Contents</b> بدهید.
+                </div>
+                <div class="gh-steps">
+                    <div class="gh-step">
+                        وارد <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">این صفحه</a> شوید
+                        و یک <b>Fine-grained token</b> بسازید.
+                    </div>
+                    <div class="gh-step">
+                        در بخش Repository access مخزن <code>${escHtml(c.owner)}/${escHtml(c.repo)}</code> را انتخاب کنید.
+                    </div>
+                    <div class="gh-step">
+                        در Permissions گزینه <code>Contents</code> را روی <b>Read and write</b> بگذارید.
+                    </div>
+                    <div class="gh-step">توکن ساخته‌شده را کپی و در کادر زیر بچسبانید.</div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">توکن دسترسی (Personal Access Token):</label>
+                    <input type="password" class="form-input" id="ghToken" placeholder="github_pat_..."
+                           value="${escHtml(c.token)}" style="direction:ltr; text-align:left; font-family:monospace;">
+                </div>
+                <div class="status-grid-2">
+                    <div class="form-group">
+                        <label class="form-label">مالک مخزن:</label>
+                        <input type="text" class="form-input" id="ghOwner" value="${escHtml(c.owner)}" style="direction:ltr; text-align:left;">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">نام مخزن:</label>
+                        <input type="text" class="form-input" id="ghRepo" value="${escHtml(c.repo)}" style="direction:ltr; text-align:left;">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">شاخه (branch):</label>
+                        <input type="text" class="form-input" id="ghBranch" value="${escHtml(c.branch)}" style="direction:ltr; text-align:left;">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">پوشه فایل‌ها:</label>
+                        <input type="text" class="form-input" id="ghPath" value="${escHtml(c.path)}" style="direction:ltr; text-align:left;">
+                    </div>
+                </div>
+                <div class="switch-row">
+                    <label for="ghAutoPublish">انتشار خودکار بعد از هر تغییر</label>
+                    <input type="checkbox" id="ghAutoPublish" ${ghConfig.autoPublish !== false ? 'checked' : ''}>
+                </div>
+                <div class="hint-text">با روشن بودن این گزینه، هر ذخیره در پنل مستقیماً روی سرور هم اعمال می‌شود.</div>
+                <div style="display:flex; gap:8px; margin-top:16px; flex-wrap:wrap;">
+                    <button class="btn btn-info btn-sm" onclick="testGhFromModal()">🔍 تست اتصال</button>
+                    <button class="btn btn-primary btn-sm" onclick="pullGhFromModal()">⬇️ خواندن از گیت‌هاب</button>
+                    <button class="btn btn-danger btn-sm" onclick="disconnectGh()">🚪 قطع اتصال</button>
+                </div>
+            `, () => {
+                readGhModal();
+                saveGhConfig();
+                refreshGhPill();
+                closeModal();
+                showToast('✅ تنظیمات گیت‌هاب ذخیره شد', 'success');
+                ghTestConnection(false);
+            });
+        }
+
+        function readGhModal() {
+            const v = id => (document.getElementById(id) || {}).value || '';
+            ghConfig.token  = v('ghToken').trim();
+            ghConfig.owner  = v('ghOwner').trim()  || GH_DEFAULTS.owner;
+            ghConfig.repo   = v('ghRepo').trim()   || GH_DEFAULTS.repo;
+            ghConfig.branch = v('ghBranch').trim() || GH_DEFAULTS.branch;
+            ghConfig.path   = v('ghPath').trim();
+            const auto = document.getElementById('ghAutoPublish');
+            ghConfig.autoPublish = auto ? auto.checked : true;
+            ghShas = {};   // config changed → sha cache is no longer valid
+        }
+
+        async function testGhFromModal() {
+            readGhModal(); saveGhConfig(); refreshGhPill();
+            await ghTestConnection(false);
+        }
+
+        async function pullGhFromModal() {
+            readGhModal(); saveGhConfig(); refreshGhPill();
+            if (!(await ghTestConnection(true))) { showToast('❌ ابتدا اتصال را درست کنید', 'error'); return; }
+            await ghPullAll(false);
+            closeModal();
+        }
+
+        function disconnectGh() {
+            ghConfig = Object.assign({}, GH_DEFAULTS);
+            ghShas = {};
+            localStorage.removeItem('nthx_gh');
+            refreshGhPill();
+            closeModal();
+            showToast('🚪 اتصال گیت‌هاب قطع شد', 'info');
+        }
+
+        // Called after every local save — publishes automatically when connected
+        async function autoPublish(only) {
+            if (!ghReady() || ghConfig.autoPublish === false) return false;
+            return await publishAll(only);
+        }
+
+        // ==================== Fallback (manual) methods ====================
+        function openFallbackMenu() {
+            openModal('📥 روش‌های دیگر ذخیره‌سازی', `
+                <div class="hint-text" style="margin-bottom:16px;">
+                    وقتی گیت‌هاب متصل است به این‌ها نیازی ندارید. این گزینه‌ها برای مواقعی است
+                    که می‌خواهید فایل‌ها را دستی جابه‌جا کنید یا سایت را روی هاست دیگری بالا آورده‌اید.
+                </div>
+                <div style="display:grid; gap:10px;">
+                    <button class="btn btn-primary" onclick="closeModal(); selectDataFolder()">📂 اتصال به پوشه data روی این کامپیوتر</button>
+                    <button class="btn btn-success" onclick="closeModal(); saveAllToFiles()">💾 ذخیره در پوشه متصل‌شده</button>
+                    <button class="btn btn-warning" onclick="closeModal(); downloadAllFiles()">📥 دانلود همه فایل‌ها</button>
+                    <button class="btn btn-info" onclick="closeModal(); downloadStatusFile()">🖥️ دانلود فقط status.json</button>
+                </div>
+            `, null);
+            const saveBtn = document.getElementById('modalSaveBtn');
+            if (saveBtn) saveBtn.style.display = 'none';
+        }
+
         // ==================== Server Status Management ====================
         function escHtml(v) {
             return String(v == null ? '' : v)
@@ -1779,13 +2199,20 @@
             saveLocal();
             updateStatusPreview();
 
-            // Try to persist straight into data/status.json when the folder is connected
+            // 1) Publish straight to the repository (the live site)
+            if (ghReady() && ghConfig.autoPublish !== false) {
+                showToast('🚀 در حال انتشار روی سرور...', 'info');
+                await publishAll('status');
+                return;
+            }
+            // 2) Local folder handle, if the user picked one
             if (fileHandles.status) {
                 const ok = await saveFileFromHandle('status');
-                showToast(ok ? '✅ وضعیت سرور در status.json ذخیره شد' : '⚠️ ذخیره در فایل ناموفق بود (فقط محلی ذخیره شد)', ok ? 'success' : 'warning');
-            } else {
-                showToast('✅ وضعیت ذخیره شد — برای انتشار، «اتصال به پوشه data» یا «دانلود فایل‌ها» را بزنید', 'success');
+                showToast(ok ? '✅ وضعیت در status.json ذخیره شد' : '⚠️ ذخیره در فایل ناموفق بود (فقط محلی ذخیره شد)', ok ? 'success' : 'warning');
+                return;
             }
+            // 3) Nothing connected yet
+            showToast('✅ ذخیره شد (محلی) — برای اعمال روی سایت، گیت‌هاب را متصل کنید', 'warning');
         }
 
         function downloadStatusFile() {
@@ -1833,21 +2260,41 @@
 
         // ==================== Init ====================
         async function init() {
+            suppressAutoPublish = true;
+            loadGhConfig();
             loadLocal();
             bindStatusInputs();
             renderAll();
             updateStats();
-            // Load the published JSON files (if the panel is served over http)
-            if (location.protocol === 'http:' || location.protocol === 'https:') {
+            refreshGhPill();
+
+            // Prefer the repository as the source of truth, then fall back to
+            // the JSON files served next to this page.
+            if (ghReady()) {
+                if (await ghTestConnection(true)) {
+                    await ghPullAll(true);
+                    updateGhPill('connected', `گیت‌هاب: ${ghConfig.owner}/${ghConfig.repo}`);
+                } else {
+                    updateGhPill('', 'گیت‌هاب: توکن نامعتبر');
+                }
+            } else if (location.protocol === 'http:' || location.protocol === 'https:') {
                 await loadFromHttp();
                 renderAll();
                 updateStats();
             }
+            suppressAutoPublish = false;
         }
 
         // ذخیره خودکار قبل از بستن صفحه
-        window.addEventListener('beforeunload', () => {
+        window.addEventListener('beforeunload', (e) => {
+            suppressAutoPublish = true;
             saveLocal();
+            suppressAutoPublish = false;
+            // Warn if a debounced publish is still pending
+            if (autoPublishTimer && ghReady() && ghConfig.autoPublish !== false) {
+                e.preventDefault();
+                e.returnValue = '';
+            }
         });
 
         window.addEventListener('load', init);
