@@ -649,9 +649,27 @@
         }
         .preview-note:empty { display: none; }
 
-        .players-row { display: flex; align-items: center; gap: 10px; }
-        .players-row .form-input { text-align: center; }
         .hint-text { font-size: 12px; color: #7ba3cc; margin-top: 6px; line-height: 1.8; }
+
+        .section-divider {
+            display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+            font-size: 15px; font-weight: 800; color: var(--accent);
+            margin: 26px 0 16px; padding-bottom: 10px;
+            border-bottom: 1px solid var(--glass-border);
+        }
+        .section-divider span { font-size: 11.5px; font-weight: 500; color: #7ba3cc; }
+        .preview-connect-btn {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 12px 30px; border-radius: var(--r-md);
+            background: linear-gradient(180deg, #6fb8ff, #0f52c7);
+            color: #fff; font-weight: 800; font-size: 14px;
+            box-shadow: 4px 4px 0 rgba(2,12,32,0.5), inset 0 -3px 0 rgba(0,20,60,0.3);
+        }
+        .preview-btn-hidden {
+            display: none; font-size: 12.5px; color: var(--danger); font-weight: 700;
+            padding: 11px 18px; border: 1px dashed rgba(239,68,68,0.45);
+            border-radius: var(--r-sm); background: rgba(239,68,68,0.07);
+        }
     </style>
 </head>
 <body>
@@ -694,9 +712,9 @@
                     <div class="status-updated" id="statusUpdatedAt">هنوز ذخیره نشده</div>
                 </div>
                 <div class="status-current">
-                    <div class="status-current-label">PLAYERS ONLINE</div>
-                    <div class="status-current-value" id="statusPlayersSummary">0 / 60</div>
-                    <div class="status-updated">تعداد بازیکنان نمایش داده شده در سایت</div>
+                    <div class="status-current-label">CONNECT BUTTON</div>
+                    <div class="status-current-value" style="font-size:17px;" id="statusBtnSummary">✅ نمایش داده می‌شود</div>
+                    <div class="status-updated">وضعیت دکمه «بزن بریم» در صفحه اصلی</div>
                 </div>
                 <div class="status-current">
                     <div class="status-current-label">SERVER ADDRESS</div>
@@ -736,10 +754,13 @@
                     <textarea class="form-textarea" id="statusMessage" rows="3" placeholder="مثال: سرور تا ساعت ۲۰ برای بروزرسانی در حال تعمیر است."></textarea>
                 </div>
 
+                <div class="section-divider">🔌 آدرس سرور <span>(فقط داخل پنجره «بزن بریم» نمایش داده می‌شود)</span></div>
+
                 <div class="status-grid-2">
                     <div class="form-group">
                         <label class="form-label">آدرس جاوا ادیشن:</label>
                         <input type="text" class="form-input" id="statusJava" placeholder="sv3.tgmc.ir:28416" style="direction:ltr; text-align:left;">
+                        <div class="hint-text">شامل پورت. لینک ورود مستقیم هم از همین ساخته می‌شود.</div>
                     </div>
                     <div class="form-group">
                         <label class="form-label">آدرس بدراک ادیشن:</label>
@@ -752,21 +773,30 @@
                     <div class="form-group">
                         <label class="form-label">نسخه سرور:</label>
                         <input type="text" class="form-input" id="statusVersion" placeholder="1.21.4" style="direction:ltr; text-align:left;">
+                        <div class="hint-text">تنها موردی است که در صفحه اصلی نمایش داده می‌شود.</div>
                     </div>
+                </div>
+
+                <div class="section-divider">🎮 دکمه «بزن بریم»</div>
+
+                <div class="switch-row">
+                    <label for="statusShowConnectBtn">نمایش دکمه «بزن بریم» در صفحه اصلی</label>
+                    <input type="checkbox" id="statusShowConnectBtn" checked>
+                </div>
+                <div class="hint-text" style="margin:-4px 0 14px;">
+                    وقتی سرور آفلاین یا در حال تعمیر است این کلید را خاموش کنید تا دکمه اتصال کاملاً برداشته شود.
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">تعداد بازیکنان:</label>
-                    <div class="players-row">
-                        <input type="number" min="0" class="form-input" id="statusPlayersOnline" placeholder="آنلاین">
-                        <span style="color:var(--accent); font-weight:800;">/</span>
-                        <input type="number" min="0" class="form-input" id="statusMaxPlayers" placeholder="ظرفیت">
-                    </div>
+                    <label class="form-label">متن روی دکمه:</label>
+                    <input type="text" class="form-input" id="statusConnectBtnText" placeholder="بزن بریم!">
                 </div>
 
+                <div class="section-divider">👁️ نمایش در سایت</div>
+
                 <div class="switch-row">
-                    <label for="statusShowPlayers">نمایش تعداد بازیکنان در سایت</label>
-                    <input type="checkbox" id="statusShowPlayers" checked>
+                    <label for="statusShowVersion">نمایش نسخه سرور در صفحه اصلی</label>
+                    <input type="checkbox" id="statusShowVersion" checked>
                 </div>
                 <div class="switch-row">
                     <label for="statusShowPanel">نمایش کل پنل وضعیت در صفحه اصلی</label>
@@ -781,6 +811,10 @@
                     </div>
                     <div class="preview-note" id="previewNote"></div>
                     <div class="preview-meta" id="previewMeta"></div>
+                    <div style="margin-top:16px;">
+                        <span class="preview-connect-btn" id="previewConnectBtn">🎮 بزن بریم!</span>
+                        <span class="preview-btn-hidden" id="previewBtnHidden">🚫 دکمه اتصال در سایت نمایش داده نمی‌شود</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -850,9 +884,9 @@
             bedrockAddress: 'sv3.tgmc.ir',
             bedrockPort: '19132',
             version: '1.21',
-            playersOnline: 0,
-            maxPlayers: 60,
-            showPlayers: true,
+            showConnectBtn: true,
+            connectBtnText: 'بزن بریم!',
+            showVersion: true,
             showPanel: true,
             updatedAt: ''
         };
@@ -1634,10 +1668,6 @@
         }
 
         function readStatusForm() {
-            const num = (id, def) => {
-                const v = parseInt(document.getElementById(id).value, 10);
-                return isNaN(v) || v < 0 ? def : v;
-            };
             return {
                 status: selectedStatus,
                 headline: document.getElementById('statusHeadline').value.trim(),
@@ -1646,9 +1676,9 @@
                 bedrockAddress: document.getElementById('statusBedrock').value.trim(),
                 bedrockPort: document.getElementById('statusBedrockPort').value.trim(),
                 version: document.getElementById('statusVersion').value.trim(),
-                playersOnline: num('statusPlayersOnline', 0),
-                maxPlayers: num('statusMaxPlayers', 0),
-                showPlayers: document.getElementById('statusShowPlayers').checked,
+                showConnectBtn: document.getElementById('statusShowConnectBtn').checked,
+                connectBtnText: document.getElementById('statusConnectBtnText').value.trim() || 'بزن بریم!',
+                showVersion: document.getElementById('statusShowVersion').checked,
                 showPanel: document.getElementById('statusShowPanel').checked,
                 updatedAt: appData.status.updatedAt || ''
             };
@@ -1663,9 +1693,9 @@
             document.getElementById('statusBedrock').value = st.bedrockAddress || '';
             document.getElementById('statusBedrockPort').value = st.bedrockPort || '';
             document.getElementById('statusVersion').value = st.version || '';
-            document.getElementById('statusPlayersOnline').value = st.playersOnline ?? 0;
-            document.getElementById('statusMaxPlayers').value = st.maxPlayers ?? 0;
-            document.getElementById('statusShowPlayers').checked = st.showPlayers !== false;
+            document.getElementById('statusConnectBtnText').value = st.connectBtnText || 'بزن بریم!';
+            document.getElementById('statusShowConnectBtn').checked = st.showConnectBtn !== false;
+            document.getElementById('statusShowVersion').checked = st.showVersion !== false;
             document.getElementById('statusShowPanel').checked = st.showPanel !== false;
             renderStatusOptions();
             updateStatusPreview();
@@ -1687,11 +1717,10 @@
             const curText = document.getElementById('statusCurrentText');
             if (curText) curText.textContent = p.icon + ' ' + p.label;
 
-            const playersSummary = document.getElementById('statusPlayersSummary');
-            if (playersSummary) {
-                playersSummary.textContent = st.showPlayers
-                    ? `${st.playersOnline} / ${st.maxPlayers}`
-                    : 'مخفی';
+            const btnSummary = document.getElementById('statusBtnSummary');
+            if (btnSummary) {
+                btnSummary.textContent = st.showConnectBtn ? '✅ نمایش داده می‌شود' : '🚫 مخفی است';
+                btnSummary.style.color = st.showConnectBtn ? 'var(--success)' : 'var(--danger)';
             }
 
             const addrSummary = document.getElementById('statusAddrSummary');
@@ -1710,17 +1739,23 @@
             const note = document.getElementById('previewNote');
             if (note) note.textContent = st.message || '';
 
+            // Only the version is shown on the site itself; addresses stay in the modal
             const meta = document.getElementById('previewMeta');
             if (meta) {
                 const items = [];
-                if (st.javaAddress) items.push(['Java Edition', st.javaAddress]);
-                if (st.bedrockAddress) items.push(['Bedrock Edition', st.bedrockPort ? st.bedrockAddress + ':' + st.bedrockPort : st.bedrockAddress]);
-                if (st.version) items.push(['نسخه', st.version]);
-                if (st.showPlayers) items.push(['بازیکن آنلاین', st.playersOnline + ' / ' + st.maxPlayers]);
+                if (st.showVersion && st.version) items.push(['نسخه سرور', st.version]);
                 meta.innerHTML = items.map(([l, v]) =>
                     `<div class="preview-meta-item"><div class="preview-meta-label">${escHtml(l)}</div><div class="preview-meta-value">${escHtml(v)}</div></div>`
                 ).join('');
             }
+
+            const btnPreview = document.getElementById('previewConnectBtn');
+            if (btnPreview) {
+                btnPreview.style.display = st.showConnectBtn ? '' : 'none';
+                btnPreview.textContent = '🎮 ' + (st.connectBtnText || 'بزن بریم!');
+            }
+            const btnHidden = document.getElementById('previewBtnHidden');
+            if (btnHidden) btnHidden.style.display = st.showConnectBtn ? 'none' : '';
         }
 
         function faNow() {
@@ -1765,11 +1800,11 @@
 
         function bindStatusInputs() {
             ['statusHeadline','statusMessage','statusJava','statusBedrock','statusBedrockPort',
-             'statusVersion','statusPlayersOnline','statusMaxPlayers'].forEach(id => {
+             'statusVersion','statusConnectBtnText'].forEach(id => {
                 const el = document.getElementById(id);
                 if (el) el.addEventListener('input', updateStatusPreview);
             });
-            ['statusShowPlayers','statusShowPanel'].forEach(id => {
+            ['statusShowConnectBtn','statusShowVersion','statusShowPanel'].forEach(id => {
                 const el = document.getElementById(id);
                 if (el) el.addEventListener('change', updateStatusPreview);
             });

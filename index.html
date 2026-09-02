@@ -738,7 +738,7 @@
                 </div>
 
                 <button class="connect-btn" id="connectBtn">
-                    <span class="connect-btn-icon">🎮</span>بزن بریم!
+                    <span class="connect-btn-icon">🎮</span><span id="connectBtnLabel">بزن بریم!</span>
                 </button>
                 <div class="stats-row" id="homeStats" style="margin-top:36px;"></div>
             </div>
@@ -1250,9 +1250,9 @@ let statusData = {
     bedrockAddress: 'sv3.tgmc.ir',
     bedrockPort: '19132',
     version: '1.21',
-    playersOnline: 0,
-    maxPlayers: 60,
-    showPlayers: true,
+    showConnectBtn: true,        // show/hide the "بزن بریم!" button
+    connectBtnText: 'بزن بریم!',
+    showVersion: true,
     showPanel: true,
     updatedAt: ''
 };
@@ -1307,29 +1307,26 @@ function renderServerStatus() {
     const panel = document.getElementById('serverPanel');
     if (panel) panel.style.display = (statusData.showPanel === false) ? 'none' : '';
 
+    // Version is the only meta shown on the page — server addresses live
+    // inside the connect modal only.
     const meta = document.getElementById('serverMeta');
     if (meta) {
         const items = [];
-        if (statusData.javaAddress)
-            items.push({ label: 'Java Edition', value: statusData.javaAddress, mono: true });
-        if (statusData.bedrockAddress) {
-            const bed = statusData.bedrockPort
-                ? statusData.bedrockAddress + ':' + statusData.bedrockPort
-                : statusData.bedrockAddress;
-            items.push({ label: 'Bedrock Edition', value: bed, mono: true });
-        }
-        if (statusData.version)
-            items.push({ label: 'نسخه', value: statusData.version, mono: true });
-        if (statusData.showPlayers !== false)
-            items.push({
-                label: 'بازیکن آنلاین',
-                value: (statusData.playersOnline || 0) + ' / ' + (statusData.maxPlayers || 0),
-                mono: true
-            });
+        if (statusData.showVersion !== false && statusData.version)
+            items.push({ label: 'نسخه سرور', value: statusData.version, mono: true });
         meta.innerHTML = items.map(i =>
             '<div class="server-meta-item"><div class="server-meta-label">' + esc(i.label) + '</div>' +
             '<div class="server-meta-value' + (i.mono ? ' mono' : '') + '">' + esc(i.value) + '</div></div>'
         ).join('');
+        meta.style.display = items.length ? '' : 'none';
+    }
+
+    // Connect button: can be hidden from the admin panel (e.g. when offline)
+    const cBtn = document.getElementById('connectBtn');
+    if (cBtn) {
+        cBtn.style.display = (statusData.showConnectBtn === false) ? 'none' : '';
+        const lbl = document.getElementById('connectBtnLabel');
+        if (lbl) lbl.textContent = statusData.connectBtnText || 'بزن بریم!';
     }
 
     // Keep the connect modal in sync with the addresses set in the admin panel
@@ -1631,7 +1628,11 @@ const modalOverlay = document.getElementById('connectModal');
 const modalClose = document.getElementById('modalClose');
 const connectBtn = document.getElementById('connectBtn');
 
-function openModal() { if (modalOverlay) modalOverlay.classList.add('active'); }
+function openModal() {
+    // Respect the admin switch: no connect modal when the button is disabled
+    if (statusData.showConnectBtn === false) return;
+    if (modalOverlay) modalOverlay.classList.add('active');
+}
 function closeModal() { if (modalOverlay) modalOverlay.classList.remove('active'); }
 
 if (connectBtn) connectBtn.addEventListener('click', openModal);
