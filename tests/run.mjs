@@ -1,4 +1,5 @@
 import { installDom, loadPage, reporter, makeEl } from './harness.mjs';
+import { readFileSync } from 'node:fs';
 const R = reporter();
 let exitCode = 0;
 
@@ -70,6 +71,8 @@ let exitCode = 0;
     'teams.json' : { teams: [] },
     'rules.json' : { rules: [] },
     'status.json': { status:'online', headline:'اولیه', version:'1.21' },
+    'texts.json' : { teamsLabel:'⚔️ تیم‌ها', teamsTitle:'تیم‌های تشکیل شده', teamsSubtitle:'',
+                     rulesLabel:'📜 قوانین', rulesTitle:'قوانین رسمی سرور', rulesSubtitle:'' },
   };
   const seen = [];
   globalThis.fetch = async (url, opt={}) => {
@@ -80,11 +83,12 @@ let exitCode = 0;
   };
 
   const S = loadPage('index.html', `globalThis.__X={load:loadData,refresh:refreshFromServer,
-    imgs:()=>imagesData, status:()=>statusData, render:renderServerStatus, sig:dataSignature}`);
+    imgs:()=>imagesData, status:()=>statusData, render:renderServerStatus, sig:dataSignature,
+    texts:()=>textsData, renderTexts:renderSectionTexts}`);
 
   R.section('H. cache-busting');
   await S.load();
-  R.check('all four files requested', ['images','teams','rules','status']
+  R.check('all five files requested', ['images','teams','rules','status','texts']
     .every(n => seen.some(s => s.url.includes(n + '.json'))));
   R.check('every request sends cache:no-store', seen.every(s => s.cache === 'no-store'));
   R.check('every request is cache-busted with ?v=', seen.every(s => /\?v=\d+/.test(s.url)));
@@ -113,6 +117,38 @@ let exitCode = 0;
   store['nthx_preview'] = '1';                  // the admin, mid-edit
   await S.load();
   R.check('admin still sees their own preview', S.status().headline === 'پیش‌نمایش ادمین');
+
+  R.section('L. editable section texts');
+  delete store['nthx_status']; delete store['nthx_preview'];
+  await S.load();
+  // The whole point of round 7: these two strings must never be baked in.
+  const raw = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  R.check('teams subtitle not hardcoded in index.html', !raw.includes('حداکثر ۱۰ نفر در هر تیم'));
+  R.check('rules subtitle not hardcoded in index.html', !raw.includes('مقررات سیزن ۱'));
+  R.check('empty subtitle stays hidden', reg['teamsSubtitle'].style.display === 'none');
+  R.check('empty rules subtitle stays hidden', reg['rulesSubtitle'].style.display === 'none');
+  R.check('titles come from texts.json', reg['teamsTitle'].textContent === 'تیم‌های تشکیل شده');
+
+  served['texts.json'] = { teamsLabel:'⚔️ گروه‌ها', teamsTitle:'لیست تیم‌ها',
+    teamsSubtitle:'حداکثر ۸ نفر', rulesLabel:'📜 قواعد', rulesTitle:'قوانین',
+    rulesSubtitle:'سیزن ۲' };
+  const textsChanged = await S.refresh(false);
+  R.check('text edits picked up live', textsChanged === true);
+  R.check('new title rendered', reg['teamsTitle'].textContent === 'لیست تیم‌ها');
+  R.check('subtitle reappears when set', reg['teamsSubtitle'].textContent === 'حداکثر ۸ نفر');
+  R.check('subtitle becomes visible again', reg['teamsSubtitle'].style.display !== 'none');
+  R.check('rules subtitle editable too', reg['rulesSubtitle'].textContent === 'سیزن ۲');
+
+  served['texts.json'] = { teamsSubtitle:'' , teamsTitle:'لیست تیم‌ها' };
+  await S.refresh(false);
+  R.check('clearing a subtitle hides it again', reg['teamsSubtitle'].style.display === 'none');
+  R.check('missing keys fall back to defaults', reg['rulesTitle'].textContent === 'قوانین رسمی سرور');
+
+  const escaped = '<img src=x onerror=alert(1)>';
+  served['texts.json'] = { teamsTitle: escaped };
+  await S.refresh(false);
+  R.check('text is inserted safely, not as HTML',
+    reg['teamsTitle'].textContent === escaped && !reg['teamsTitle'].innerHTML);
 }
 
 /* ============ E. ADMIN: form + GitHub sync ============ */
@@ -144,7 +180,9 @@ let exitCode = 0;
     tab:switchTab,cfg:o=>Object.assign(ghConfig,o),getCfg:()=>ghConfig,ready:ghReady,
     test:ghTestConnection,pull:ghPullAll,publish:publishAll,put:ghPutFile,
     setSha:(f,v)=>{ghShas[f]=v},b64:utf8ToBase64,unb64:base64ToUtf8,
-    data:()=>appData,saveLocal,dl:downloadStatusFile,getCfg:()=>ghConfig}`);
+    data:()=>appData,saveLocal,dl:downloadStatusFile,getCfg:()=>ghConfig,
+    saveTexts,fillTexts:fillTextsForm,readTexts:readTextsForm,bindTexts:bindTextsInputs,
+    restoreDefaults:restoreDefaultTexts,defaults:()=>DEFAULT_TEXTS}`);
 
   R.section('E. admin status form');
   A.bind(); A.fill();
@@ -235,9 +273,35 @@ let exitCode = 0;
   await A.saveLogo();
   R.check('unchanged logo makes no commit', calls.filter(c=>c.method==='PUT').length === 0);
 
+  R.section('M. admin texts tab');
+  A.cfg({ token:'good-token' });
+  A.bindTexts(); A.fillTexts();
+  R.check('form loads current texts', gid('txtTeamsTitle').value === 'تیم‌های تشکیل شده');
+  R.check('subtitles default to empty', gid('txtTeamsSubtitle').value === '');
+  gid('txtTeamsSubtitle').value = 'حداکثر ۸ نفر';
+  gid('txtRulesTitle').value = 'قوانین سیزن ۲';
+  calls = [];
+  await A.saveTexts();
+  const textPuts = calls.filter(c => c.method === 'PUT');
+  R.check('saveTexts publishes to the repo', textPuts.length === 1);
+  R.check('it writes texts.json', textPuts[0] && textPuts[0].url.includes('texts.json'));
+  const committed = JSON.parse(repo['data/texts.json'].content);
+  R.check('subtitle committed', committed.teamsSubtitle === 'حداکثر ۸ نفر');
+  R.check('title committed', committed.rulesTitle === 'قوانین سیزن ۲');
+  R.check('all six keys present',
+    ['teamsLabel','teamsTitle','teamsSubtitle','rulesLabel','rulesTitle','rulesSubtitle']
+      .every(k => k in committed));
+  gid('txtTeamsSubtitle').value = '   ';
+  await A.saveTexts();
+  R.check('whitespace-only subtitle stored as empty',
+    JSON.parse(repo['data/texts.json'].content).teamsSubtitle === '');
+  A.restoreDefaults();
+  R.check('restore defaults refills the form', gid('txtTeamsTitle').value === 'تیم‌های تشکیل شده');
+  R.check('restored subtitles are empty', gid('txtTeamsSubtitle').value === '');
+
   R.section('G. tabs');
   let threw = null;
-  try { ['status','teams','rules','images'].forEach(t => A.tab(t, makeEl('b'))); } catch(e){ threw = e; }
+  try { ['status','teams','rules','texts','images'].forEach(t => A.tab(t, makeEl('b'))); } catch(e){ threw = e; }
   R.check('all tabs switch without error', !threw);
 }
 

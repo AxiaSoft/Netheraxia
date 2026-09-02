@@ -749,9 +749,9 @@
         <div id="teams" class="section">
             <div class="section-inner">
                 <div class="section-header">
-                    <div class="section-label">⚔️ تیم‌ها</div>
-                    <h2 class="section-title">تیم‌های تشکیل شده</h2>
-                    <p class="section-subtitle">حداکثر ۱۰ نفر در هر تیم</p>
+                    <div class="section-label" id="teamsLabel">⚔️ تیم‌ها</div>
+                    <h2 class="section-title" id="teamsTitle">تیم‌های تشکیل شده</h2>
+                    <p class="section-subtitle" id="teamsSubtitle" style="display:none;"></p>
                 </div>
                 <div class="stats-row" id="teamsStats" style="margin-top:0;margin-bottom:36px;"></div>
                 <div class="teams-grid" id="teamsGrid"></div>
@@ -763,9 +763,9 @@
         <div id="rules" class="section">
             <div class="section-inner">
                 <div class="section-header">
-                    <div class="section-label">📜 قوانین</div>
-                    <h2 class="section-title">قوانین رسمی سرور</h2>
-                    <p class="section-subtitle">مقررات سیزن ۱</p>
+                    <div class="section-label" id="rulesLabel">📜 قوانین</div>
+                    <h2 class="section-title" id="rulesTitle">قوانین رسمی سرور</h2>
+                    <p class="section-subtitle" id="rulesSubtitle" style="display:none;"></p>
                 </div>
                 <div class="rules-feed" id="rulesContent"></div>
             </div>
@@ -1242,6 +1242,18 @@ const STATUS_PRESETS = {
     starting:    { label: 'در حال راه‌اندازی', color: '#a855f7', ring: 'rgba(168,85,247,0.65)', icon: '⏳' }
 };
 
+// Section headings, editable from the admin panel (data/texts.json).
+// Subtitles default to empty so nothing is shown unless it is set.
+const DEFAULT_TEXTS = Object.freeze({
+    teamsLabel: '⚔️ تیم‌ها',
+    teamsTitle: 'تیم‌های تشکیل شده',
+    teamsSubtitle: '',
+    rulesLabel: '📜 قوانین',
+    rulesTitle: 'قوانین رسمی سرور',
+    rulesSubtitle: ''
+});
+let textsData = Object.assign({}, DEFAULT_TEXTS);
+
 let statusData = {
     status: 'online',
     headline: 'سیزن ۱ - در حال برگزاری',
@@ -1282,7 +1294,7 @@ async function fetchJson(file) {
 function dataSignature() {
     return JSON.stringify([
         imagesData && imagesData.logo ? imagesData.logo.length + ':' + imagesData.logo.slice(-24) : '',
-        statusData, teamsData, rulesData
+        statusData, teamsData, rulesData, textsData
     ]);
 }
 
@@ -1291,6 +1303,7 @@ async function loadData() {
     try { teamsData  = await fetchJson('teams.json'); } catch(e) {}
     try { rulesData  = await fetchJson('rules.json'); } catch(e) {}
     try { statusData = Object.assign({}, statusData, await fetchJson('status.json')); } catch(e) {}
+    try { textsData  = Object.assign({}, DEFAULT_TEXTS, await fetchJson('texts.json')); } catch(e) {}
 
     // Admin preview override: only for whoever is actually editing in this
     // browser, and only until the published file catches up. It must never
@@ -1694,9 +1707,25 @@ function renderRules() {
     el.innerHTML = rulesData.rules.map((rule, i) => `<div class="rule-card"><div class="rule-card-title"><span class="rule-card-num">${i+1}</span>${rule.title}</div>${rule.items ? rule.items.map(item => `<div class="rule-item">${item}</div>`).join('') : ''}</div>`).join('');
 }
 
+function renderSectionTexts() {
+    const apply = (id, value, hideWhenEmpty) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const text = (value == null ? '' : String(value)).trim();
+        el.textContent = text;
+        if (hideWhenEmpty) el.style.display = text ? '' : 'none';
+    };
+    apply('teamsLabel',    textsData.teamsLabel,    true);
+    apply('teamsTitle',    textsData.teamsTitle,    true);
+    apply('teamsSubtitle', textsData.teamsSubtitle, true);
+    apply('rulesLabel',    textsData.rulesLabel,    true);
+    apply('rulesTitle',    textsData.rulesTitle,    true);
+    apply('rulesSubtitle', textsData.rulesSubtitle, true);
+}
+
 function renderAll() {
     const stats = calcStats(); renderStats('homeStats', stats); renderStats('teamsStats', stats);
-    renderTeams(); renderRules(); renderServerStatus();
+    renderTeams(); renderRules(); renderServerStatus(); renderSectionTexts();
 }
 
 // ==================== Modal ====================
