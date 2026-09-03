@@ -1,16 +1,5 @@
-/* ============================================================================
- * Netheraxia — تنظیمات اتصال به Supabase
- *
- * دو مقدار زیر را از داشبورد Supabase بردارید:
- *     Project Settings → API → Project URL   و   anon public key
- *
- * این دو مقدار عمومی‌اند و افشایشان خطری ندارد؛ امنیت واقعی با RLS
- * در فایل supabase/schema.sql تأمین می‌شود.
- *
- * راه دوم (بدون ویرایش این فایل): در پنل مدیریت → تب «بازیکنان و تیم‌ها»
- * همین دو مقدار را وارد و روی «ذخیره و انتشار» بزنید.
- * ==========================================================================*/
+/* ساخته‌شده توسط پنل مدیریت Netheraxia — دستی ویرایش نکنید */
 window.NETHERAXIA_SUPABASE = {
-    url: '',
-    anonKey: ''
+    url: "https://wpfaovzrmxyajcgbbhku.supabase.co",
+    anonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndwZmFvdnpybXh5YWpjZ2JiaGt1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg0NTk3NTcsImV4cCI6MjEwNDAzNTc1N30.L2dlTwe20gRBwxXjCBufZQQFfZH08ZnFiWIa01PlOEw"
 };
