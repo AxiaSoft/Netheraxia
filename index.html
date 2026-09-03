@@ -865,6 +865,36 @@
             background: rgba(var(--accent-rgb), 0.18);
             border: 1px solid var(--border-accent); color: var(--accent-light);
         }
+
+        .flag-row { display: flex; gap: 13px; align-items: flex-start; }
+        .flag-preview {
+            width: 74px; height: 74px; flex-shrink: 0; border-radius: var(--r-sm);
+            background: var(--bg-chip); border: 1px dashed var(--border-accent);
+            display: grid; place-items: center; font-size: 30px; overflow: hidden;
+        }
+        .flag-preview img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .flag-actions { flex: 1; min-width: 0; }
+        .flag-btn {
+            width: 100%; padding: 9px 12px; margin-bottom: 6px; cursor: pointer;
+            border-radius: var(--r-sm); border: 1px solid var(--border-accent);
+            background: rgba(var(--accent-rgb), 0.12); color: var(--accent-light);
+            font-family: inherit; font-size: 12.5px; font-weight: 700;
+        }
+        .flag-btn:hover { background: rgba(var(--accent-rgb), 0.2); }
+        .flag-btn.ghost {
+            background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.35); color: #fca5a5;
+        }
+        .flag-btn:disabled { opacity: .55; cursor: not-allowed; }
+        .team-flag-img {
+            width: 26px; height: 26px; border-radius: var(--r-xs);
+            object-fit: cover; display: block; flex-shrink: 0;
+        }
+
+        .auth-chip.logged-in { border-color: var(--border-accent); }
+        .auth-chip.logged-in .auth-chip-avatar {
+            background: linear-gradient(135deg, #16a34a, #22c55e);
+        }
+        .auth-chip-avatar { font-size: 13px; line-height: 1; }
     </style>
 </head>
 <body>
@@ -902,8 +932,8 @@
     <button class="bg-switch" id="bgSwitch" title="تغییر پس‌زمینه سه‌بعدی">
         <span id="bgSwitchIcon">🧊</span>
     </button>
-    <button class="auth-chip" id="authChip" style="display:none;" title="حساب کاربری">
-        <span class="auth-chip-avatar" id="authAvatar">?</span>
+    <button class="auth-chip" id="authChip" title="ورود / ثبت‌نام">
+        <span class="auth-chip-avatar" id="authAvatar">🔑</span>
         <span class="auth-chip-label" id="authChipLabel">ورود</span>
     </button>
 </div>
@@ -1129,8 +1159,21 @@
             <input type="text" id="teamDesc" placeholder="تیم ما اهل ساخت‌وساز است" maxlength="120">
         </div>
         <div class="field">
-            <label>نماد تیم</label>
-            <input type="text" id="teamEmoji" placeholder="🛡️" maxlength="4" value="🛡️" style="text-align:center;font-size:22px;">
+            <label>پرچم تیم</label>
+            <div class="flag-row">
+                <div class="flag-preview" id="flagPreview">
+                    <span id="flagPreviewEmoji">🛡️</span>
+                    <img id="flagPreviewImg" alt="" style="display:none;">
+                </div>
+                <div class="flag-actions">
+                    <button type="button" class="flag-btn" id="flagPickBtn">🖼️ آپلود عکس پرچم</button>
+                    <button type="button" class="flag-btn ghost" id="flagClearBtn" style="display:none;">✕ حذف عکس</button>
+                    <input type="file" id="flagFile" accept="image/*" style="display:none;">
+                    <div class="field-hint" id="flagHint">یا به‌جای عکس، یک ایموji بنویس:</div>
+                    <input type="text" id="teamEmoji" placeholder="🛡️" maxlength="4" value="🛡️"
+                           style="text-align:center;font-size:20px;margin-top:6px;">
+                </div>
+            </div>
         </div>
         <button class="btn-primary-full" id="teamSubmit">ساخت تیم</button>
         <div class="auth-switch">تو کاپیتان این تیم می‌شوی و اولین عضو آن خواهی بود.</div>
@@ -1670,26 +1713,41 @@ function showAuthError(id, msg, ok) {
 function openOverlay(id)  { const m = document.getElementById(id); if (m) m.classList.add('active'); }
 function closeOverlay(id) { const m = document.getElementById(id); if (m) m.classList.remove('active'); }
 
+// The account button is always on screen. Its icon says what it does:
+//   🔑 = you need to sign in      👤 = you are signed in (opens your profile)
 function renderAuthChip() {
     const chip = document.getElementById('authChip');
     if (!chip) return;
-    if (!authEnabled()) { chip.style.display = 'none'; return; }
+
+    // Always visible, even before the database is configured, so the button
+    // never disappears on the player.
     chip.style.display = 'flex';
 
     const label = document.getElementById('authChipLabel');
     const avatar = document.getElementById('authAvatar');
-    if (NXAuth.isLoggedIn() && myProfile) {
-        label.textContent = myProfile.mc_username;
-        avatar.textContent = myProfile.mc_username.charAt(0).toUpperCase();
-        document.getElementById('authMenuName').textContent = myProfile.mc_username;
-        document.getElementById('authMenuSub').textContent =
+    const loggedIn = authEnabled() && NXAuth.isLoggedIn();
+
+    chip.classList.toggle('logged-in', !!loggedIn);
+
+    if (loggedIn) {
+        const name = (myProfile && myProfile.mc_username) || '';
+        avatar.textContent = '👤';
+        label.textContent = name || 'پروفایل';
+        chip.title = name ? 'پروفایل ' + name : 'پروفایل من';
+
+        const menuName = document.getElementById('authMenuName');
+        if (menuName) menuName.textContent = name || '—';
+        const menuSub = document.getElementById('authMenuSub');
+        if (menuSub) menuSub.textContent =
             myTeam ? (myTeam.is_leader ? '👑 کاپیتان ' : '🛡️ عضو ') + myTeam.team_name : 'بدون تیم';
-        document.getElementById('authMenuTeam').style.display = myTeam ? 'block' : 'none';
+        const mt = document.getElementById('authMenuTeam');
+        if (mt) mt.style.display = myTeam ? 'block' : 'none';
         const pm = document.getElementById('authMenuProfile');
         if (pm) pm.style.display = 'block';
     } else {
-        label.textContent = 'ورود / ثبت‌نام';
-        avatar.textContent = '?';
+        avatar.textContent = '🔑';
+        label.textContent = 'ورود';
+        chip.title = 'ورود / ثبت‌نام';
     }
 }
 
@@ -1822,7 +1880,9 @@ function renderLiveTeams() {
             <div class="team-card-accent"></div>
             <div class="team-card-head">
                 <div class="team-card-name">
-                    <span style="font-size:20px;">${escapeHtml(team.emoji || '🛡️')}</span>
+                    ${team.flag
+                        ? `<img class="team-flag-img" src="${escapeHtml(team.flag)}" alt="">`
+                        : `<span style="font-size:20px;">${escapeHtml(team.emoji || '🛡️')}</span>`}
                     <span>${escapeHtml(team.name)}</span>
                     ${mine ? '<span class="team-mine-tag">تیم تو</span>' : ''}
                 </div>
@@ -1887,14 +1947,21 @@ async function doDeleteTeam(teamId) {
     } finally { authBusy = false; }
 }
 
+let authUIWired = false;
+
 function wireAuthUI() {
-    if (!authEnabled()) return;
+    if (authUIWired) return;
+    authUIWired = true;
 
     const chip = document.getElementById('authChip');
     const menu = document.getElementById('authMenu');
 
     chip.addEventListener('click', (ev) => {
         ev.stopPropagation();
+        if (!authEnabled()) {
+            nxToast('سیستم حساب کاربری هنوز پیکربندی نشده است.', 'error');
+            return;
+        }
         if (NXAuth.isLoggedIn()) menu.classList.toggle('active');
         else { showAuthError('authError', ''); openOverlay('authModal'); }
     });
@@ -2033,11 +2100,16 @@ function wireAuthUI() {
             await NXAuth.createTeam({
                 name: document.getElementById('teamName').value,
                 description: document.getElementById('teamDesc').value,
-                emoji: document.getElementById('teamEmoji').value.trim() || '🛡️'
+                emoji: document.getElementById('teamEmoji').value.trim() || '🛡️',
+                flag: pendingFlag
             });
             closeOverlay('teamModal');
             document.getElementById('teamName').value = '';
             document.getElementById('teamDesc').value = '';
+            setFlagPreview(null);
+            document.getElementById('flagFile').value = '';
+            document.getElementById('flagHint').className = 'field-hint';
+            document.getElementById('flagHint').textContent = 'یا به‌جای عکس، یک ایموji بنویس:';
             await reloadTeamsUI();
             nxToast('🎉 تیمت ساخته شد!', 'success');
         } catch (e) {
@@ -2060,6 +2132,96 @@ function wireAuthUI() {
 }
 
 
+
+// ---- team flag upload ----------------------------------------------------
+// Browsers hand us the raw file; the database stores a data URL. A phone photo
+// is several megabytes, so shrink it hard before encoding.
+let pendingFlag = null;
+
+function downscaleFlag(file, maxSize) {
+    return new Promise((resolve, reject) => {
+        if (!file.type || file.type.indexOf('image/') !== 0) {
+            reject(new Error('فقط فایل تصویری مجاز است.')); return;
+        }
+        if (file.size > 12 * 1024 * 1024) {
+            reject(new Error('حجم فایل بیش از ۱۲ مگابایت است.')); return;
+        }
+        const reader = new FileReader();
+        reader.onerror = () => reject(new Error('خواندن فایل ناموفق بود.'));
+        reader.onload = () => {
+            const img = new Image();
+            img.onerror = () => reject(new Error('این فایل یک تصویر معتبر نیست.'));
+            img.onload = () => {
+                let { width: w, height: h } = img;
+                const scale = Math.min(1, maxSize / Math.max(w, h));
+                w = Math.max(1, Math.round(w * scale));
+                h = Math.max(1, Math.round(h * scale));
+                const canvas = document.createElement('canvas');
+                canvas.width = w; canvas.height = h;
+                canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                // PNG keeps transparency for flags; fall back to JPEG if huge.
+                let out = canvas.toDataURL('image/png');
+                if (out.length > 300000) out = canvas.toDataURL('image/jpeg', 0.82);
+                resolve(out);
+            };
+            img.src = reader.result;
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+function setFlagPreview(dataUrl) {
+    pendingFlag = dataUrl || null;
+    const img = document.getElementById('flagPreviewImg');
+    const emo = document.getElementById('flagPreviewEmoji');
+    const clear = document.getElementById('flagClearBtn');
+    if (dataUrl) {
+        img.src = dataUrl; img.style.display = 'block';
+        emo.style.display = 'none'; clear.style.display = 'block';
+    } else {
+        img.removeAttribute('src'); img.style.display = 'none';
+        emo.style.display = ''; clear.style.display = 'none';
+    }
+}
+
+function wireFlagUpload() {
+    const pick = document.getElementById('flagPickBtn');
+    const file = document.getElementById('flagFile');
+    const clear = document.getElementById('flagClearBtn');
+    const emoji = document.getElementById('teamEmoji');
+    if (!pick || !file) return;
+
+    pick.addEventListener('click', () => file.click());
+    clear.addEventListener('click', () => {
+        setFlagPreview(null); file.value = '';
+        document.getElementById('flagHint').textContent = 'یا به‌جای عکس، یک ایموji بنویس:';
+    });
+    if (emoji) emoji.addEventListener('input', function () {
+        const el = document.getElementById('flagPreviewEmoji');
+        if (el && !pendingFlag) el.textContent = this.value || '🛡️';
+    });
+
+    file.addEventListener('change', async function () {
+        const f = this.files && this.files[0];
+        if (!f) return;
+        const hint = document.getElementById('flagHint');
+        hint.className = 'field-hint';
+        hint.textContent = 'در حال پردازش تصویر...';
+        pick.disabled = true;
+        try {
+            const dataUrl = await downscaleFlag(f, 256);
+            setFlagPreview(dataUrl);
+            const kb = Math.round(dataUrl.length / 1024);
+            hint.className = 'field-hint ok';
+            hint.textContent = `✅ آماده شد (${toFa(kb)} کیلوبایت)`;
+        } catch (e) {
+            setFlagPreview(null);
+            hint.className = 'field-hint bad';
+            hint.textContent = e.message;
+        } finally { pick.disabled = false; }
+    });
+}
+
 // ---- profile ------------------------------------------------------------
 function faDate(iso) {
     if (!iso) return '—';
@@ -2069,7 +2231,22 @@ function faDate(iso) {
 }
 
 function renderProfile() {
-    if (!myProfile) return;
+    if (!myProfile) {
+        // Still loading (or the profile row is unreadable) — say so rather
+        // than showing an empty card.
+        const loading = NXAuth.isLoggedIn() ? 'در حال بارگذاری...' : '—';
+        ['pfName','pfTeam','pfRole','pfSince','pfMates'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = loading;
+        });
+        const mail = document.getElementById('pfMail');
+        if (mail) mail.textContent = '';
+        const av = document.getElementById('pfAvatar');
+        if (av) av.textContent = '…';
+        const box = document.getElementById('pfTeamBox');
+        if (box) box.style.display = 'none';
+        return;
+    }
     const name = myProfile.mc_username || '—';
     document.getElementById('pfName').textContent = name;
     document.getElementById('pfAvatar').textContent = name.charAt(0).toUpperCase();
@@ -2104,11 +2281,12 @@ function renderProfile() {
 }
 
 async function openProfile() {
-    await refreshAccountState();
-    renderProfile();
     showAuthError('pfError', '');
     document.getElementById('pfNewPass').value = '';
-    openOverlay('profileModal');
+    renderProfile();              // paint whatever is already loaded
+    openOverlay('profileModal');  // ...and show it immediately
+    await refreshAccountState();  // then refresh in the background
+    renderProfile();
 }
 
 // ---- password recovery ---------------------------------------------------
@@ -2167,12 +2345,13 @@ function wireRecoveryUI() {
 async function initAccounts() {
     if (typeof NXAuth === 'undefined') return;
     try { await NXAuth.init(); } catch (e) {}
-    if (!NXAuth.isConfigured()) { renderAuthChip(); return; }
+    if (!NXAuth.isConfigured()) { renderAuthChip(); wireAuthUI(); return; }
     await handleRecoveryLink();          // before anything else reads the session
     await refreshLiveTeams();
     await refreshAccountState();
     wireAuthUI();
     wireRecoveryUI();
+    wireFlagUpload();
     renderTeams();
 }
 

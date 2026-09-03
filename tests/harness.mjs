@@ -14,7 +14,8 @@ export function makeEl(id, tag='div'){
     click(){ this.dispatch('click'); },
     appendChild(){}, removeChild(){}, remove(){}, focus(){},
     getBoundingClientRect:()=>({left:0,top:0,width:100,height:40}),
-    getAttribute:()=>null, setAttribute(){}, querySelectorAll:()=>[],
+    getAttribute:()=>null, setAttribute(){}, removeAttribute(a){ if(a in this) this[a]=''; },
+    querySelectorAll:()=>[],
     closest(sel){
       const keys = String(sel).match(/\[data-([a-z]+)\]/g) || [];
       for (const k of keys) {

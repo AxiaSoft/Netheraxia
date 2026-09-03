@@ -306,10 +306,34 @@
     }
 
     /* ---- پروفایل --------------------------------------------------------- */
+    // Ask the auth server who this token belongs to, and cache it on the
+    // session. Needed because a restored/refreshed session may carry no user.
+    function fetchUser() {
+        if (!isLoggedIn()) return Promise.resolve(null);
+        if (session.user && session.user.id) return Promise.resolve(session.user);
+        return request('/auth/v1/user').then(function (u) {
+            if (u && u.id) { session.user = u; storeSession(session); }
+            return u || null;
+        });
+    }
+
     function myProfile() {
         if (!isLoggedIn()) return Promise.resolve(null);
-        return rest('/profiles?select=*&id=eq.' + currentUser().id + '&limit=1')
-            .then(function (rows) { return (rows && rows[0]) || null; });
+        return fetchUser().then(function (u) {
+            if (!u || !u.id) return null;
+            return rest('/profiles?select=*&id=eq.' + u.id + '&limit=1')
+                .then(function (rows) {
+                    var row = (rows && rows[0]) || null;
+                    // RLS lets a player read only their own row; fall back to
+                    // the auth record so the name is never blank.
+                    if (!row && u.user_metadata && u.user_metadata.mc_username) {
+                        row = { id: u.id, mc_username: u.user_metadata.mc_username,
+                                email: u.email, is_admin: false, is_banned: false,
+                                created_at: u.created_at };
+                    }
+                    return row;
+                });
+        });
     }
 
     /* ---- تیم‌ها ----------------------------------------------------------- */
@@ -330,32 +354,46 @@
         if (name.length < 2 || name.length > 24) {
             return Promise.reject(new Error('نام تیم باید بین ۲ تا ۲۴ کاراکتر باشد.'));
         }
-        return rest('/teams', {
-            method: 'POST',
-            headers: { 'Prefer': 'return=representation' },
-            body: {
-                name: name,
-                description: String(team.description || '').trim().slice(0, 200) || null,
-                emoji: team.emoji || '🛡️',
-                color: team.color || '#2f86ff',
-                owner_id: currentUser().id
-            }
+        var flag = team.flag ? String(team.flag) : null;
+        if (flag && flag.length > 400000) {
+            return Promise.reject(new Error('تصویر پرچم خیلی بزرگ است؛ عکس کوچک‌تری انتخاب کنید.'));
+        }
+        return fetchUser().then(function (u) {
+            if (!u || !u.id) throw new Error('نشست معتبر نیست؛ دوباره وارد شوید.');
+            return rest('/teams', {
+                method: 'POST',
+                headers: { 'Prefer': 'return=representation' },
+                body: {
+                    name: name,
+                    description: String(team.description || '').trim().slice(0, 200) || null,
+                    emoji: team.emoji || '🛡️',
+                    flag: flag,
+                    color: team.color || '#2f86ff',
+                    owner_id: u.id
+                }
+            });
         }).then(function (rows) { return (rows && rows[0]) || null; });
     }
 
     function joinTeam(teamId) {
         if (!isLoggedIn()) return Promise.reject(new Error('اول وارد حساب خود شوید.'));
-        return rest('/team_members', {
-            method: 'POST',
-            headers: { 'Prefer': 'return=representation' },
-            body: { team_id: teamId, user_id: currentUser().id, is_leader: false }
+        return fetchUser().then(function (u) {
+            if (!u || !u.id) throw new Error('نشست معتبر نیست؛ دوباره وارد شوید.');
+            return rest('/team_members', {
+                method: 'POST',
+                headers: { 'Prefer': 'return=representation' },
+                body: { team_id: teamId, user_id: u.id, is_leader: false }
+            });
         });
     }
 
     function leaveTeam(teamId) {
         if (!isLoggedIn()) return Promise.reject(new Error('اول وارد حساب خود شوید.'));
-        return rest('/team_members?team_id=eq.' + teamId + '&user_id=eq.' + currentUser().id,
-                    { method: 'DELETE' });
+        return fetchUser().then(function (u) {
+            if (!u || !u.id) throw new Error('نشست معتبر نیست؛ دوباره وارد شوید.');
+            return rest('/team_members?team_id=eq.' + teamId + '&user_id=eq.' + u.id,
+                        { method: 'DELETE' });
+        });
     }
 
     function kickMember(teamId, userId) {
@@ -415,6 +453,7 @@
         session: function () { return session; },
         user: currentUser, isLoggedIn: isLoggedIn,
         signUp: signUp, signIn: signIn, signOut: signOut, resetPassword: resetPassword,
+        fetchUser: fetchUser,
         consumeRecoveryLink: consumeRecoveryLink, updatePassword: updatePassword, siteUrl: siteUrl,
         checkUsername: checkUsername, myProfile: myProfile,
         getConfig: getConfig, listTeams: listTeams, myMembership: myMembership,

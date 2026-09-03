@@ -749,7 +749,7 @@ let exitCode = 0;
   R.section('T. profile shows the player identity');
   R.check('the button shows the player name, not a generic label',
     reg['authChipLabel'].textContent === 'Steve');
-  R.check('the avatar uses the first letter', reg['authAvatar'].textContent === 'S');
+  R.check('signed-in state uses the profile icon', reg['authAvatar'].textContent === '👤');
   R.check('the menu names the player', reg['authMenuName'].textContent === 'Steve');
   R.check('the menu shows the team and role',
     /کاپیتان/.test(reg['authMenuSub'].textContent) &&
@@ -771,6 +771,179 @@ let exitCode = 0;
   S.renderTeams();
   R.check('team card tags the signed-in player',
     reg['teamsGrid'].innerHTML.includes('member-you'));
+}
+
+
+/* ============ U. account button is always present ============ */
+{
+  const { reg } = installDom();
+  globalThis.fetch = async () => ({ ok:false, status:404 });
+  globalThis.location = { origin:'https://x.io', pathname:'/', hash:'', search:'' };
+  globalThis.history = { replaceState(){} };
+  delete globalThis.window.NETHERAXIA_SUPABASE;
+  delete globalThis.NETHERAXIA_SUPABASE;
+  delete globalThis.NXAuth;          // drop the instance a previous section configured
+  loadScript('js/nx-config.js');     // ships empty (url:'' , anonKey:'')
+  loadScript('js/nx-auth.js');
+  // isConfigured() re-reads lazily, so clear every source it consults
+  globalThis.window.NETHERAXIA_SUPABASE = { url:'', anonKey:'' };
+  globalThis.NETHERAXIA_SUPABASE = { url:'', anonKey:'' };
+  globalThis.NXAuth.saveConfig('', '');
+
+  const S = loadPage('index.html', `globalThis.__X={chip:renderAuthChip, init:initAccounts,
+    enabled:authEnabled}`);
+
+  R.section('U. account button never disappears');
+  R.check('database not configured in this scenario', S.enabled() === false);
+  S.chip();
+  R.check('the button is still shown', reg['authChip'].style.display === 'flex');
+  R.check('it offers to sign in', reg['authChipLabel'].textContent === 'ورود');
+  R.check('logged-out icon is the key', reg['authAvatar'].textContent === '🔑');
+  R.check('it is not marked as logged in', !reg['authChip'].classList.contains('logged-in'));
+
+  await S.init();
+  R.check('still visible after init with no database',
+    reg['authChip'].style.display === 'flex');
+  // clicking must not throw when there is no backend
+  let threw = null;
+  try { reg['authChip'].click(); } catch (e) { threw = e; }
+  R.check('clicking without a database is handled', !threw);
+}
+
+/* ============ V. team flag upload ============ */
+{
+  const { reg, gid } = installDom();
+
+  // canvas + image stubs that mimic a 1200x800 photo
+  globalThis.Image = class {
+    set src(v) { this.width = 1200; this.height = 800; setTimeout(() => this.onload && this.onload(), 0); }
+  };
+  let drawnTo = null;
+  globalThis.document.createElement = (t) => {
+    const el = makeEl('c', t);
+    if (t === 'canvas') {
+      el.getContext = () => ({ drawImage(){ drawnTo = { w: el.width, h: el.height }; } });
+      el.toDataURL = (type) => (type === 'image/jpeg'
+        ? 'data:image/jpeg;base64,' + 'J'.repeat(120)
+        : 'data:image/png;base64,' + 'P'.repeat(120));
+    }
+    return el;
+  };
+  globalThis.FileReader = class {
+    readAsDataURL(){ this.result = 'data:image/png;base64,AAA';
+                     setTimeout(() => this.onload && this.onload(), 0); }
+  };
+  globalThis.fetch = async () => ({ ok:false, status:404 });
+  globalThis.location = { origin:'https://x.io', pathname:'/', hash:'', search:'' };
+  globalThis.history = { replaceState(){} };
+  loadScript('js/nx-auth.js');
+
+  const S = loadPage('index.html', `globalThis.__X={shrink:downscaleFlag, setFlag:setFlagPreview,
+    flag:()=>pendingFlag, wire:wireFlagUpload}`);
+
+  R.section('V. team flag upload');
+  const big = { type:'image/png', size: 4 * 1024 * 1024 };
+  const out = await S.shrink(big, 256);
+  R.check('upload is converted to a base64 data URL', /^data:image\/(png|jpeg);base64,/.test(out));
+  R.check('a large photo is scaled down', drawnTo.w === 256 && drawnTo.h === 171);
+  R.check('aspect ratio is preserved', Math.abs((drawnTo.w / drawnTo.h) - 1.5) < 0.02);
+
+  let err = null;
+  await S.shrink({ type:'application/pdf', size:1000 }, 256).catch(e => err = e);
+  R.check('non-images are rejected in Persian', !!err && /تصویر/.test(err.message));
+  err = null;
+  await S.shrink({ type:'image/png', size: 20 * 1024 * 1024 }, 256).catch(e => err = e);
+  R.check('oversized files are rejected', !!err && /مگابایت/.test(err.message));
+
+  S.setFlag('data:image/png;base64,XYZ');
+  R.check('preview shows the uploaded image', reg['flagPreviewImg'].style.display === 'block');
+  R.check('the emoji preview steps aside', reg['flagPreviewEmoji'].style.display === 'none');
+  R.check('a remove button appears', reg['flagClearBtn'].style.display === 'block');
+  R.check('the flag is queued for saving', S.flag() === 'data:image/png;base64,XYZ');
+
+  S.setFlag(null);
+  R.check('removing restores the emoji', reg['flagPreviewEmoji'].style.display === '');
+  R.check('and clears the queued flag', S.flag() === null);
+
+  // the flag must reach the database and be escaped when rendered
+  const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  R.check('createTeam is given the flag', /createTeam\(\{[\s\S]{0,400}flag:\s*pendingFlag/.test(html));
+  R.check('team cards render the flag image',
+    /team\.flag[\s\S]{0,120}team-flag-img/.test(html));
+  R.check('the flag src is escaped', /team-flag-img" src="\$\{escapeHtml\(team\.flag\)\}/.test(html));
+
+  const sql = readFileSync(new URL('../supabase/schema.sql', import.meta.url), 'utf8');
+  R.check('schema stores the flag', /alter table public\.teams add column if not exists flag text/.test(sql));
+  R.check('schema caps the flag size', /teams_flag_size/.test(sql));
+  R.check('the public view exposes it', /t\.flag,/.test(sql));
+}
+
+/* ============ W. profile fills in even without a cached user ============ */
+{
+  const { store } = installDom();
+  globalThis.location = { origin:'https://x.io', pathname:'/', hash:'', search:'' };
+  globalThis.history = { replaceState(){} };
+  loadScript('js/nx-auth.js');
+  const A = globalThis.NXAuth;
+  A.saveConfig('https://demo.supabase.co', 'k');
+
+  // Regression: a session restored from storage (or created by a recovery
+  // link) has no user object. Everything keyed on user().id used to throw,
+  // and the caller's catch swallowed it, so the profile modal was blank.
+  store['nthx_session'] = JSON.stringify({ access_token:'t', refresh_token:'r',
+    expires_at: Math.floor(Date.now()/1000) + 9999, user:null });
+
+  const seen = [];
+  globalThis.fetch = async (url, opt={}) => {
+    const u = String(url); seen.push(u);
+    if (u.includes('/auth/v1/user')) return { ok:true, status:200, text:async()=>JSON.stringify(
+      { id:'u1', email:'steve@mc.com', created_at:'2026-01-15T10:00:00Z',
+        user_metadata:{ mc_username:'Steve' } }) };
+    if (u.includes('/profiles')) return { ok:true, status:200, text:async()=>JSON.stringify(
+      [{ id:'u1', mc_username:'Steve', email:'steve@mc.com', is_admin:false,
+         is_banned:false, created_at:'2026-01-15T10:00:00Z' }]) };
+    return { ok:true, status:200, text:async()=>'[]' };
+  };
+  await A.init();
+
+  R.section('W. profile survives a session with no user object');
+  R.check('session restored without a user', A.user() === null);
+  const prof = await A.myProfile();
+  R.check('profile still resolves', !!prof && prof.mc_username === 'Steve');
+  R.check('the user was looked up', seen.some(u => u.includes('/auth/v1/user')));
+  R.check('and cached on the session', A.user() && A.user().id === 'u1');
+  seen.length = 0;
+  await A.myProfile();
+  R.check('the lookup is not repeated', !seen.some(u => u.includes('/auth/v1/user')));
+
+  // if RLS hides the profiles row, fall back to the auth record
+  store['nthx_session'] = JSON.stringify({ access_token:'t2', refresh_token:'r',
+    expires_at: Math.floor(Date.now()/1000) + 9999, user:null });
+  await A.init();
+  globalThis.fetch = async (url) => {
+    const u = String(url);
+    if (u.includes('/auth/v1/user')) return { ok:true, status:200, text:async()=>JSON.stringify(
+      { id:'u9', email:'a@b.c', user_metadata:{ mc_username:'Alex' } }) };
+    return { ok:true, status:200, text:async()=>'[]' };   // profiles unreadable
+  };
+  const fb = await A.myProfile();
+  R.check('falls back to the auth record so the name is never blank',
+    !!fb && fb.mc_username === 'Alex');
+
+  // team actions must not crash on a userless session either
+  store['nthx_session'] = JSON.stringify({ access_token:'t3', refresh_token:'r',
+    expires_at: Math.floor(Date.now()/1000) + 9999, user:null });
+  await A.init();
+  const posts = [];
+  globalThis.fetch = async (url, opt={}) => {
+    const u = String(url);
+    if (u.includes('/auth/v1/user')) return { ok:true, status:200,
+      text:async()=>JSON.stringify({ id:'u5', email:'e@f.g' }) };
+    posts.push({ url:u, body: opt.body ? JSON.parse(opt.body) : null });
+    return { ok:true, status:200, text:async()=>'[]' };
+  };
+  await A.joinTeam('t1');
+  R.check('joining resolves the user first', posts[0] && posts[0].body.user_id === 'u5');
 }
 
 exitCode = R.done('ALL NETHERAXIA TESTS');

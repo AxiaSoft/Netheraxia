@@ -56,10 +56,19 @@ create table if not exists public.teams (
     name        text not null,
     description text,
     emoji       text default '🛡️',
+    flag        text,                      -- تصویر پرچم به صورت data URL (base64)
     color       text default '#2f86ff',
     owner_id    uuid not null references public.profiles(id) on delete cascade,
     created_at  timestamptz not null default now()
 );
+
+-- برای پروژه‌هایی که جدول را قبلاً ساخته‌اند
+alter table public.teams add column if not exists flag text;
+
+do $$ begin
+    alter table public.teams add constraint teams_flag_size
+        check (flag is null or char_length(flag) <= 400000);   -- ~۳۰۰ کیلوبایت
+exception when duplicate_object then null; end $$;
 
 do $$ begin
     alter table public.teams add constraint teams_name_len
@@ -237,6 +246,7 @@ select
     t.name,
     t.description,
     t.emoji,
+    t.flag,
     t.color,
     t.created_at,
     t.owner_id,

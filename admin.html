@@ -757,6 +757,12 @@
             font-size: 11px; padding: 1px 4px; border-radius: var(--r-xs);
         }
         .member-kick-btn:hover { background: rgba(239,68,68,0.18); }
+
+        .ac-flag-img {
+            width: 30px; height: 30px; border-radius: var(--r-xs);
+            object-fit: cover; display: block; flex-shrink: 0;
+            border: 1px solid var(--glass-border);
+        }
     </style>
 </head>
 <body>
@@ -2793,7 +2799,9 @@
                     </span>`).join('');
                 return `<div class="ac-row">
                         <div class="ac-row-main">
-                            <span style="font-size:20px;">${escHtml(t.emoji || '🛡️')}</span>
+                            ${t.flag
+                                ? `<img class="ac-flag-img" src="${escHtml(t.flag)}" alt="">`
+                                : `<span style="font-size:20px;">${escHtml(t.emoji || '🛡️')}</span>`}
                             <div>
                                 <div class="ac-name">${escHtml(t.name)}</div>
                                 <div class="ac-meta">کاپیتان: ${escHtml(t.owner_name || '—')}${t.description ? ' • ' + escHtml(t.description) : ''}</div>
