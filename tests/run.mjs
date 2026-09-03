@@ -182,7 +182,8 @@ let exitCode = 0;
     setSha:(f,v)=>{ghShas[f]=v},b64:utf8ToBase64,unb64:base64ToUtf8,
     data:()=>appData,saveLocal,dl:downloadStatusFile,getCfg:()=>ghConfig,
     saveTexts,fillTexts:fillTextsForm,readTexts:readTextsForm,bindTexts:bindTextsInputs,
-    restoreDefaults:restoreDefaultTexts,defaults:()=>DEFAULT_TEXTS}`);
+    restoreDefaults:restoreDefaultTexts,defaults:()=>DEFAULT_TEXTS,
+    vsb:validateSupabase}`);
 
   R.section('E. admin status form');
   A.bind(); A.fill();
@@ -298,6 +299,29 @@ let exitCode = 0;
   A.restoreDefaults();
   R.check('restore defaults refills the form', gid('txtTeamsTitle').value === 'تیم‌های تشکیل شده');
   R.check('restored subtitles are empty', gid('txtTeamsSubtitle').value === '');
+
+
+  R.section('P. Supabase key validation');
+  const okUrl = 'https://abcdefgh.supabase.co';
+  // Both key generations must be accepted: new projects get sb_publishable_,
+  // older ones still have the eyJ... anon JWT.
+  const anonJwt = 'eyJ' + Buffer.from('{"alg":"HS256"}').toString('base64') + '.' +
+    Buffer.from('{"role":"anon"}').toString('base64') + '.sig';
+  R.check('new publishable key accepted', A.vsb(okUrl, 'sb_publishable_abc123') === null);
+  R.check('legacy anon JWT accepted', A.vsb(okUrl, anonJwt) === null);
+
+  // Security: a secret key here would be handed to every visitor.
+  R.check('sb_secret_ key is refused', /secret|مدیریتی/.test(A.vsb(okUrl, 'sb_secret_abc') || ''));
+  const svcJwt = 'eyJ' + Buffer.from('{"alg":"HS256"}').toString('base64') + '.' +
+    Buffer.from('{"role":"service_role"}').toString('base64') + '.sig';
+  R.check('service_role JWT is refused', A.vsb(okUrl, svcJwt) !== null);
+
+  R.check('missing values refused', A.vsb('', '') !== null);
+  R.check('non-https url refused', A.vsb('http://abc.supabase.co', 'sb_publishable_x') !== null);
+  R.check('dashboard url refused (common mistake)',
+    A.vsb('https://supabase.com/dashboard/project/abcdefgh', 'sb_publishable_x') !== null);
+  R.check('trailing slash tolerated', A.vsb(okUrl + '/', 'sb_publishable_x') === null);
+  R.check('garbage key refused', A.vsb(okUrl, 'hello') !== null);
 
   R.section('G. tabs');
   let threw = null;

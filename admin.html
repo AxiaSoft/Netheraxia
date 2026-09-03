@@ -1015,17 +1015,20 @@
                     </div>
                 </div>
                 <div class="form-info">
-                    💡 از داشبورد Supabase → <b>Project Settings → API</b> دو مقدار زیر را بردارید.
-                    این کلید عمومی است و افشایش خطری ندارد؛ امنیت با RLS تأمین می‌شود.
-                    راهنمای کامل در فایل <code>SETUP-ACCOUNTS.md</code> است.
+                    💡 ساده‌ترین راه: در داشبورد Supabase دکمه‌ی سبز <b>Connect</b> (بالای صفحه) را بزنید؛
+                    هر دو مقدار زیر آنجا کنار هم هستند.<br>
+                    یا: <b>Settings → API Keys</b> برای کلید، و آدرس پروژه از نوار آدرس مرورگر
+                    (<code dir="ltr">dashboard/project/<b>شناسه</b></code> ← <code dir="ltr">https://شناسه.supabase.co</code>).<br>
+                    ⛔ کلید <code dir="ltr">service_role</code> یا <code dir="ltr">sb_secret_</code> را هرگز اینجا نگذارید.
+                    راهنمای کامل: <code>SETUP-ACCOUNTS.md</code>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Project URL:</label>
                     <input type="text" class="form-input" id="sbUrl" placeholder="https://xxxxx.supabase.co" dir="ltr">
                 </div>
                 <div class="form-group">
-                    <label class="form-label">anon public key:</label>
-                    <input type="text" class="form-input" id="sbKey" placeholder="eyJhbGciOi..." dir="ltr">
+                    <label class="form-label">کلید publishable / anon public:</label>
+                    <input type="text" class="form-input" id="sbKey" placeholder="sb_publishable_... یا eyJhbGciOi..." dir="ltr">
                 </div>
                 <div class="publish-log" id="sbLog"></div>
             </div>
@@ -2636,13 +2639,42 @@
             if (k && !k.value) k.value = c.anonKey || '';
         }
 
-        async function saveSupabaseConfig() {
-            const url = document.getElementById('sbUrl').value.trim();
-            const key = document.getElementById('sbKey').value.trim();
-            if (!url || !key) { showToast('❌ هر دو مقدار را وارد کنید', 'error'); return; }
-            if (!/^https:\/\/[a-z0-9-]+\.supabase\.(co|in)/i.test(url)) {
-                showToast('❌ آدرس پروژه معتبر نیست', 'error'); return;
+        // Supabase now issues sb_publishable_... keys; older projects still use
+        // the eyJ... JWT anon key. Both are fine. A secret key must never be
+        // pasted here — it bypasses every security rule.
+        function validateSupabase(url, key) {
+            if (!url || !key) return 'هر دو مقدار را وارد کنید.';
+            if (/^sb_secret_/i.test(key) || /service_role/i.test(key)) {
+                return '⛔ این کلید مدیریتی (secret/service_role) است و نباید در سایت عمومی قرار بگیرد! ' +
+                       'کلید publishable یا anon public را بردارید.';
             }
+            if (!/^https:\/\//i.test(url)) return 'آدرس باید با https:// شروع شود.';
+            if (!/^https:\/\/[a-z0-9-]+\.supabase\.(co|in)\/?$/i.test(url)) {
+                return 'آدرس پروژه باید مثل https://abcdefgh.supabase.co باشد ' +
+                       '(بدون مسیر اضافه). آن را از دکمه‌ی Connect در داشبورد بردارید.';
+            }
+            const okKey = /^sb_publishable_/i.test(key) || /^eyJ/.test(key);
+            if (!okKey) {
+                return 'کلید معتبر نیست. باید با sb_publishable_ یا eyJ شروع شود.';
+            }
+            if (/^eyJ/.test(key)) {
+                // Legacy JWT: make sure it is the anon one, not service_role.
+                try {
+                    const payload = JSON.parse(base64ToUtf8(key.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));
+                    if (payload.role && payload.role !== 'anon') {
+                        return '⛔ این کلید «' + payload.role + '» است، نه anon. ' +
+                               'کلید anon public را بردارید.';
+                    }
+                } catch (e) {}
+            }
+            return null;
+        }
+
+        async function saveSupabaseConfig() {
+            const url = document.getElementById('sbUrl').value.trim().replace(/\/+$/, '');
+            const key = document.getElementById('sbKey').value.trim();
+            const bad = validateSupabase(url, key);
+            if (bad) { sbLog('❌ ' + bad, 'err'); showToast('❌ مقادیر معتبر نیستند', 'error'); return; }
             NXAuth.saveConfig(url, key);
 
             // Publish js/nx-config.js so every visitor gets the same settings.
@@ -2668,9 +2700,11 @@
         }
 
         async function testSupabase() {
-            const url = document.getElementById('sbUrl').value.trim();
+            const url = document.getElementById('sbUrl').value.trim().replace(/\/+$/, '');
             const key = document.getElementById('sbKey').value.trim();
-            if (url && key) NXAuth.saveConfig(url, key);
+            const bad = validateSupabase(url, key);
+            if (bad) { sbLog('❌ ' + bad, 'err'); return; }
+            NXAuth.saveConfig(url, key);
             if (!NXAuth.isConfigured()) { sbLog('❌ ابتدا آدرس و کلید را وارد کنید', 'err'); return; }
             sbLog('⏳ در حال بررسی...', 'skip');
             try {
