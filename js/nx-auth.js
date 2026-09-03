@@ -427,15 +427,26 @@
 
     function kickMember(teamId, userId) {
         return rest('/team_members?team_id=eq.' + teamId + '&user_id=eq.' + userId,
-                    { method: 'DELETE' });
+                    { method: 'DELETE', headers: { 'Prefer': 'return=representation' } })
+            .then(function (rows) {
+                return requireRows(rows, 'حذف انجام نشد — یا این بازیکن عضو تیم نیست ' +
+                                         'یا دسترسی ادمین ندارید.');
+            });
     }
 
     function deleteTeam(teamId) {
-        return rest('/teams?id=eq.' + teamId, { method: 'DELETE' });
+        return rest('/teams?id=eq.' + teamId,
+                    { method: 'DELETE', headers: { 'Prefer': 'return=representation' } })
+            .then(function (rows) {
+                return requireRows(rows, 'تیم حذف نشد — دسترسی ادمین ندارید ' +
+                                         'یا تیم قبلاً حذف شده است.');
+            });
     }
 
     function updateTeam(teamId, patch) {
-        return rest('/teams?id=eq.' + teamId, { method: 'PATCH', body: patch });
+        return rest('/teams?id=eq.' + teamId, {
+            method: 'PATCH', headers: { 'Prefer': 'return=representation' }, body: patch
+        }).then(function (rows) { return requireRows(rows)[0]; });
     }
 
     function transferLeadership(teamId, newOwnerId) {
@@ -443,21 +454,82 @@
     }
 
     /* ---- مدیریت (ادمین) --------------------------------------------------- */
+    // پستگرس وقتی RLS ردیفی را پنهان می‌کند خطا نمی‌دهد: UPDATE/DELETE روی
+    // «هیچ ردیف» اجرا می‌شود و PostgREST همان 200 با آرایه‌ی خالی برمی‌گرداند.
+    // بدون بررسی زیر، پنل «ذخیره شد» می‌گوید و مقدار قبلی برمی‌گردد.
+    var ADMIN_BLOCKED =
+        'ذخیره نشد. دیتابیس این تغییر را رد کرد چون با حساب ادمین وارد نشده‌اید. ' +
+        'در همین صفحه وارد شوید و مطمئن شوید حسابتان ادمین است ' +
+        '(دستور آخر فایل supabase/schema.sql).';
+
+    function requireRows(rows, message) {
+        if (!rows || !rows.length) {
+            var err = new Error(message || ADMIN_BLOCKED);
+            err.blocked = true;
+            throw err;
+        }
+        return rows;
+    }
+
     function getSettings() {
         return rest('/app_settings?select=*&id=eq.1&limit=1')
             .then(function (rows) { return (rows && rows[0]) || null; });
     }
     function updateSettings(patch) {
-        patch.updated_at = new Date().toISOString();
+        var body = {};
+        for (var k in patch) body[k] = patch[k];
+        body.updated_at = new Date().toISOString();
         return rest('/app_settings?id=eq.1', {
-            method: 'PATCH', headers: { 'Prefer': 'return=representation' }, body: patch
+            method: 'PATCH', headers: { 'Prefer': 'return=representation' }, body: body
+        }).then(function (rows) {
+            requireRows(rows);
+            var saved = rows[0];
+            // Confirm the database really stored what we asked for, so a
+            // trigger or constraint that rewrites values cannot pass silently.
+            var ignored = [];
+            for (var f in patch) {
+                if (f === 'updated_at') continue;
+                if (String(saved[f]) !== String(patch[f])) ignored.push(f);
+            }
+            if (ignored.length) {
+                var err = new Error('دیتابیس این مقدارها را نپذیرفت: ' + ignored.join('، ') + '.');
+                err.blocked = true;
+                throw err;
+            }
+            return saved;
+        });
+    }
+
+    // وضعیت حساب فعلی: وارد شده؟ ادمین هست؟
+    function adminState() {
+        if (!isLoggedIn()) {
+            return Promise.resolve({ signedIn: false, isAdmin: false, profile: null });
+        }
+        return myProfile().then(function (p) {
+            return { signedIn: true, isAdmin: !!(p && p.is_admin), profile: p };
+        }, function (e) {
+            return { signedIn: true, isAdmin: false, profile: null, error: e.message };
         });
     }
     function listPlayers() {
         return rest('/profiles?select=*&order=created_at.desc');
     }
     function setPlayerFlags(userId, patch) {
-        return rest('/profiles?id=eq.' + userId, { method: 'PATCH', body: patch });
+        return rest('/profiles?id=eq.' + userId, {
+            method: 'PATCH', headers: { 'Prefer': 'return=representation' }, body: patch
+        }).then(function (rows) {
+            requireRows(rows);
+            var saved = rows[0];
+            for (var f in patch) {
+                // یک تریگر، تغییرِ is_banned/is_admin توسط غیرادمین را بی‌صدا برمی‌گرداند
+                if (String(saved[f]) !== String(patch[f])) {
+                    var err = new Error(ADMIN_BLOCKED);
+                    err.blocked = true;
+                    throw err;
+                }
+            }
+            return saved;
+        });
     }
     function adminAddMember(teamId, userId) {
         return rest('/team_members', {
@@ -490,6 +562,7 @@
         kickMember: kickMember, deleteTeam: deleteTeam, updateTeam: updateTeam,
         transferLeadership: transferLeadership,
         getSettings: getSettings, updateSettings: updateSettings,
+        adminState: adminState,
         listPlayers: listPlayers, setPlayerFlags: setPlayerFlags,
         adminAddMember: adminAddMember,
         humanize: humanize, rest: rest, rpc: rpc, refresh: refreshIfNeeded,

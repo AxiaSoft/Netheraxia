@@ -730,6 +730,29 @@
         .pv-sub { font-size: 13px; color: #7ba3cc; }
         .pv-label:empty, .pv-title:empty, .pv-sub:empty { display: none; }
 
+        /* وضعیت ورود مدیر */
+        .ac-auth-state {
+            display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+            padding: 13px 16px; border-radius: var(--r-sm); margin-bottom: 14px;
+            border: 1px solid var(--glass-border); background: rgba(10,26,54,0.5);
+        }
+        .ac-auth-state.ok   { background: rgba(34,197,94,0.10); border-color: rgba(34,197,94,0.38); }
+        .ac-auth-state.warn { background: rgba(245,158,11,0.10); border-color: rgba(245,158,11,0.40); }
+        .ac-auth-state.off  { background: rgba(239,68,68,0.10); border-color: rgba(239,68,68,0.35); }
+        .ac-auth-text { flex: 1; min-width: 200px; font-size: 13px; line-height: 1.9; }
+        .ac-auth-text b { font-weight: 800; }
+        .ac-sql {
+            display: block; margin-top: 8px; padding: 9px 11px; border-radius: var(--r-xs);
+            background: rgba(3,10,24,0.8); border: 1px solid var(--glass-border);
+            font-family: monospace; font-size: 11.5px; direction: ltr; text-align: left;
+            color: #9fd0ff; word-break: break-all; user-select: all;
+        }
+        .locked-note {
+            display: none; padding: 11px 14px; margin-bottom: 12px; border-radius: var(--r-sm);
+            background: rgba(245,158,11,0.10); border: 1px solid rgba(245,158,11,0.40);
+            font-size: 12.5px; line-height: 1.9;
+        }
+
         .ac-row {
             display: flex; align-items: center; justify-content: space-between; gap: 12px;
             padding: 12px 14px; margin-bottom: 8px; border-radius: var(--r-sm);
@@ -1039,6 +1062,34 @@
                 <div class="publish-log" id="sbLog"></div>
             </div>
 
+            <div class="card" id="accountsAuthCard" style="display:none;">
+                <div class="card-header">
+                    <div class="card-title">👤 ورود مدیر</div>
+                </div>
+                <div class="form-info">
+                    💡 تغییر محدودیت‌ها فقط با حساب <b>ادمین</b> ممکن است. دیتابیس درخواستِ یک
+                    بازدیدکننده‌ی معمولی را بی‌صدا نادیده می‌گیرد، به همین دلیل عدد بعد از ذخیره
+                    به حالت قبل برمی‌گشت.
+                </div>
+                <div class="ac-auth-state off" id="acAuthState">
+                    <div class="ac-auth-text" id="acAuthText">در حال بررسی…</div>
+                    <button class="btn btn-sm btn-danger" id="acLogoutBtn" style="display:none;" onclick="acLogout()">🚪 خروج</button>
+                </div>
+                <div id="acLoginForm">
+                    <div class="status-grid-2">
+                        <div class="form-group">
+                            <label class="form-label">ایمیل یا نام ماینکرفت:</label>
+                            <input type="text" class="form-input" id="acLoginId" autocomplete="username" dir="ltr">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">رمز عبور:</label>
+                            <input type="password" class="form-input" id="acLoginPass" autocomplete="current-password" dir="ltr">
+                        </div>
+                    </div>
+                    <button class="btn btn-success" onclick="acLogin()">🔐 ورود</button>
+                </div>
+            </div>
+
             <div class="card" id="accountsLiveCard" style="display:none;">
                 <div class="card-header">
                     <div class="card-title">⚙️ محدودیت‌ها و سوییچ‌ها</div>
@@ -1046,6 +1097,10 @@
                         <button class="btn btn-info btn-sm" onclick="loadAccountsData()">🔄 تازه‌سازی</button>
                         <button class="btn btn-success" onclick="saveAccountSettings()">💾 ذخیره تنظیمات</button>
                     </div>
+                </div>
+                <div class="locked-note" id="acLockedNote">
+                    🔒 با حساب ادمین وارد نشده‌اید — تغییرات اینجا ذخیره <b>نمی‌شود</b>.
+                    از کادر «ورود مدیر» بالا وارد شوید.
                 </div>
                 <div class="status-grid-2">
                     <div class="form-group">
@@ -2628,7 +2683,7 @@
         }
 
         // ==================== Accounts & live teams (Supabase) ====================
-        let acTeams = [], acPlayers = [], acSettings = null;
+        let acTeams = [], acPlayers = [], acSettings = null, acIsAdmin = false;
 
         function sbLog(msg, kind) {
             const box = document.getElementById('sbLog');
@@ -2725,6 +2780,8 @@
         async function loadAccountsData() {
             if (typeof NXAuth === 'undefined' || !NXAuth.isConfigured()) return;
             const show = id => { const el = document.getElementById(id); if (el) el.style.display = ''; };
+            show('accountsAuthCard');
+            await refreshAdminState();
             try {
                 const cfg = await NXAuth.getConfig();
                 acTeams = await NXAuth.listTeams();
@@ -2746,6 +2803,62 @@
             } catch (e) { acPlayers = []; }
         }
 
+        // ---- ورود مدیر ----------------------------------------------------
+        // بدون نشستِ ادمین، دیتابیس نوشتن را بی‌صدا رد می‌کند و مقدار قدیمی
+        // برمی‌گردد؛ پس وضعیت را صریح نشان می‌دهیم.
+        async function refreshAdminState() {
+            const box  = document.getElementById('acAuthState');
+            const text = document.getElementById('acAuthText');
+            const form = document.getElementById('acLoginForm');
+            const out  = document.getElementById('acLogoutBtn');
+            const note = document.getElementById('acLockedNote');
+            if (!box || !text) return { isAdmin: false };
+
+            let st = { signedIn: false, isAdmin: false };
+            try { st = await NXAuth.adminState(); } catch (e) {}
+
+            acIsAdmin = !!st.isAdmin;
+            box.className = 'ac-auth-state ' + (st.isAdmin ? 'ok' : (st.signedIn ? 'warn' : 'off'));
+            if (form) form.style.display = st.signedIn ? 'none' : '';
+            if (out)  out.style.display  = st.signedIn ? '' : 'none';
+            if (note) note.style.display = st.isAdmin ? 'none' : '';
+
+            const name = st.profile && st.profile.mc_username ? escHtml(st.profile.mc_username) : '';
+            if (st.isAdmin) {
+                text.innerHTML = `✅ وارد شده‌اید به عنوان <b>${name}</b> — دسترسی ادمین دارید.`;
+            } else if (st.signedIn) {
+                text.innerHTML = `⚠️ وارد شده‌اید${name ? ' به عنوان <b>' + name + '</b>' : ''}، ` +
+                    `ولی این حساب <b>ادمین نیست</b>؛ تغییرات ذخیره نمی‌شود.<br>` +
+                    `این دستور را در SQL Editor سوپابیس اجرا کنید:` +
+                    `<code class="ac-sql">update public.profiles set is_admin = true where lower(mc_username) = lower('${name || 'YourMinecraftName'}');</code>`;
+            } else {
+                text.innerHTML = '⛔ وارد نشده‌اید. برای تغییر محدودیت‌ها با حساب ادمین وارد شوید.';
+            }
+            return st;
+        }
+
+        async function acLogin() {
+            const id   = document.getElementById('acLoginId').value.trim();
+            const pass = document.getElementById('acLoginPass').value;
+            if (!id || !pass) { showToast('❌ ایمیل و رمز را وارد کنید', 'error'); return; }
+            try {
+                await NXAuth.signIn(id, pass);
+                document.getElementById('acLoginPass').value = '';
+                const st = await refreshAdminState();
+                if (st.isAdmin) showToast('✅ وارد شدید', 'success');
+                else showToast('⚠️ وارد شدید، ولی این حساب ادمین نیست', 'warning');
+                await loadAccountsData();
+            } catch (e) {
+                showToast('❌ ' + (e.message || e), 'error');
+            }
+        }
+
+        async function acLogout() {
+            try { await NXAuth.signOut(); } catch (e) {}
+            await refreshAdminState();
+            showToast('🚪 خارج شدید', 'info');
+        }
+
         function fillAcSettings() {
             if (!acSettings) return;
             document.getElementById('acMaxTeams').value = acSettings.max_teams;
@@ -2757,22 +2870,45 @@
         }
 
         async function saveAccountSettings() {
+            const maxTeams   = parseInt(document.getElementById('acMaxTeams').value, 10);
+            const maxMembers = parseInt(document.getElementById('acMaxMembers').value, 10);
+            if (!(maxTeams >= 1 && maxTeams <= 500) || !(maxMembers >= 1 && maxMembers <= 500)) {
+                showToast('❌ عددها باید بین ۱ تا ۵۰۰ باشند', 'error');
+                sbLog('❌ حداکثر تیم و حداکثر نفرات باید عددی بین ۱ تا ۵۰۰ باشد.', 'err');
+                return;
+            }
+            // Lowering the cap below what already exists would be rejected by the
+            // database anyway; say so here instead of after a failed round-trip.
+            const liveTeams = acTeams.length;
+            if (liveTeams > maxTeams &&
+                !confirm(`الان ${liveTeams} تیم ساخته شده و شما سقف را روی ${maxTeams} می‌گذارید.\n` +
+                         `تیم‌های موجود حذف نمی‌شوند، ولی تیم جدیدی ساخته نمی‌شود. ادامه می‌دهید؟`)) {
+                return;
+            }
+
             const patch = {
-                max_teams: parseInt(document.getElementById('acMaxTeams').value, 10) || 10,
-                max_members: parseInt(document.getElementById('acMaxMembers').value, 10) || 10,
+                max_teams: maxTeams,
+                max_members: maxMembers,
                 registration_open: document.getElementById('acRegOpen').checked,
                 team_creation_open: document.getElementById('acTeamOpen').checked,
                 join_open: document.getElementById('acJoinOpen').checked,
                 one_team_per_user: document.getElementById('acOneTeam').checked
             };
             try {
-                await NXAuth.updateSettings(patch);
+                const saved = await NXAuth.updateSettings(patch);
+                acSettings = saved;
                 showToast('✅ تنظیمات ذخیره شد', 'success');
+                sbLog(`✅ ذخیره شد — حداکثر تیم: ${saved.max_teams}، حداکثر نفرات: ${saved.max_members}`, 'ok');
                 await loadAccountsData();
             } catch (e) {
                 showToast('❌ ' + (e.message || e), 'error');
-                sbLog('❌ برای تغییر تنظیمات باید با حساب ادمین وارد شده باشید. ' +
-                      'در سایت اصلی وارد شوید و در SQL Editor دستور آخر schema.sql را اجرا کنید.', 'err');
+                sbLog('❌ ' + (e.message || e), 'err');
+                // Put the real stored values back so the form never lies.
+                await refreshAdminState();
+                try {
+                    const fresh = await NXAuth.getSettings();
+                    if (fresh) { acSettings = fresh; fillAcSettings(); }
+                } catch (e2) {}
             }
         }
 

@@ -1050,5 +1050,179 @@ let exitCode = 0;
     reg['pfError'].textContent.indexOf('در حال بارگذاری') === -1);
 }
 
+/* ============ Z. lowering a limit must not silently bounce back ============ */
+{
+  const { store } = installDom();
+  globalThis.location = { origin:'https://x.io', pathname:'/', hash:'', search:'' };
+  globalThis.history = { replaceState(){} };
+  loadScript('js/nx-auth.js');
+  const A = globalThis.NXAuth;
+  A.saveConfig('https://demo.supabase.co', 'k');
+  store['nthx_session'] = JSON.stringify({ access_token:'t', refresh_token:'r',
+    expires_at: Math.floor(Date.now()/1000)+9999, user:{ id:'u1' } });
+  await A.init();
+
+  R.section('Z. the settings save reports the truth');
+
+  // ---- exactly the user's bug: RLS hides the row, so PostgREST answers
+  // 200 with [] and the old number comes back on the next refresh.
+  let sent = null;
+  globalThis.fetch = async (url, opt={}) => {
+    const u = String(url);
+    if (u.includes('/auth/v1/user')) return { ok:true, status:200, text:async()=>JSON.stringify({id:'u1'}) };
+    if (u.includes('/app_settings') && (opt.method === 'PATCH')) {
+      sent = JSON.parse(opt.body);
+      return { ok:true, status:200, text:async()=>'[]' };   // silently refused
+    }
+    return { ok:true, status:200, text:async()=>'[]' };
+  };
+  let err = null;
+  await A.updateSettings({ max_teams: 4 }).catch(e => err = e);
+  R.check('a silently-refused save is reported as a failure', !!err);
+  R.check('the message blames the missing admin session', !!err && /ادمین/.test(err.message));
+  R.check('the new value was actually sent', sent && sent.max_teams === 4);
+  R.check('the caller can tell it was a permission block', !!err && err.blocked === true);
+
+  // ---- the database accepted it but stored something else
+  globalThis.fetch = async (url, opt={}) => {
+    const u = String(url);
+    if (u.includes('/auth/v1/user')) return { ok:true, status:200, text:async()=>JSON.stringify({id:'u1'}) };
+    if (u.includes('/app_settings')) return { ok:true, status:200,
+      text:async()=>JSON.stringify([{ id:1, max_teams:10, max_members:10 }]) };
+    return { ok:true, status:200, text:async()=>'[]' };
+  };
+  err = null;
+  await A.updateSettings({ max_teams: 4 }).catch(e => err = e);
+  R.check('a value the database quietly rewrote is reported', !!err && /نپذیرفت/.test(err.message));
+
+  // ---- the happy path still resolves with the stored row
+  globalThis.fetch = async (url, opt={}) => {
+    const u = String(url);
+    if (u.includes('/auth/v1/user')) return { ok:true, status:200, text:async()=>JSON.stringify({id:'u1'}) };
+    if (u.includes('/app_settings')) return { ok:true, status:200,
+      text:async()=>JSON.stringify([{ id:1, max_teams:4, max_members:10 }]) };
+    return { ok:true, status:200, text:async()=>'[]' };
+  };
+  const ok = await A.updateSettings({ max_teams: 4 });
+  R.check('a real save resolves with the stored row', ok && ok.max_teams === 4);
+  R.check('updated_at is stamped', !!sent.updated_at);
+
+  // ---- the caller's object must not be mutated behind its back
+  const patch = { max_teams: 4 };
+  await A.updateSettings(patch);
+  R.check('the caller patch is left clean', patch.updated_at === undefined);
+
+  // ---- the other admin writes were silent in exactly the same way
+  globalThis.fetch = async (url, opt={}) => {
+    const u = String(url);
+    if (u.includes('/auth/v1/user')) return { ok:true, status:200, text:async()=>JSON.stringify({id:'u1'}) };
+    return { ok:true, status:200, text:async()=>'[]' };
+  };
+  err = null; await A.deleteTeam('t1').catch(e => err = e);
+  R.check('deleting a team cannot fail silently', !!err);
+  err = null; await A.kickMember('t1','u2').catch(e => err = e);
+  R.check('kicking a member cannot fail silently', !!err);
+  err = null; await A.setPlayerFlags('u2', { is_banned:true }).catch(e => err = e);
+  R.check('banning a player cannot fail silently', !!err);
+
+  // a ban the guard trigger reverted must not look like success
+  globalThis.fetch = async (url, opt={}) => {
+    const u = String(url);
+    if (u.includes('/auth/v1/user')) return { ok:true, status:200, text:async()=>JSON.stringify({id:'u1'}) };
+    return { ok:true, status:200, text:async()=>JSON.stringify([{ id:'u2', is_banned:false }]) };
+  };
+  err = null; await A.setPlayerFlags('u2', { is_banned:true }).catch(e => err = e);
+  R.check('a ban reverted by the trigger is reported', !!err && /ادمین/.test(err.message));
+}
+
+/* ============ AA. the admin panel knows whether it may write ============ */
+{
+  const { reg, store } = installDom();
+  globalThis.location = { origin:'https://x.io', pathname:'/admin.html', hash:'', search:'' };
+  globalThis.history = { replaceState(){} };
+  const cfg = { url:'https://demo.supabase.co', anonKey:'k' };
+  globalThis.window.NETHERAXIA_SUPABASE = cfg; globalThis.NETHERAXIA_SUPABASE = cfg;
+  loadScript('js/nx-auth.js');
+  globalThis.NXAuth.saveConfig(cfg.url, cfg.anonKey);
+
+  let profile = { id:'u1', mc_username:'Steve', is_admin:false };
+  globalThis.fetch = async (url, opt={}) => {
+    const u = String(url);
+    if (u.includes('/auth/v1/user')) return { ok:true, status:200, text:async()=>JSON.stringify({id:'u1'}) };
+    if (u.includes('/profiles'))     return { ok:true, status:200, text:async()=>JSON.stringify([profile]) };
+    if (u.includes('public_config')) return { ok:true, status:200,
+      text:async()=>JSON.stringify({ max_teams:10, max_members:10, team_count:0, player_count:1, member_count:0 }) };
+    if (u.includes('/app_settings')) return { ok:true, status:200,
+      text:async()=>JSON.stringify([{ id:1, max_teams:10, max_members:10, registration_open:true,
+        team_creation_open:true, join_open:true, one_team_per_user:true }]) };
+    return { ok:true, status:200, text:async()=>'[]' };
+  };
+
+  const P = loadPage('admin.html', `globalThis.__X={state:refreshAdminState, load:loadAccountsData,
+    login:acLogin, save:saveAccountSettings}`);
+
+  R.section('AA. the admin panel shows whether it may write');
+
+  // signed out
+  await P.state();
+  R.check('a signed-out admin is told so', /وارد نشده/.test(reg['acAuthText'].innerHTML));
+  R.check('the lock warning is visible', reg['acLockedNote'].style.display !== 'none');
+  R.check('the login form is offered', reg['acLoginForm'].style.display !== 'none');
+
+  // signed in, but not an admin -> this is the state the user was in
+  store['nthx_session'] = JSON.stringify({ access_token:'t', refresh_token:'r',
+    expires_at: Math.floor(Date.now()/1000)+9999, user:{ id:'u1' } });
+  await globalThis.NXAuth.init();          // the panel does this on tab open
+  await P.state();
+  R.check('a non-admin account is called out', /ادمین نیست/.test(reg['acAuthText'].innerHTML));
+  R.check('the exact SQL to fix it is shown', /is_admin = true/.test(reg['acAuthText'].innerHTML));
+  R.check('the SQL names the signed-in player', /Steve/.test(reg['acAuthText'].innerHTML));
+  R.check('the lock warning stays up for a non-admin', reg['acLockedNote'].style.display !== 'none');
+
+  // a real admin
+  profile = { id:'u1', mc_username:'Steve', is_admin:true };
+  await P.state();
+  R.check('an admin is confirmed', /دسترسی ادمین/.test(reg['acAuthText'].innerHTML));
+  R.check('the lock warning disappears', reg['acLockedNote'].style.display === 'none');
+  R.check('the login form is hidden once signed in', reg['acLoginForm'].style.display === 'none');
+  R.check('a logout button is offered', reg['acLogoutBtn'].style.display !== 'none');
+
+  // the form must show what is really stored, not what was typed
+  await P.load();
+  reg['acMaxTeams'].value = '4';
+  let patched = null;
+  globalThis.fetch = async (url, opt={}) => {
+    const u = String(url);
+    if (u.includes('/auth/v1/user')) return { ok:true, status:200, text:async()=>JSON.stringify({id:'u1'}) };
+    if (u.includes('/profiles'))     return { ok:true, status:200, text:async()=>JSON.stringify([profile]) };
+    if (u.includes('/app_settings') && opt.method === 'PATCH') {
+      patched = JSON.parse(opt.body);
+      return { ok:true, status:200, text:async()=>'[]' };        // refused
+    }
+    if (u.includes('/app_settings')) return { ok:true, status:200,
+      text:async()=>JSON.stringify([{ id:1, max_teams:10, max_members:10, registration_open:true,
+        team_creation_open:true, join_open:true, one_team_per_user:true }]) };
+    if (u.includes('public_config')) return { ok:true, status:200,
+      text:async()=>JSON.stringify({ max_teams:10, max_members:10, team_count:0, player_count:1, member_count:0 }) };
+    return { ok:true, status:200, text:async()=>'[]' };
+  };
+  await P.save();
+  R.check('the lowered value was sent', patched && patched.max_teams === 4);
+  R.check('a refused save is surfaced in the log', /❌/.test(reg['sbLog'].innerHTML));
+  R.check('the box is reset to the value really stored',
+    String(reg['acMaxTeams'].value) === '10');
+
+  // out-of-range input never reaches the network
+  let touched = false;
+  globalThis.fetch = async (url, opt={}) => {
+    if (String(url).includes('/app_settings') && opt.method === 'PATCH') touched = true;
+    if (String(url).includes('/auth/v1/user')) return { ok:true, status:200, text:async()=>JSON.stringify({id:'u1'}) };
+    return { ok:true, status:200, text:async()=>'[]' };
+  };
+  reg['acMaxTeams'].value = '0';
+  await P.save();
+  R.check('a zero cap is rejected before the request', touched === false);
+}
+
 exitCode = R.done('ALL NETHERAXIA TESTS');
 process.exit(exitCode);
