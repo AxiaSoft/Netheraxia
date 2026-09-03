@@ -365,8 +365,10 @@ alter table public.app_settings enable row level security;
 drop policy if exists profiles_select   on public.profiles;
 drop policy if exists profiles_update   on public.profiles;
 drop policy if exists profiles_admin_all on public.profiles;
+-- نام بازیکنان عمومی است (برای نمایش اعضای تیم لازم است)؛
+-- ایمیل از طریق نمای teams_public افشا نمی‌شود.
 create policy profiles_select on public.profiles
-    for select using (id = auth.uid() or public.is_admin());
+    for select using (true);
 create policy profiles_update on public.profiles
     for update using (id = auth.uid() or public.is_admin())
     with check (id = auth.uid() or public.is_admin());
@@ -428,7 +430,30 @@ create policy settings_update on public.app_settings for update
     using (public.is_admin()) with check (public.is_admin());
 
 -- ============================================================================
--- ۹) بعد از ثبت‌نام، خودتان را ادمین کنید (نام خود را جایگزین کنید):
+-- ۹) دسترسی جدول‌ها (GRANT)
+--     پستگرس اول GRANT را چک می‌کند و بعد RLS. بدون این بخش، حتی با وجود
+--     policyها، خواندن جدول‌ها رد می‌شود و پروفایل خالی می‌ماند.
+-- ============================================================================
+grant usage on schema public to anon, authenticated;
+
+grant select                         on public.profiles     to anon, authenticated;
+grant update                         on public.profiles     to authenticated;
+grant select                         on public.teams        to anon, authenticated;
+grant insert, update, delete         on public.teams        to authenticated;
+grant select                         on public.team_members to anon, authenticated;
+grant insert, update, delete         on public.team_members to authenticated;
+grant select                         on public.app_settings to anon, authenticated;
+grant update                         on public.app_settings to authenticated;
+
+-- ============================================================================
+-- ۱۰) تازه‌سازی کش اسکیمای PostgREST
+--     بدون این، ستون‌های تازه‌اضافه‌شده (مثل teams.flag) با خطای
+--     «Could not find the 'flag' column ... in the schema cache» رد می‌شوند.
+-- ============================================================================
+notify pgrst, 'reload schema';
+
+-- ============================================================================
+-- ۱۱) بعد از ثبت‌نام، خودتان را ادمین کنید (نام خود را جایگزین کنید):
 --     update public.profiles set is_admin = true
 --     where lower(mc_username) = lower('YourMinecraftName');
 -- ============================================================================

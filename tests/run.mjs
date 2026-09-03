@@ -946,5 +946,109 @@ let exitCode = 0;
   R.check('joining resolves the user first', posts[0] && posts[0].body.user_id === 'u5');
 }
 
+
+/* ============ X. the two failures the user hit ============ */
+{
+  const { reg, store } = installDom();
+  globalThis.location = { origin:'https://x.io', pathname:'/', hash:'', search:'' };
+  globalThis.history = { replaceState(){} };
+  loadScript('js/nx-auth.js');
+  const A = globalThis.NXAuth;
+  A.saveConfig('https://demo.supabase.co', 'k');
+
+  R.section('X. schema/permission failures are explained');
+
+  // "Could not find the 'flag' column of 'teams' in the schema cache"
+  R.check('schema-cache errors tell you to re-run the SQL',
+    /schema\.sql/.test(A.humanize("Could not find the 'flag' column of 'teams' in the schema cache")));
+  // grants were missing entirely, which is what blanked the profile
+  R.check('permission errors tell you to re-run the SQL',
+    /schema\.sql/.test(A.humanize('permission denied for table profiles')));
+
+  // A team must still be created when the flag column is missing.
+  store['nthx_session'] = JSON.stringify({ access_token:'t', refresh_token:'r',
+    expires_at: Math.floor(Date.now()/1000)+9999, user:{ id:'u1' } });
+  await A.init();
+  const posts = [];
+  let firstCall = true;
+  globalThis.fetch = async (url, opt={}) => {
+    const u = String(url);
+    if (u.includes('/auth/v1/user')) return { ok:true, status:200,
+      text:async()=>JSON.stringify({ id:'u1' }) };
+    const body = opt.body ? JSON.parse(opt.body) : null;
+    posts.push(body);
+    if (u.includes('/teams') && firstCall) {
+      firstCall = false;
+      return { ok:false, status:400, text:async()=>JSON.stringify(
+        { message:"Could not find the 'flag' column of 'teams' in the schema cache" }) };
+    }
+    return { ok:true, status:200, text:async()=>JSON.stringify([{ id:'t1', name:'Alpha' }]) };
+  };
+  const made = await A.createTeam({ name:'Alpha', flag:'data:image/png;base64,XX' });
+  R.check('team is still created when the flag column is missing', !!made);
+  R.check('the first attempt included the flag', posts[0].flag === 'data:image/png;base64,XX');
+  R.check('the retry drops the flag', posts[1] && posts[1].flag === undefined);
+  R.check('the team name survives the retry', posts[1].name === 'Alpha');
+  const warn = A.takeWarning();
+  R.check('the user is warned the flag was not saved', !!warn && /پرچم/.test(warn));
+  R.check('the warning is consumed once', A.takeWarning() === null);
+
+  // a genuine failure must not be silently retried
+  const teamPosts = [];
+  globalThis.fetch = async (url, opt={}) => {
+    const u = String(url);
+    if (u.includes('/auth/v1/user')) return { ok:true, status:200, text:async()=>JSON.stringify({id:'u1'}) };
+    if (u.includes('/teams')) teamPosts.push(u);
+    return { ok:false, status:400, text:async()=>JSON.stringify({ message:'MAX_TEAMS_REACHED' }) };
+  };
+  let err = null;
+  await A.createTeam({ name:'Beta', flag:'data:image/png;base64,YY' }).catch(e => err = e);
+  R.check('unrelated errors are not swallowed', !!err && /ظرفیت/.test(err.message));
+  R.check('and are not retried', teamPosts.length === 1);
+}
+
+/* ============ Y. profile must never sit on "loading" ============ */
+{
+  const { reg, store } = installDom();
+  const served = { 'images.json':{}, 'teams.json':{teams:[]}, 'rules.json':{rules:[]},
+                   'status.json':{}, 'texts.json':{} };
+  globalThis.location = { origin:'https://x.io', pathname:'/', hash:'', search:'' };
+  globalThis.history = { replaceState(){} };
+  globalThis.fetch = async (url) => {
+    const u = String(url);
+    if (u.includes('supabase.co')) {
+      if (u.includes('/auth/v1/user')) return { ok:true, status:200,
+        text:async()=>JSON.stringify({ id:'u1', email:'s@mc.com' }) };
+      // grants missing -> exactly what the user's database did
+      if (u.includes('/profiles')) return { ok:false, status:403,
+        text:async()=>JSON.stringify({ message:'permission denied for table profiles' }) };
+      if (u.includes('public_config')) return { ok:true, status:200, text:async()=>JSON.stringify(
+        { max_teams:10, max_members:10, team_creation_open:true, join_open:true }) };
+      return { ok:true, status:200, text:async()=>'[]' };
+    }
+    const n = u.split('/').pop().split('?')[0];
+    return served[n] ? { ok:true, status:200, json:async()=>served[n] } : { ok:false, status:404 };
+  };
+  const cfg = { url:'https://demo.supabase.co', anonKey:'k' };
+  globalThis.window.NETHERAXIA_SUPABASE = cfg; globalThis.NETHERAXIA_SUPABASE = cfg;
+  loadScript('js/nx-auth.js');
+  globalThis.NXAuth.saveConfig(cfg.url, cfg.anonKey);
+  store['nthx_session'] = JSON.stringify({ access_token:'t', refresh_token:'r',
+    expires_at: Math.floor(Date.now()/1000)+9999, user:{ id:'u1' } });
+
+  const S = loadPage('index.html', `globalThis.__X={init:initAccounts, open:openProfile,
+    profile:renderProfile}`);
+  await S.init();
+  await S.open();
+
+  R.section('Y. profile explains itself when the database refuses');
+  R.check('the modal still opens', reg['profileModal'].classList.contains('active'));
+  R.check('an error is shown instead of endless loading',
+    reg['pfError'].style.display === 'block');
+  R.check('the message points at the fix', /schema\.sql/.test(reg['pfError'].textContent));
+  R.check('it does not pretend to still be loading',
+    reg['pfError'].textContent.indexOf('در حال بارگذاری') === -1);
+}
+
 exitCode = R.done('ALL NETHERAXIA TESTS');
 process.exit(exitCode);

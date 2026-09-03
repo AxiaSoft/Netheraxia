@@ -1687,6 +1687,7 @@ let liveTeams = null;          // null = not using the database
 let liveConfig = null;
 let myTeam = null;             // { team_id, is_leader, team_name }
 let myProfile = null;
+let lastProfileError = null;
 let authBusy = false;
 
 function nxToast(msg, kind) {
@@ -1757,12 +1758,20 @@ async function refreshAccountState() {
         liveConfig = await NXAuth.getConfig();
     } catch (e) { liveConfig = null; }
     if (NXAuth.isLoggedIn()) {
+        // Load these independently: if the membership lookup fails we still
+        // want the name, and vice versa.
         try {
             myProfile = await NXAuth.myProfile();
+            lastProfileError = null;
+        } catch (e) {
+            myProfile = null;
+            lastProfileError = e.message || 'خطا در خواندن پروفایل';
+        }
+        try {
             myTeam = await NXAuth.myMembership();
-        } catch (e) { myProfile = null; myTeam = null; }
+        } catch (e) { myTeam = null; }
     } else {
-        myProfile = null; myTeam = null;
+        myProfile = null; myTeam = null; lastProfileError = null;
     }
     renderAuthChip();
 }
@@ -2111,7 +2120,8 @@ function wireAuthUI() {
             document.getElementById('flagHint').className = 'field-hint';
             document.getElementById('flagHint').textContent = 'یا به‌جای عکس، یک ایموji بنویس:';
             await reloadTeamsUI();
-            nxToast('🎉 تیمت ساخته شد!', 'success');
+            const warn = NXAuth.takeWarning && NXAuth.takeWarning();
+            nxToast(warn || '🎉 تیمت ساخته شد!', warn ? 'error' : 'success');
         } catch (e) {
             showAuthError('teamError', e.message);
         } finally {
@@ -2232,8 +2242,6 @@ function faDate(iso) {
 
 function renderProfile() {
     if (!myProfile) {
-        // Still loading (or the profile row is unreadable) — say so rather
-        // than showing an empty card.
         const loading = NXAuth.isLoggedIn() ? 'در حال بارگذاری...' : '—';
         ['pfName','pfTeam','pfRole','pfSince','pfMates'].forEach(id => {
             const el = document.getElementById(id);
@@ -2245,6 +2253,8 @@ function renderProfile() {
         if (av) av.textContent = '…';
         const box = document.getElementById('pfTeamBox');
         if (box) box.style.display = 'none';
+        // Never leave the user staring at "loading" with no reason.
+        if (lastProfileError) showAuthError('pfError', lastProfileError);
         return;
     }
     const name = myProfile.mc_username || '—';
@@ -2281,11 +2291,12 @@ function renderProfile() {
 }
 
 async function openProfile() {
-    showAuthError('pfError', '');
     document.getElementById('pfNewPass').value = '';
+    if (!lastProfileError) showAuthError('pfError', '');
     renderProfile();              // paint whatever is already loaded
     openOverlay('profileModal');  // ...and show it immediately
     await refreshAccountState();  // then refresh in the background
+    if (!lastProfileError) showAuthError('pfError', '');
     renderProfile();
 }
 

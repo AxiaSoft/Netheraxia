@@ -50,6 +50,9 @@
 
     /* ---- نشست ------------------------------------------------------------ */
     var session = null;
+    var lastWarning = null;   // پیام هشدار غیربحرانی برای نمایش به کاربر
+
+    function takeWarning() { var w = lastWarning; lastWarning = null; return w; }
 
     function loadSession() {
         try {
@@ -100,6 +103,14 @@
         if (/duplicate key.*profiles_username_uniq/i.test(t)) return MESSAGES.USERNAME_TAKEN;
         if (/teams_name_len/i.test(t)) return 'نام تیم باید بین ۲ تا ۲۴ کاراکتر باشد.';
         if (/duplicate key/i.test(t)) return 'این مورد از قبل ثبت شده است.';
+        if (/schema cache|could not find the .* column/i.test(t)) {
+            return 'دیتابیس هنوز به‌روز نشده است. فایل supabase/schema.sql را ' +
+                   'دوباره در SQL Editor اجرا کنید (بخش پرچم تیم ستون جدیدی لازم دارد).';
+        }
+        if (/permission denied/i.test(t)) {
+            return 'دسترسی دیتابیس تنظیم نشده است. فایل supabase/schema.sql را ' +
+                   'دوباره اجرا کنید تا بخش GRANT اعمال شود.';
+        }
         if (/Invalid login credentials/i.test(t)) return 'نام کاربری/ایمیل یا رمز عبور اشتباه است.';
         if (/Email not confirmed/i.test(t)) return 'ایمیل شما هنوز تأیید نشده است.';
         if (/User already registered/i.test(t)) return 'این ایمیل قبلاً ثبت‌نام کرده است.';
@@ -360,17 +371,35 @@
         }
         return fetchUser().then(function (u) {
             if (!u || !u.id) throw new Error('نشست معتبر نیست؛ دوباره وارد شوید.');
-            return rest('/teams', {
-                method: 'POST',
-                headers: { 'Prefer': 'return=representation' },
-                body: {
-                    name: name,
-                    description: String(team.description || '').trim().slice(0, 200) || null,
-                    emoji: team.emoji || '🛡️',
-                    flag: flag,
-                    color: team.color || '#2f86ff',
-                    owner_id: u.id
-                }
+            var payload = {
+                name: name,
+                description: String(team.description || '').trim().slice(0, 200) || null,
+                emoji: team.emoji || '🛡️',
+                color: team.color || '#2f86ff',
+                owner_id: u.id
+            };
+            if (flag) payload.flag = flag;
+
+            var post = function (body) {
+                return rest('/teams', {
+                    method: 'POST',
+                    headers: { 'Prefer': 'return=representation' },
+                    body: body
+                });
+            };
+
+            return post(payload).catch(function (err) {
+                // Older databases have no `flag` column yet. Rather than lose
+                // the whole team, save it without the image and say so.
+                var missingFlag = /flag/i.test(String(err.raw || err.message)) &&
+                    /schema cache|column/i.test(String(err.raw || err.message));
+                if (!missingFlag || !flag) throw err;
+                delete payload.flag;
+                return post(payload).then(function (rows) {
+                    lastWarning = 'تیم ساخته شد، ولی پرچم ذخیره نشد چون دیتابیس ' +
+                        'به‌روز نیست. فایل supabase/schema.sql را دوباره اجرا کنید.';
+                    return rows;
+                });
             });
         }).then(function (rows) { return (rows && rows[0]) || null; });
     }
@@ -463,6 +492,7 @@
         getSettings: getSettings, updateSettings: updateSettings,
         listPlayers: listPlayers, setPlayerFlags: setPlayerFlags,
         adminAddMember: adminAddMember,
-        humanize: humanize, rest: rest, rpc: rpc, refresh: refreshIfNeeded
+        humanize: humanize, rest: rest, rpc: rpc, refresh: refreshIfNeeded,
+        takeWarning: takeWarning
     };
 })(typeof globalThis !== 'undefined' ? globalThis : window);
