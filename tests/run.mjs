@@ -646,5 +646,132 @@ let exitCode = 0;
       css.slice(css.indexOf('bg-switch" id="bgSwitch"'))));
 }
 
+
+/* ============ S. password recovery (the 404 bug) ============ */
+{
+  const { store } = installDom();
+  globalThis.location = { origin:'https://axiasoft.github.io',
+                          pathname:'/Netheraxia/index.html', hash:'', search:'' };
+  globalThis.history = { replaceState(){} };
+  loadScript('js/nx-auth.js');
+  const A = globalThis.NXAuth;
+  A.saveConfig('https://demo.supabase.co', 'sb_publishable_x');
+
+  R.section('S. password recovery');
+  // The link 404'd because Supabase bounced back to the site root while the
+  // site lives under /Netheraxia/. The return address must keep the subfolder.
+  R.check('return address keeps the sub-directory',
+    A.siteUrl() === 'https://axiasoft.github.io/Netheraxia/');
+
+  const seen = [];
+  globalThis.fetch = async (url, opt={}) => {
+    seen.push({ url:String(url), method:opt.method||'GET',
+                body: opt.body ? JSON.parse(opt.body) : null });
+    return { ok:true, status:200, text:async()=>'{}' };
+  };
+  await A.resetPassword('steve@mc.com');
+  R.check('recovery request hits /recover', seen[0].url.includes('/auth/v1/recover'));
+  R.check('it sends an explicit redirect_to',
+    /redirect_to=/.test(seen[0].url));
+  R.check('the redirect points back inside /Netheraxia/',
+    decodeURIComponent(seen[0].url).includes('https://axiasoft.github.io/Netheraxia/'));
+
+  // returning from the email link
+  R.check('nothing happens on a normal page load', A.consumeRecoveryLink() === null);
+
+  globalThis.location.hash =
+    '#access_token=rec-token&refresh_token=rr&expires_in=3600&type=recovery';
+  const res = A.consumeRecoveryLink();
+  R.check('recovery link is recognised', !!res && res.recovery === true);
+  R.check('the session is adopted from the link', A.isLoggedIn() === true);
+  R.check('session persisted so the password can be changed', !!store['nthx_session']);
+
+  // an expired link must explain itself, not fail silently
+  globalThis.location.hash = '#error=access_denied&error_description=Email+link+is+invalid+or+has+expired';
+  const bad = A.consumeRecoveryLink();
+  R.check('expired links report a Persian message',
+    !!bad && /منقضی|نامعتبر/.test(bad.error));
+
+  // setting the new password
+  globalThis.location.hash = '#access_token=rec2&refresh_token=r&expires_in=3600&type=recovery';
+  A.consumeRecoveryLink();
+  seen.length = 0;
+  await A.updatePassword('brandnew123');
+  R.check('password update PUTs to /auth/v1/user',
+    seen[0].method === 'PUT' && seen[0].url.includes('/auth/v1/user'));
+  R.check('the new password is sent', seen[0].body.password === 'brandnew123');
+
+  let err = null;
+  await A.updatePassword('123').catch(e => err = e);
+  R.check('short passwords refused before any request', !!err);
+}
+
+/* ============ T. profile shows the player's name ============ */
+{
+  const { reg, gid } = installDom();
+  const served = { 'images.json':{}, 'teams.json':{teams:[]}, 'rules.json':{rules:[]},
+                   'status.json':{}, 'texts.json':{} };
+  const team = { id:'t1', name:'شوالیه‌ها', emoji:'⚔️', owner_id:'u1', owner_name:'Steve',
+    members:[{ user_id:'u1', name:'Steve', is_leader:true },
+             { user_id:'u2', name:'Alex',  is_leader:false }] };
+  globalThis.fetch = async (url) => {
+    const u = String(url);
+    if (u.includes('supabase.co')) {
+      if (u.includes('public_config')) return { ok:true, status:200, text:async()=>JSON.stringify(
+        { max_teams:10, max_members:10, team_creation_open:true, join_open:true,
+          team_count:1, player_count:2, member_count:2 }) };
+      if (u.includes('my_membership')) return { ok:true, status:200, text:async()=>JSON.stringify(
+        { team_id:'t1', is_leader:true, team_name:'شوالیه‌ها' }) };
+      if (u.includes('/profiles')) return { ok:true, status:200, text:async()=>JSON.stringify(
+        [{ id:'u1', mc_username:'Steve', email:'steve@mc.com', is_admin:true,
+           is_banned:false, created_at:'2026-01-15T10:00:00Z' }]) };
+      if (u.includes('teams_public')) return { ok:true, status:200, text:async()=>JSON.stringify([team]) };
+      return { ok:true, status:200, text:async()=>'[]' };
+    }
+    const n = u.split('/').pop().split('?')[0];
+    return served[n] ? { ok:true, status:200, json:async()=>served[n] } : { ok:false, status:404 };
+  };
+  const cfg = { url:'https://demo.supabase.co', anonKey:'sb_publishable_x' };
+  globalThis.window.NETHERAXIA_SUPABASE = cfg; globalThis.NETHERAXIA_SUPABASE = cfg;
+  globalThis.location = { origin:'https://x.io', pathname:'/', hash:'', search:'' };
+  globalThis.history = { replaceState(){} };
+  loadScript('js/nx-auth.js');
+  globalThis.NXAuth.saveConfig(cfg.url, cfg.anonKey);
+  // pretend we are signed in as Steve
+  globalThis.localStorage.setItem('nthx_session', JSON.stringify({
+    access_token:'t', refresh_token:'r',
+    expires_at: Math.floor(Date.now()/1000)+9999, user:{ id:'u1' } }));
+
+  const S = loadPage('index.html', `globalThis.__X={init:initAccounts, profile:renderProfile,
+    open:openProfile, chip:renderAuthChip, renderTeams}`);
+  await S.init();
+
+  R.section('T. profile shows the player identity');
+  R.check('the button shows the player name, not a generic label',
+    reg['authChipLabel'].textContent === 'Steve');
+  R.check('the avatar uses the first letter', reg['authAvatar'].textContent === 'S');
+  R.check('the menu names the player', reg['authMenuName'].textContent === 'Steve');
+  R.check('the menu shows the team and role',
+    /کاپیتان/.test(reg['authMenuSub'].textContent) &&
+    reg['authMenuSub'].textContent.includes('شوالیه‌ها'));
+
+  S.profile();
+  R.check('profile shows the minecraft name', reg['pfName'].textContent === 'Steve');
+  R.check('profile shows the email', reg['pfMail'].textContent === 'steve@mc.com');
+  R.check('profile shows the team', reg['pfTeam'].textContent === 'شوالیه‌ها');
+  R.check('profile shows the role', /کاپیتان/.test(reg['pfRole'].textContent));
+  R.check('admins are badged', /مدیر سرور/.test(reg['pfBadges'].innerHTML));
+  R.check('join date is shown in Persian', reg['pfSince'].textContent !== '—');
+  R.check('teammates are listed', reg['pfTeamMembers'].innerHTML.includes('Alex'));
+  R.check('the player is marked among them',
+    reg['pfTeamMembers'].innerHTML.includes('profile-member me'));
+  R.check('teammate count excludes the player', reg['pfMates'].textContent.includes('۱'));
+
+  // and the team card marks who you are
+  S.renderTeams();
+  R.check('team card tags the signed-in player',
+    reg['teamsGrid'].innerHTML.includes('member-you'));
+}
+
 exitCode = R.done('ALL NETHERAXIA TESTS');
 process.exit(exitCode);

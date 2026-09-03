@@ -808,6 +808,63 @@
             .auth-chip-label { display: none; }
             .auth-chip { padding: 0 9px; }
         }
+
+        .profile-head {
+            display: flex; align-items: center; gap: 14px; margin-bottom: 18px;
+            padding-bottom: 18px; border-bottom: 1px solid var(--border-default);
+        }
+        .profile-avatar {
+            width: 58px; height: 58px; border-radius: var(--r-md); flex-shrink: 0;
+            background: linear-gradient(135deg, var(--accent-dark), var(--cyan));
+            display: grid; place-items: center;
+            font-size: 26px; font-weight: 900; color: #fff;
+            box-shadow: var(--pixel-shadow);
+        }
+        .profile-ident { min-width: 0; }
+        .profile-name {
+            font-size: 19px; font-weight: 900; color: var(--text-primary);
+            word-break: break-all; line-height: 1.4;
+        }
+        .profile-mail { font-size: 12px; color: var(--text-tertiary); word-break: break-all; }
+        .profile-grid {
+            display: grid; grid-template-columns: repeat(2, 1fr); gap: 9px; margin-bottom: 18px;
+        }
+        .profile-stat {
+            padding: 11px 13px; border-radius: var(--r-sm);
+            background: var(--bg-chip); border: 1px solid var(--border-default);
+        }
+        .profile-stat-label { font-size: 10.5px; color: var(--text-tertiary); margin-bottom: 4px; }
+        .profile-stat-value {
+            font-size: 13.5px; font-weight: 800; color: var(--text-primary);
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .profile-sec-title {
+            font-size: 12px; font-weight: 800; color: var(--accent-light);
+            margin: 16px 0 10px; padding-top: 14px; border-top: 1px solid var(--border-default);
+        }
+        .profile-members { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 4px; }
+        .profile-member {
+            display: inline-flex; align-items: center; gap: 5px;
+            padding: 5px 10px; border-radius: var(--r-xs);
+            background: var(--bg-chip); border: 1px solid var(--border-default); font-size: 12px;
+        }
+        .profile-member.me { border-color: var(--accent); color: var(--accent-light); font-weight: 800; }
+        .profile-badge {
+            display: inline-block; padding: 3px 9px; border-radius: var(--r-xs); margin-left: 5px;
+            font-size: 10px; font-weight: 800;
+            background: rgba(var(--accent-rgb), 0.15);
+            border: 1px solid var(--border-accent); color: var(--accent-light);
+        }
+        .profile-badge.gold {
+            background: rgba(255,201,74,0.14); border-color: rgba(255,201,74,0.4); color: var(--gold);
+        }
+
+        .member-you {
+            display: inline-block; margin-right: 6px; padding: 1px 7px;
+            border-radius: var(--r-xs); font-size: 9.5px; font-weight: 800;
+            background: rgba(var(--accent-rgb), 0.18);
+            border: 1px solid var(--border-accent); color: var(--accent-light);
+        }
     </style>
 </head>
 <body>
@@ -857,6 +914,7 @@
         <div class="auth-menu-name" id="authMenuName"></div>
         <div class="auth-menu-sub" id="authMenuSub"></div>
     </div>
+    <button class="auth-menu-item" id="authMenuProfile">👤 پروفایل من</button>
     <button class="auth-menu-item" id="authMenuTeam">⚔️ تیم من</button>
     <button class="auth-menu-item danger" id="authMenuLogout">🚪 خروج از حساب</button>
 </div>
@@ -985,6 +1043,74 @@
             <button class="btn-primary-full" id="registerSubmit">ساخت حساب</button>
             <div class="auth-switch">با ثبت‌نام، قوانین سرور را می‌پذیری.</div>
         </div>
+    </div>
+</div>
+
+<!-- Profile modal -->
+<div class="modal-overlay" id="profileModal">
+    <div class="modal-box">
+        <button class="modal-close" data-close="profileModal">✕</button>
+        <div class="modal-title">👤 پروفایل من</div>
+
+        <div class="profile-head">
+            <div class="profile-avatar" id="pfAvatar">?</div>
+            <div class="profile-ident">
+                <div class="profile-name" id="pfName">—</div>
+                <div class="profile-mail" id="pfMail"></div>
+                <div id="pfBadges" style="margin-top:6px;"></div>
+            </div>
+        </div>
+
+        <div class="profile-grid">
+            <div class="profile-stat">
+                <div class="profile-stat-label">تیم</div>
+                <div class="profile-stat-value" id="pfTeam">—</div>
+            </div>
+            <div class="profile-stat">
+                <div class="profile-stat-label">نقش</div>
+                <div class="profile-stat-value" id="pfRole">—</div>
+            </div>
+            <div class="profile-stat">
+                <div class="profile-stat-label">عضویت از</div>
+                <div class="profile-stat-value" id="pfSince">—</div>
+            </div>
+            <div class="profile-stat">
+                <div class="profile-stat-label">هم‌تیمی‌ها</div>
+                <div class="profile-stat-value" id="pfMates">—</div>
+            </div>
+        </div>
+
+        <div id="pfTeamBox" style="display:none;">
+            <div class="profile-sec-title">⚔️ اعضای تیم</div>
+            <div id="pfTeamMembers" class="profile-members"></div>
+        </div>
+
+        <div class="profile-sec-title">🔑 تغییر رمز عبور</div>
+        <div class="auth-error" id="pfError"></div>
+        <div class="field">
+            <input type="password" id="pfNewPass" placeholder="رمز عبور جدید (حداقل ۶ کاراکتر)" autocomplete="new-password">
+        </div>
+        <button class="btn-primary-full" id="pfSavePass">ذخیره رمز جدید</button>
+    </div>
+</div>
+
+<!-- Set new password (after clicking the recovery email link) -->
+<div class="modal-overlay" id="recoveryModal">
+    <div class="modal-box">
+        <div class="modal-title">🔐 انتخاب رمز عبور جدید</div>
+        <div class="auth-error" id="rcError"></div>
+        <p style="font-size:13px;color:var(--text-tertiary);line-height:2;margin-bottom:16px;text-align:center;">
+            لینک بازیابی تأیید شد. حالا یک رمز عبور جدید انتخاب کن.
+        </p>
+        <div class="field">
+            <label>رمز عبور جدید</label>
+            <input type="password" id="rcPass1" placeholder="حداقل ۶ کاراکتر" autocomplete="new-password">
+        </div>
+        <div class="field">
+            <label>تکرار رمز عبور</label>
+            <input type="password" id="rcPass2" placeholder="دوباره وارد کن" autocomplete="new-password">
+        </div>
+        <button class="btn-primary-full" id="rcSubmit">ثبت رمز جدید</button>
     </div>
 </div>
 
@@ -1557,8 +1683,10 @@ function renderAuthChip() {
         avatar.textContent = myProfile.mc_username.charAt(0).toUpperCase();
         document.getElementById('authMenuName').textContent = myProfile.mc_username;
         document.getElementById('authMenuSub').textContent =
-            myTeam ? (myTeam.is_leader ? '👑 کاپیتان ' : 'عضو ') + myTeam.team_name : 'بدون تیم';
+            myTeam ? (myTeam.is_leader ? '👑 کاپیتان ' : '🛡️ عضو ') + myTeam.team_name : 'بدون تیم';
         document.getElementById('authMenuTeam').style.display = myTeam ? 'block' : 'none';
+        const pm = document.getElementById('authMenuProfile');
+        if (pm) pm.style.display = 'block';
     } else {
         label.textContent = 'ورود / ثبت‌نام';
         avatar.textContent = '?';
@@ -1667,8 +1795,10 @@ function renderLiveTeams() {
             const kick = (iAmOwner && m.user_id !== uid)
                 ? `<button class="member-kick" data-kick="${escapeHtml(team.id)}" data-user="${escapeHtml(m.user_id)}" title="اخراج">✕</button>`
                 : '';
+            const isMe = uid && m.user_id === uid;
             return `<div class="member-row ${m.is_leader ? 'leader' : ''}">
-                <span class="member-name">${m.is_leader ? '<span class="member-crown">👑</span>' : ''}${escapeHtml(m.name)}</span>${kick}</div>`;
+                <span class="member-name">${m.is_leader ? '<span class="member-crown">👑</span>' : ''}${escapeHtml(m.name)}` +
+                `${isMe ? '<span class="member-you">تو</span>' : ''}</span>${kick}</div>`;
         }).join('');
 
         let foot = '';
@@ -1786,7 +1916,7 @@ function wireAuthUI() {
     document.querySelectorAll('[data-close]').forEach(b => {
         b.addEventListener('click', () => closeOverlay(b.dataset.close));
     });
-    ['authModal', 'teamModal'].forEach(id => {
+    ['authModal', 'teamModal', 'profileModal'].forEach(id => {
         const m = document.getElementById(id);
         if (m) m.addEventListener('click', ev => { if (ev.target === m) closeOverlay(id); });
     });
@@ -1873,13 +2003,19 @@ function wireAuthUI() {
 
     document.getElementById('forgotLink').addEventListener('click', async () => {
         const id = document.getElementById('loginId').value.trim();
+        if (!id) {
+            showAuthError('authError', 'اول ایمیل حسابت را در کادر بالا بنویس.');
+            return;
+        }
         if (id.indexOf('@') === -1) {
-            showAuthError('authError', 'برای بازیابی رمز، ایمیل حسابت را در کادر بالا بنویس.');
+            showAuthError('authError',
+                'برای بازیابی رمز باید ایمیل حسابت را بنویسی (نه نام ماینکرفت).');
             return;
         }
         try {
             await NXAuth.resetPassword(id);
-            showAuthError('authError', '✅ لینک بازیابی به ایمیلت فرستاده شد.', true);
+            showAuthError('authError',
+                '✅ لینک بازیابی به ایمیلت فرستاده شد. اگر نبود، پوشه‌ی اسپم را ببین.', true);
         } catch (e) { showAuthError('authError', e.message); }
     });
 
@@ -1923,13 +2059,120 @@ function wireAuthUI() {
     });
 }
 
+
+// ---- profile ------------------------------------------------------------
+function faDate(iso) {
+    if (!iso) return '—';
+    try { return new Date(iso).toLocaleDateString('fa-IR',
+        { year:'numeric', month:'long', day:'numeric' }); }
+    catch (e) { return '—'; }
+}
+
+function renderProfile() {
+    if (!myProfile) return;
+    const name = myProfile.mc_username || '—';
+    document.getElementById('pfName').textContent = name;
+    document.getElementById('pfAvatar').textContent = name.charAt(0).toUpperCase();
+    document.getElementById('pfMail').textContent = myProfile.email || '';
+    document.getElementById('pfSince').textContent = faDate(myProfile.created_at);
+
+    const badges = [];
+    if (myProfile.is_admin)  badges.push('<span class="profile-badge gold">مدیر سرور</span>');
+    if (myProfile.is_banned) badges.push('<span class="profile-badge">مسدود</span>');
+    if (myTeam && myTeam.is_leader) badges.push('<span class="profile-badge gold">👑 کاپیتان</span>');
+    document.getElementById('pfBadges').innerHTML = badges.join('');
+
+    document.getElementById('pfTeam').textContent = myTeam ? myTeam.team_name : 'بدون تیم';
+    document.getElementById('pfRole').textContent =
+        myTeam ? (myTeam.is_leader ? '👑 کاپیتان' : '🛡️ عضو') : '—';
+
+    // teammates, taken from the already-loaded team list
+    const box = document.getElementById('pfTeamBox');
+    const list = document.getElementById('pfTeamMembers');
+    const uid = NXAuth.user() ? NXAuth.user().id : null;
+    const team = (liveTeams || []).find(t => myTeam && t.id === myTeam.team_id);
+    if (team && Array.isArray(team.members)) {
+        document.getElementById('pfMates').textContent = toFa(Math.max(0, team.members.length - 1)) + ' نفر';
+        list.innerHTML = team.members.map(m =>
+            `<span class="profile-member${m.user_id === uid ? ' me' : ''}">` +
+            `${m.is_leader ? '👑' : '👤'} ${escapeHtml(m.name)}</span>`).join('');
+        box.style.display = '';
+    } else {
+        document.getElementById('pfMates').textContent = '—';
+        box.style.display = 'none';
+    }
+}
+
+async function openProfile() {
+    await refreshAccountState();
+    renderProfile();
+    showAuthError('pfError', '');
+    document.getElementById('pfNewPass').value = '';
+    openOverlay('profileModal');
+}
+
+// ---- password recovery ---------------------------------------------------
+// Supabase sends the user back here with tokens in the URL fragment. Without
+// this the link lands on a page that does nothing (or 404s).
+async function handleRecoveryLink() {
+    if (!authEnabled()) return;
+    let res = null;
+    try { res = NXAuth.consumeRecoveryLink(); } catch (e) { return; }
+    if (!res) return;
+
+    if (res.error) { nxToast(res.error, 'error'); return; }
+
+    showAuthError('rcError', '');
+    openOverlay('recoveryModal');
+}
+
+function wireRecoveryUI() {
+    const submit = document.getElementById('rcSubmit');
+    if (submit) submit.addEventListener('click', async function () {
+        const p1 = document.getElementById('rcPass1').value;
+        const p2 = document.getElementById('rcPass2').value;
+        if (p1 !== p2) { showAuthError('rcError', 'دو رمز یکسان نیستند.'); return; }
+        if (p1.length < 6) { showAuthError('rcError', 'رمز عبور باید حداقل ۶ کاراکتر باشد.'); return; }
+        this.disabled = true; this.textContent = 'در حال ذخیره...';
+        try {
+            await NXAuth.updatePassword(p1);
+            closeOverlay('recoveryModal');
+            await reloadTeamsUI();
+            nxToast('✅ رمز عبور عوض شد. خوش آمدی!', 'success');
+        } catch (e) {
+            showAuthError('rcError', e.message);
+        } finally { this.disabled = false; this.textContent = 'ثبت رمز جدید'; }
+    });
+
+    const save = document.getElementById('pfSavePass');
+    if (save) save.addEventListener('click', async function () {
+        const p = document.getElementById('pfNewPass').value;
+        this.disabled = true; this.textContent = 'در حال ذخیره...';
+        try {
+            await NXAuth.updatePassword(p);
+            document.getElementById('pfNewPass').value = '';
+            showAuthError('pfError', '✅ رمز عبور با موفقیت عوض شد.', true);
+        } catch (e) {
+            showAuthError('pfError', e.message);
+        } finally { this.disabled = false; this.textContent = 'ذخیره رمز جدید'; }
+    });
+
+    const menu = document.getElementById('authMenuProfile');
+    if (menu) menu.addEventListener('click', () => {
+        document.getElementById('authMenu').classList.remove('active');
+        openProfile();
+    });
+}
+
 async function initAccounts() {
     if (typeof NXAuth === 'undefined') return;
     try { await NXAuth.init(); } catch (e) {}
     if (!NXAuth.isConfigured()) { renderAuthChip(); return; }
+    await handleRecoveryLink();          // before anything else reads the session
     await refreshLiveTeams();
     await refreshAccountState();
     wireAuthUI();
+    wireRecoveryUI();
     renderTeams();
 }
 

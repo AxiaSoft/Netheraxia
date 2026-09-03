@@ -236,8 +236,73 @@
         return request('/auth/v1/logout', { method: 'POST' }).then(done, done);
     }
 
+    // The page the recovery link should come back to. Works from any
+    // sub-directory (GitHub Pages serves this site under /Netheraxia/).
+    function siteUrl() {
+        if (typeof location === 'undefined') return '';
+        var path = location.pathname.replace(/[^/]*$/, '');   // strip the filename
+        return location.origin + path;
+    }
+
     function resetPassword(email) {
-        return request('/auth/v1/recover', { method: 'POST', body: { email: String(email || '').trim() } });
+        var target = siteUrl() + '?recovery=1';
+        return request('/auth/v1/recover?redirect_to=' + encodeURIComponent(target), {
+            method: 'POST',
+            body: { email: String(email || '').trim() }
+        });
+    }
+
+    // Supabase returns the tokens in the URL fragment:
+    //   #access_token=...&refresh_token=...&type=recovery
+    // Read them, adopt the session, and clean the address bar so the
+    // tokens are not left sitting in history.
+    function consumeRecoveryLink() {
+        if (typeof location === 'undefined') return null;
+        var frag = String(location.hash || '').replace(/^#/, '');
+        var qs   = String(location.search || '').replace(/^\?/, '');
+        var p    = new URLSearchParams(frag || qs);
+
+        var errDesc = p.get('error_description') || p.get('error');
+        if (errDesc) {
+            cleanUrl();
+            return { error: /expired|invalid/i.test(errDesc)
+                ? 'لینک بازیابی منقضی یا نامعتبر است. دوباره درخواست بدهید.'
+                : decodeURIComponent(errDesc) };
+        }
+
+        var token = p.get('access_token');
+        var type  = p.get('type');
+        if (!token || type !== 'recovery') return null;
+
+        storeSession({
+            access_token: token,
+            refresh_token: p.get('refresh_token'),
+            expires_at: Math.floor(Date.now() / 1000) + parseInt(p.get('expires_in') || '3600', 10),
+            user: null
+        });
+        cleanUrl();
+        return { recovery: true };
+    }
+
+    function cleanUrl() {
+        try {
+            if (typeof history !== 'undefined' && history.replaceState) {
+                history.replaceState(null, '', location.pathname);
+            }
+        } catch (e) {}
+    }
+
+    // Set a new password for the signed-in (or just-recovered) user.
+    function updatePassword(newPassword) {
+        if (String(newPassword || '').length < 6) {
+            return Promise.reject(new Error('رمز عبور باید حداقل ۶ کاراکتر باشد.'));
+        }
+        if (!isLoggedIn()) {
+            return Promise.reject(new Error('لینک بازیابی معتبر نیست؛ دوباره درخواست بدهید.'));
+        }
+        return request('/auth/v1/user', {
+            method: 'PUT', body: { password: String(newPassword) }
+        });
     }
 
     /* ---- پروفایل --------------------------------------------------------- */
@@ -350,6 +415,7 @@
         session: function () { return session; },
         user: currentUser, isLoggedIn: isLoggedIn,
         signUp: signUp, signIn: signIn, signOut: signOut, resetPassword: resetPassword,
+        consumeRecoveryLink: consumeRecoveryLink, updatePassword: updatePassword, siteUrl: siteUrl,
         checkUsername: checkUsername, myProfile: myProfile,
         getConfig: getConfig, listTeams: listTeams, myMembership: myMembership,
         createTeam: createTeam, joinTeam: joinTeam, leaveTeam: leaveTeam,
