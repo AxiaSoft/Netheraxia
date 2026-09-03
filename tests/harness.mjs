@@ -51,6 +51,12 @@ export function loadPage(file, exportsSrc){
   return globalThis.__X;
 }
 
+// Load a standalone .js file (e.g. js/nx-auth.js) into the global scope.
+export function loadScript(file){
+  const code = fs.readFileSync('/home/user/Netheraxia/'+file,'utf8');
+  new Function(code)();
+}
+
 export function reporter(){
   let failed = false;
   return {

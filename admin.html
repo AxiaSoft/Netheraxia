@@ -729,6 +729,34 @@
         .pv-title { font-size: 22px; font-weight: 900; color: #e6f2ff; margin-bottom: 6px; }
         .pv-sub { font-size: 13px; color: #7ba3cc; }
         .pv-label:empty, .pv-title:empty, .pv-sub:empty { display: none; }
+
+        .ac-row {
+            display: flex; align-items: center; justify-content: space-between; gap: 12px;
+            padding: 12px 14px; margin-bottom: 8px; border-radius: var(--r-sm);
+            background: rgba(10,26,54,0.5); border: 1px solid var(--glass-border); flex-wrap: wrap;
+        }
+        .ac-row-main { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 200px; }
+        .ac-name { font-weight: 800; font-size: 14px; }
+        .ac-meta { font-size: 11px; color: var(--text-tertiary); margin-top: 3px; }
+        .ac-badge {
+            padding: 3px 9px; border-radius: var(--r-xs); font-size: 10px; font-weight: 800;
+            background: rgba(47,134,255,0.15); border: 1px solid rgba(47,134,255,0.35); color: #6fb8ff;
+        }
+        .ac-badge.full   { background: rgba(239,68,68,0.15); border-color: rgba(239,68,68,0.4); color: #fca5a5; }
+        .ac-badge.admin  { background: rgba(255,201,74,0.15); border-color: rgba(255,201,74,0.4); color: #ffc94a; }
+        .ac-badge.banned { background: rgba(239,68,68,0.15); border-color: rgba(239,68,68,0.4); color: #fca5a5; }
+        .ac-members { padding: 6px 14px 12px; }
+        .ac-member {
+            display: inline-flex; align-items: center; gap: 6px; margin: 3px;
+            padding: 5px 10px; border-radius: var(--r-xs);
+            background: rgba(3,10,24,0.6); border: 1px solid var(--glass-border); font-size: 12px;
+        }
+
+        .member-kick-btn {
+            background: none; border: none; color: #fca5a5; cursor: pointer;
+            font-size: 11px; padding: 1px 4px; border-radius: var(--r-xs);
+        }
+        .member-kick-btn:hover { background: rgba(239,68,68,0.18); }
     </style>
 </head>
 <body>
@@ -760,6 +788,7 @@
             <button class="tab-btn" onclick="switchTab('teams', this)">👥 مدیریت تیم‌ها</button>
             <button class="tab-btn" onclick="switchTab('rules', this)">⚖️ مدیریت قوانین</button>
             <button class="tab-btn" onclick="switchTab('texts', this)">📝 متن‌های سایت</button>
+            <button class="tab-btn" onclick="switchTab('accounts', this)">🧑‍🤝‍🧑 بازیکنان و تیم‌ها</button>
             <button class="tab-btn" onclick="switchTab('images', this)">🖼️ مدیریت تصاویر</button>
         </div>
 
@@ -975,6 +1004,72 @@
             </div>
         </div>
 
+        <!-- Accounts Panel -->
+        <div id="accountsPanel" class="panel">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">🔌 اتصال به دیتابیس</div>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                        <button class="btn btn-info btn-sm" onclick="testSupabase()">🔍 تست اتصال</button>
+                        <button class="btn btn-success" onclick="saveSupabaseConfig()">💾 ذخیره و انتشار</button>
+                    </div>
+                </div>
+                <div class="form-info">
+                    💡 از داشبورد Supabase → <b>Project Settings → API</b> دو مقدار زیر را بردارید.
+                    این کلید عمومی است و افشایش خطری ندارد؛ امنیت با RLS تأمین می‌شود.
+                    راهنمای کامل در فایل <code>SETUP-ACCOUNTS.md</code> است.
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Project URL:</label>
+                    <input type="text" class="form-input" id="sbUrl" placeholder="https://xxxxx.supabase.co" dir="ltr">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">anon public key:</label>
+                    <input type="text" class="form-input" id="sbKey" placeholder="eyJhbGciOi..." dir="ltr">
+                </div>
+                <div class="publish-log" id="sbLog"></div>
+            </div>
+
+            <div class="card" id="accountsLiveCard" style="display:none;">
+                <div class="card-header">
+                    <div class="card-title">⚙️ محدودیت‌ها و سوییچ‌ها</div>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                        <button class="btn btn-info btn-sm" onclick="loadAccountsData()">🔄 تازه‌سازی</button>
+                        <button class="btn btn-success" onclick="saveAccountSettings()">💾 ذخیره تنظیمات</button>
+                    </div>
+                </div>
+                <div class="status-grid-2">
+                    <div class="form-group">
+                        <label class="form-label">حداکثر تعداد تیم‌ها:</label>
+                        <input type="number" class="form-input" id="acMaxTeams" min="1" max="500" value="10">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">حداکثر نفرات هر تیم:</label>
+                        <input type="number" class="form-input" id="acMaxMembers" min="1" max="500" value="10">
+                    </div>
+                </div>
+                <div class="switch-row"><label for="acRegOpen">🚪 ثبت‌نام بازیکن جدید باز باشد</label><input type="checkbox" id="acRegOpen" checked></div>
+                <div class="switch-row"><label for="acTeamOpen">➕ ساخت تیم جدید باز باشد</label><input type="checkbox" id="acTeamOpen" checked></div>
+                <div class="switch-row"><label for="acJoinOpen">🤝 عضویت در تیم‌ها باز باشد</label><input type="checkbox" id="acJoinOpen" checked></div>
+                <div class="switch-row"><label for="acOneTeam">☝️ هر بازیکن فقط عضو یک تیم باشد</label><input type="checkbox" id="acOneTeam" checked></div>
+            </div>
+
+            <div class="card" id="accountsStatsCard" style="display:none;">
+                <div class="card-header"><div class="card-title">📊 وضعیت فعلی</div></div>
+                <div class="stats-grid" id="acStats"></div>
+            </div>
+
+            <div class="card" id="accountsTeamsCard" style="display:none;">
+                <div class="card-header"><div class="card-title">⚔️ تیم‌های ساخته‌شده توسط بازیکنان</div></div>
+                <div id="acTeamsList"></div>
+            </div>
+
+            <div class="card" id="accountsPlayersCard" style="display:none;">
+                <div class="card-header"><div class="card-title">🧑‍💻 بازیکنان ثبت‌نام‌شده</div></div>
+                <div id="acPlayersList"></div>
+            </div>
+        </div>
+
         <!-- Images Panel -->
         <div id="imagesPanel" class="panel">
             <div class="card">
@@ -995,6 +1090,7 @@
         </div>
     </div>
 
+    <script src="js/nx-auth.js"></script>
     <script>
         // ==================== Constants ====================
         const MAX_MEMBERS = 10;
@@ -1892,6 +1988,35 @@
             return dir ? dir + '/' + filename : filename;
         }
 
+        // GitHub wants real slashes between folders, so encode segment by segment.
+        function ghEncodePath(p) {
+            return String(p).split('/').filter(Boolean).map(encodeURIComponent).join('/');
+        }
+
+        // Write a file anywhere in the repo (outside the data/ folder), e.g.
+        // js/nx-config.js. Fetches its current sha first so updates don't 409.
+        async function ghPutRepoFile(repoPath, contentString, message) {
+            const enc = ghEncodePath(repoPath);
+            let sha = null;
+            const cur = await ghRequest(`/contents/${enc}?ref=${encodeURIComponent(ghConfig.branch)}`);
+            if (cur.ok) { try { sha = (await cur.json()).sha; } catch (e) {} }
+
+            const body = {
+                message: message || `chore: update ${repoPath} via admin panel`,
+                content: utf8ToBase64(contentString),
+                branch: ghConfig.branch
+            };
+            if (sha) body.sha = sha;
+
+            const res = await ghRequest(`/contents/${enc}`, { method: 'PUT', body: JSON.stringify(body) });
+            if (!res.ok) {
+                let detail = '';
+                try { detail = (await res.json()).message || ''; } catch (e) {}
+                throw new Error(`${repoPath} → ${res.status} ${detail}`);
+            }
+            return true;
+        }
+
         function updateGhPill(state, text) {
             const pill = document.getElementById('ghPill');
             const label = document.getElementById('ghPillText');
@@ -2493,6 +2618,207 @@
             });
         }
 
+        // ==================== Accounts & live teams (Supabase) ====================
+        let acTeams = [], acPlayers = [], acSettings = null;
+
+        function sbLog(msg, kind) {
+            const box = document.getElementById('sbLog');
+            if (!box) return;
+            box.style.display = '';
+            box.innerHTML = `<div class="${kind || 'ok'}">${escHtml(msg)}</div>`;
+        }
+
+        function fillSupabaseForm() {
+            if (typeof NXAuth === 'undefined') return;
+            const c = NXAuth.config();
+            const u = document.getElementById('sbUrl'), k = document.getElementById('sbKey');
+            if (u && !u.value) u.value = c.url || '';
+            if (k && !k.value) k.value = c.anonKey || '';
+        }
+
+        async function saveSupabaseConfig() {
+            const url = document.getElementById('sbUrl').value.trim();
+            const key = document.getElementById('sbKey').value.trim();
+            if (!url || !key) { showToast('❌ هر دو مقدار را وارد کنید', 'error'); return; }
+            if (!/^https:\/\/[a-z0-9-]+\.supabase\.(co|in)/i.test(url)) {
+                showToast('❌ آدرس پروژه معتبر نیست', 'error'); return;
+            }
+            NXAuth.saveConfig(url, key);
+
+            // Publish js/nx-config.js so every visitor gets the same settings.
+            const body = `/* ساخته‌شده توسط پنل مدیریت Netheraxia — دستی ویرایش نکنید */\n` +
+                `window.NETHERAXIA_SUPABASE = {\n` +
+                `    url: ${JSON.stringify(url)},\n` +
+                `    anonKey: ${JSON.stringify(key)}\n` +
+                `};\n`;
+            try {
+                if (!ghReady()) {
+                    sbLog('⚠️ ذخیره شد (فقط این مرورگر). برای اعمال روی سایت، گیت‌هاب را وصل کنید.', 'skip');
+                    showToast('⚠️ ذخیره محلی انجام شد', 'warning');
+                } else {
+                    await ghPutRepoFile('js/nx-config.js', body, 'chore: update Supabase config from admin panel');
+                    sbLog('✅ js/nx-config.js منتشر شد — سایت به دیتابیس وصل است', 'ok');
+                    showToast('✅ تنظیمات منتشر شد', 'success');
+                }
+            } catch (e) {
+                sbLog('❌ ' + (e.message || e), 'err');
+                showToast('❌ انتشار ناموفق بود', 'error');
+            }
+            await loadAccountsData();
+        }
+
+        async function testSupabase() {
+            const url = document.getElementById('sbUrl').value.trim();
+            const key = document.getElementById('sbKey').value.trim();
+            if (url && key) NXAuth.saveConfig(url, key);
+            if (!NXAuth.isConfigured()) { sbLog('❌ ابتدا آدرس و کلید را وارد کنید', 'err'); return; }
+            sbLog('⏳ در حال بررسی...', 'skip');
+            try {
+                const cfg = await NXAuth.getConfig();
+                sbLog(`✅ اتصال برقرار است — ${cfg.team_count} تیم، ${cfg.player_count} بازیکن ثبت‌نام‌شده`, 'ok');
+                await loadAccountsData();
+            } catch (e) {
+                sbLog('❌ ' + (e.message || e) + ' — آیا فایل schema.sql را اجرا کرده‌اید؟', 'err');
+            }
+        }
+
+        async function loadAccountsData() {
+            if (typeof NXAuth === 'undefined' || !NXAuth.isConfigured()) return;
+            const show = id => { const el = document.getElementById(id); if (el) el.style.display = ''; };
+            try {
+                const cfg = await NXAuth.getConfig();
+                acTeams = await NXAuth.listTeams();
+                show('accountsStatsCard'); show('accountsTeamsCard');
+                renderAcStats(cfg);
+                renderAcTeams(cfg);
+            } catch (e) {
+                sbLog('❌ ' + (e.message || e), 'err');
+                return;
+            }
+            // Settings and the player list need an admin session.
+            try {
+                acSettings = await NXAuth.getSettings();
+                if (acSettings) { show('accountsLiveCard'); fillAcSettings(); }
+            } catch (e) { acSettings = null; }
+            try {
+                acPlayers = await NXAuth.listPlayers();
+                if (acPlayers && acPlayers.length) { show('accountsPlayersCard'); renderAcPlayers(); }
+            } catch (e) { acPlayers = []; }
+        }
+
+        function fillAcSettings() {
+            if (!acSettings) return;
+            document.getElementById('acMaxTeams').value = acSettings.max_teams;
+            document.getElementById('acMaxMembers').value = acSettings.max_members;
+            document.getElementById('acRegOpen').checked = !!acSettings.registration_open;
+            document.getElementById('acTeamOpen').checked = !!acSettings.team_creation_open;
+            document.getElementById('acJoinOpen').checked = !!acSettings.join_open;
+            document.getElementById('acOneTeam').checked = !!acSettings.one_team_per_user;
+        }
+
+        async function saveAccountSettings() {
+            const patch = {
+                max_teams: parseInt(document.getElementById('acMaxTeams').value, 10) || 10,
+                max_members: parseInt(document.getElementById('acMaxMembers').value, 10) || 10,
+                registration_open: document.getElementById('acRegOpen').checked,
+                team_creation_open: document.getElementById('acTeamOpen').checked,
+                join_open: document.getElementById('acJoinOpen').checked,
+                one_team_per_user: document.getElementById('acOneTeam').checked
+            };
+            try {
+                await NXAuth.updateSettings(patch);
+                showToast('✅ تنظیمات ذخیره شد', 'success');
+                await loadAccountsData();
+            } catch (e) {
+                showToast('❌ ' + (e.message || e), 'error');
+                sbLog('❌ برای تغییر تنظیمات باید با حساب ادمین وارد شده باشید. ' +
+                      'در سایت اصلی وارد شوید و در SQL Editor دستور آخر schema.sql را اجرا کنید.', 'err');
+            }
+        }
+
+        function renderAcStats(cfg) {
+            document.getElementById('acStats').innerHTML = `
+                <div class="stat-card"><div class="stat-value">${cfg.team_count}/${cfg.max_teams}</div><div class="stat-label">⚔️ تیم</div></div>
+                <div class="stat-card"><div class="stat-value">${cfg.player_count}</div><div class="stat-label">🧑‍💻 بازیکن</div></div>
+                <div class="stat-card"><div class="stat-value">${cfg.member_count}</div><div class="stat-label">👥 عضو تیم</div></div>
+                <div class="stat-card"><div class="stat-value">${cfg.max_members}</div><div class="stat-label">📏 سقف هر تیم</div></div>`;
+        }
+
+        function renderAcTeams(cfg) {
+            const box = document.getElementById('acTeamsList');
+            if (!acTeams.length) {
+                box.innerHTML = '<div style="text-align:center;padding:34px;color:var(--text-tertiary);">هنوز بازیکنی تیمی نساخته است</div>';
+                return;
+            }
+            box.innerHTML = acTeams.map(t => {
+                const members = Array.isArray(t.members) ? t.members : [];
+                const full = members.length >= cfg.max_members;
+                const chips = members.map(m => `<span class="ac-member">
+                        ${m.is_leader ? '👑' : '👤'} ${escHtml(m.name)}
+                        <button class="member-kick-btn" onclick="acKick('${t.id}','${m.user_id}')" title="حذف از تیم">✕</button>
+                    </span>`).join('');
+                return `<div class="ac-row">
+                        <div class="ac-row-main">
+                            <span style="font-size:20px;">${escHtml(t.emoji || '🛡️')}</span>
+                            <div>
+                                <div class="ac-name">${escHtml(t.name)}</div>
+                                <div class="ac-meta">کاپیتان: ${escHtml(t.owner_name || '—')}${t.description ? ' • ' + escHtml(t.description) : ''}</div>
+                            </div>
+                        </div>
+                        <span class="ac-badge${full ? ' full' : ''}">${members.length}/${cfg.max_members}</span>
+                        <button class="btn btn-danger btn-sm" onclick="acDeleteTeam('${t.id}', '${escHtml(t.name).replace(/'/g, "")}')">🗑️ حذف تیم</button>
+                    </div>
+                    <div class="ac-members">${chips}</div>`;
+            }).join('');
+        }
+
+        function renderAcPlayers() {
+            const box = document.getElementById('acPlayersList');
+            box.innerHTML = acPlayers.map(p => `
+                <div class="ac-row">
+                    <div class="ac-row-main">
+                        <div>
+                            <div class="ac-name">${escHtml(p.mc_username)}
+                                ${p.is_admin ? '<span class="ac-badge admin">ادمین</span>' : ''}
+                                ${p.is_banned ? '<span class="ac-badge banned">مسدود</span>' : ''}
+                            </div>
+                            <div class="ac-meta">${escHtml(p.email || '')} • ${new Date(p.created_at).toLocaleDateString('fa-IR')}</div>
+                        </div>
+                    </div>
+                    <button class="btn btn-sm ${p.is_banned ? 'btn-success' : 'btn-danger'}"
+                            onclick="acToggleBan('${p.id}', ${p.is_banned ? 'false' : 'true'})">
+                        ${p.is_banned ? '✅ رفع مسدودی' : '🚫 مسدود کردن'}
+                    </button>
+                </div>`).join('');
+        }
+
+        async function acKick(teamId, userId) {
+            if (!confirm('این بازیکن از تیم حذف شود؟')) return;
+            try { await NXAuth.kickMember(teamId, userId); showToast('✅ حذف شد', 'success'); await loadAccountsData(); }
+            catch (e) { showToast('❌ ' + e.message, 'error'); }
+        }
+
+        async function acDeleteTeam(teamId, name) {
+            if (!confirm('تیم «' + name + '» کاملاً حذف شود؟')) return;
+            try { await NXAuth.deleteTeam(teamId); showToast('✅ تیم حذف شد', 'success'); await loadAccountsData(); }
+            catch (e) { showToast('❌ ' + e.message, 'error'); }
+        }
+
+        async function acToggleBan(userId, ban) {
+            try {
+                await NXAuth.setPlayerFlags(userId, { is_banned: ban });
+                showToast(ban ? '🚫 بازیکن مسدود شد' : '✅ مسدودی برداشته شد', 'success');
+                await loadAccountsData();
+            } catch (e) { showToast('❌ ' + e.message, 'error'); }
+        }
+
+        async function initAccountsTab() {
+            if (typeof NXAuth === 'undefined') return;
+            try { await NXAuth.init(); } catch (e) {}
+            fillSupabaseForm();
+            if (NXAuth.isConfigured()) await loadAccountsData();
+        }
+
         // ==================== Tabs ====================
         function switchTab(name, btn) {
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -2503,6 +2829,7 @@
             if (panel) panel.classList.add('active');
             if (name === 'status') fillStatusForm();
             if (name === 'texts') fillTextsForm();
+            if (name === 'accounts') initAccountsTab();
             if (name === 'teams') renderTeams();
             if (name === 'rules') renderRules();
             if (name === 'images') renderImages();

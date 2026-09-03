@@ -663,6 +663,134 @@
             border-radius: 4px 0 0 4px; box-shadow: 0 0 20px var(--accent-glow);
         }
         .swipe-hint.show { opacity: 0.6; }
+
+        /* ==================== Accounts & teams ==================== */
+        .auth-chip {
+            position: fixed; top: 18px; left: 18px; z-index: 60;
+            display: flex; align-items: center; gap: 8px;
+            padding: 9px 14px; border-radius: var(--r-md);
+            background: var(--glass); border: 1px solid var(--glass-border);
+            backdrop-filter: blur(14px); cursor: pointer;
+            color: var(--text-primary); font-family: inherit; font-size: 13px;
+            font-weight: 700; box-shadow: var(--pixel-shadow);
+            transition: transform .15s, border-color .15s;
+        }
+        .auth-chip:hover { transform: translateY(-2px); border-color: var(--secondary); }
+        .auth-chip-avatar {
+            width: 24px; height: 24px; border-radius: var(--r-xs);
+            background: linear-gradient(135deg, var(--primary), var(--cyan));
+            display: grid; place-items: center; font-size: 12px; font-weight: 900; color: #fff;
+        }
+        .auth-menu {
+            position: fixed; top: 62px; left: 18px; z-index: 61; display: none;
+            min-width: 210px; padding: 8px; border-radius: var(--r-md);
+            background: var(--glass); border: 1px solid var(--glass-border);
+            backdrop-filter: blur(18px); box-shadow: var(--pixel-shadow);
+        }
+        .auth-menu.active { display: block; }
+        .auth-menu-head { padding: 10px 12px; border-bottom: 1px solid var(--glass-border); margin-bottom: 6px; }
+        .auth-menu-name { font-weight: 800; font-size: 14px; }
+        .auth-menu-sub { font-size: 11px; color: var(--text-tertiary); margin-top: 3px; }
+        .auth-menu-item {
+            display: block; width: 100%; text-align: right; padding: 10px 12px;
+            border: none; background: none; color: var(--text-secondary);
+            font-family: inherit; font-size: 13px; border-radius: var(--r-sm); cursor: pointer;
+        }
+        .auth-menu-item:hover { background: rgba(47,134,255,0.14); color: var(--text-primary); }
+        .auth-menu-item.danger:hover { background: rgba(239,68,68,0.16); color: #fca5a5; }
+
+        .auth-tabs { display: flex; gap: 6px; margin-bottom: 20px; }
+        .auth-tab {
+            flex: 1; padding: 11px; border-radius: var(--r-sm); cursor: pointer;
+            background: rgba(10,26,54,0.6); border: 1px solid var(--glass-border);
+            color: var(--text-tertiary); font-family: inherit; font-size: 13px; font-weight: 700;
+        }
+        .auth-tab.active {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: #fff; border-color: var(--secondary);
+        }
+        .field { margin-bottom: 15px; }
+        .field label { display: block; font-size: 12px; font-weight: 700; margin-bottom: 7px; color: var(--text-secondary); }
+        .field input, .field textarea, .field select {
+            width: 100%; padding: 12px 14px; border-radius: var(--r-sm);
+            background: rgba(3,10,24,0.7); border: 1px solid var(--glass-border);
+            color: var(--text-primary); font-family: inherit; font-size: 14px; outline: none;
+        }
+        .field input:focus, .field textarea:focus { border-color: var(--secondary); }
+        .field-hint { font-size: 11px; color: var(--text-tertiary); margin-top: 6px; }
+        .field-hint.ok  { color: #4ade80; }
+        .field-hint.bad { color: #fca5a5; }
+        .auth-error {
+            display: none; padding: 11px 14px; border-radius: var(--r-sm); margin-bottom: 15px;
+            background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.35);
+            color: #fca5a5; font-size: 12.5px; line-height: 1.7;
+        }
+        .auth-error.ok { background: rgba(34,197,94,0.12); border-color: rgba(34,197,94,0.35); color: #86efac; }
+        .btn-primary-full {
+            width: 100%; padding: 13px; border: none; border-radius: var(--r-sm); cursor: pointer;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: #fff; font-family: inherit; font-size: 14px; font-weight: 800;
+            box-shadow: var(--pixel-shadow);
+        }
+        .btn-primary-full:disabled { opacity: .55; cursor: not-allowed; }
+        .auth-switch { text-align: center; margin-top: 15px; font-size: 12px; color: var(--text-tertiary); }
+        .auth-link { color: var(--accent); cursor: pointer; text-decoration: underline; }
+
+        .teams-toolbar {
+            display: flex; gap: 10px; justify-content: center; align-items: center;
+            flex-wrap: wrap; margin-bottom: 26px;
+        }
+        .team-action-btn {
+            padding: 11px 20px; border-radius: var(--r-sm); cursor: pointer;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border: 1px solid var(--secondary); color: #fff;
+            font-family: inherit; font-size: 13px; font-weight: 800; box-shadow: var(--pixel-shadow);
+        }
+        .team-action-btn.ghost {
+            background: rgba(10,26,54,0.6); border-color: var(--glass-border); color: var(--text-secondary);
+        }
+        .team-action-btn:disabled { opacity: .5; cursor: not-allowed; box-shadow: none; }
+        .teams-counter {
+            font-size: 12px; color: var(--text-tertiary);
+            padding: 8px 14px; border-radius: var(--r-sm);
+            background: rgba(10,26,54,0.5); border: 1px solid var(--glass-border);
+        }
+        .team-card-foot { display: flex; gap: 8px; margin-top: 14px; }
+        .team-join-btn {
+            flex: 1; padding: 10px; border-radius: var(--r-sm); cursor: pointer;
+            background: linear-gradient(135deg, #16a34a, #22c55e); border: none; color: #fff;
+            font-family: inherit; font-size: 12.5px; font-weight: 800;
+        }
+        .team-join-btn.leave { background: linear-gradient(135deg, #b91c1c, #ef4444); }
+        .team-join-btn:disabled { opacity: .45; cursor: not-allowed; }
+        .team-mine-tag {
+            display: inline-block; padding: 3px 9px; border-radius: var(--r-xs); margin-right: 6px;
+            background: rgba(34,197,94,0.16); border: 1px solid rgba(34,197,94,0.4);
+            color: #86efac; font-size: 10px; font-weight: 800;
+        }
+        .member-kick {
+            background: none; border: none; color: #fca5a5; cursor: pointer;
+            font-size: 12px; padding: 2px 6px; border-radius: var(--r-xs);
+        }
+        .member-kick:hover { background: rgba(239,68,68,0.15); }
+        .nx-toast {
+            position: fixed; bottom: 26px; left: 50%; transform: translateX(-50%) translateY(20px);
+            z-index: 200; padding: 13px 22px; border-radius: var(--r-md);
+            background: var(--glass); border: 1px solid var(--glass-border);
+            backdrop-filter: blur(16px); color: var(--text-primary);
+            font-size: 13px; font-weight: 700; box-shadow: var(--pixel-shadow);
+            opacity: 0; pointer-events: none; transition: opacity .25s, transform .25s; max-width: 90vw;
+        }
+        .nx-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+        .nx-toast.error   { border-color: rgba(239,68,68,0.5); color: #fca5a5; }
+        .nx-toast.success { border-color: rgba(34,197,94,0.5); color: #86efac; }
+        .auth-off-note {
+            text-align: center; padding: 40px 20px; color: var(--text-tertiary); font-size: 13px; line-height: 2;
+        }
+        @media (max-width: 768px) {
+            .auth-chip { top: auto; bottom: 90px; left: 14px; padding: 8px 12px; font-size: 12px; }
+            .auth-menu { top: auto; bottom: 138px; left: 14px; }
+        }
     </style>
 </head>
 <body>
@@ -702,6 +830,20 @@
     </button>
 </div>
 <div class="bg-switch-label" id="bgSwitchLabel"></div>
+
+<!-- Account -->
+<button class="auth-chip" id="authChip" style="display:none;">
+    <span class="auth-chip-avatar" id="authAvatar">?</span>
+    <span id="authChipLabel">ورود / ثبت‌نام</span>
+</button>
+<div class="auth-menu" id="authMenu">
+    <div class="auth-menu-head">
+        <div class="auth-menu-name" id="authMenuName"></div>
+        <div class="auth-menu-sub" id="authMenuSub"></div>
+    </div>
+    <button class="auth-menu-item" id="authMenuTeam">⚔️ تیم من</button>
+    <button class="auth-menu-item danger" id="authMenuLogout">🚪 خروج از حساب</button>
+</div>
 
 <!-- Swipe Hint -->
 <div class="swipe-hint" id="swipeHint"></div>
@@ -754,6 +896,10 @@
                     <p class="section-subtitle" id="teamsSubtitle" style="display:none;"></p>
                 </div>
                 <div class="stats-row" id="teamsStats" style="margin-top:0;margin-bottom:36px;"></div>
+                <div class="teams-toolbar" id="teamsToolbar" style="display:none;">
+                    <button class="team-action-btn" id="createTeamBtn">➕ ساخت تیم جدید</button>
+                    <span class="teams-counter" id="teamsCounter"></span>
+                </div>
                 <div class="teams-grid" id="teamsGrid"></div>
             </div>
             <div class="footer"><p>© <span class="footer-year"></span> Netheraxia</p></div>
@@ -776,6 +922,81 @@
 </div>
 
 <!-- ===== MODAL ===== -->
+<!-- Auth modal -->
+<div class="modal-overlay" id="authModal">
+    <div class="modal-box">
+        <button class="modal-close" data-close="authModal">✕</button>
+        <div class="modal-title" id="authModalTitle">🎮 ورود به حساب</div>
+
+        <div class="auth-tabs">
+            <button class="auth-tab active" id="tabLogin">ورود</button>
+            <button class="auth-tab" id="tabRegister">ثبت‌نام</button>
+        </div>
+
+        <div class="auth-error" id="authError"></div>
+
+        <!-- login -->
+        <div id="loginForm">
+            <div class="field">
+                <label>نام ماینکرفت یا ایمیل</label>
+                <input type="text" id="loginId" autocomplete="username" placeholder="Steve یا steve@mail.com">
+            </div>
+            <div class="field">
+                <label>رمز عبور</label>
+                <input type="password" id="loginPass" autocomplete="current-password" placeholder="••••••••">
+            </div>
+            <button class="btn-primary-full" id="loginSubmit">ورود</button>
+            <div class="auth-switch">
+                رمز را فراموش کردی؟ <span class="auth-link" id="forgotLink">بازیابی رمز</span>
+            </div>
+        </div>
+
+        <!-- register -->
+        <div id="registerForm" style="display:none;">
+            <div class="field">
+                <label>نام کاربری ماینکرفت</label>
+                <input type="text" id="regUser" autocomplete="username" placeholder="Steve" maxlength="16">
+                <div class="field-hint" id="regUserHint">۳ تا ۱۶ کاراکتر؛ حروف انگلیسی، عدد و _</div>
+            </div>
+            <div class="field">
+                <label>ایمیل</label>
+                <input type="email" id="regEmail" autocomplete="email" placeholder="steve@mail.com">
+            </div>
+            <div class="field">
+                <label>رمز عبور</label>
+                <input type="password" id="regPass" autocomplete="new-password" placeholder="حداقل ۶ کاراکتر">
+            </div>
+            <button class="btn-primary-full" id="registerSubmit">ساخت حساب</button>
+            <div class="auth-switch">با ثبت‌نام، قوانین سرور را می‌پذیری.</div>
+        </div>
+    </div>
+</div>
+
+<!-- Create team modal -->
+<div class="modal-overlay" id="teamModal">
+    <div class="modal-box">
+        <button class="modal-close" data-close="teamModal">✕</button>
+        <div class="modal-title">⚔️ ساخت تیم جدید</div>
+        <div class="auth-error" id="teamError"></div>
+        <div class="field">
+            <label>نام تیم</label>
+            <input type="text" id="teamName" placeholder="مثلاً: شوالیه‌های نتر" maxlength="24">
+        </div>
+        <div class="field">
+            <label>توضیح کوتاه (اختیاری)</label>
+            <input type="text" id="teamDesc" placeholder="تیم ما اهل ساخت‌وساز است" maxlength="120">
+        </div>
+        <div class="field">
+            <label>نماد تیم</label>
+            <input type="text" id="teamEmoji" placeholder="🛡️" maxlength="4" value="🛡️" style="text-align:center;font-size:22px;">
+        </div>
+        <button class="btn-primary-full" id="teamSubmit">ساخت تیم</button>
+        <div class="auth-switch">تو کاپیتان این تیم می‌شوی و اولین عضو آن خواهی بود.</div>
+    </div>
+</div>
+
+<div class="nx-toast" id="nxToast"></div>
+
 <div class="modal-overlay" id="connectModal">
     <div class="modal-box">
         <button class="modal-close" id="modalClose">✕</button>
@@ -805,6 +1026,8 @@
     </div>
 </div>
 
+<script src="js/nx-config.js"></script>
+<script src="js/nx-auth.js"></script>
 <script>
 // ==================== Year ====================
 document.querySelectorAll('.footer-year').forEach(el => el.textContent = new Date().getFullYear());
@@ -1227,6 +1450,7 @@ themeToggle.addEventListener('click', () => {
 
 // ==================== Data ====================
 const MAX_MEMBERS = 10;
+const MAX_TEAMS_FALLBACK = 10;
 let teamsData = { teams: [] };
 let rulesData = { rules: [] };
 let imagesData = { logo: '' };
@@ -1269,6 +1493,433 @@ let statusData = {
     updatedAt: ''
 };
 
+
+// ==================== Accounts & live teams ====================
+// When Supabase is configured, teams come from the database and players can
+// create/join them here. Otherwise the site falls back to data/teams.json
+// exactly as before, so it never breaks.
+let liveTeams = null;          // null = not using the database
+let liveConfig = null;
+let myTeam = null;             // { team_id, is_leader, team_name }
+let myProfile = null;
+let authBusy = false;
+
+function nxToast(msg, kind) {
+    const el = document.getElementById('nxToast');
+    if (!el) return;
+    el.textContent = msg;
+    el.className = 'nx-toast show' + (kind ? ' ' + kind : '');
+    clearTimeout(el._t);
+    el._t = setTimeout(() => { el.className = 'nx-toast'; }, 3600);
+}
+
+function authEnabled() {
+    return typeof NXAuth !== 'undefined' && NXAuth.isConfigured();
+}
+
+function showAuthError(id, msg, ok) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = msg || '';
+    el.className = 'auth-error' + (ok ? ' ok' : '');
+    el.style.display = msg ? 'block' : 'none';
+}
+
+function openModal(id)  { const m = document.getElementById(id); if (m) m.classList.add('active'); }
+function closeModal(id) { const m = document.getElementById(id); if (m) m.classList.remove('active'); }
+
+function renderAuthChip() {
+    const chip = document.getElementById('authChip');
+    if (!chip) return;
+    if (!authEnabled()) { chip.style.display = 'none'; return; }
+    chip.style.display = 'flex';
+
+    const label = document.getElementById('authChipLabel');
+    const avatar = document.getElementById('authAvatar');
+    if (NXAuth.isLoggedIn() && myProfile) {
+        label.textContent = myProfile.mc_username;
+        avatar.textContent = myProfile.mc_username.charAt(0).toUpperCase();
+        document.getElementById('authMenuName').textContent = myProfile.mc_username;
+        document.getElementById('authMenuSub').textContent =
+            myTeam ? (myTeam.is_leader ? '👑 کاپیتان ' : 'عضو ') + myTeam.team_name : 'بدون تیم';
+        document.getElementById('authMenuTeam').style.display = myTeam ? 'block' : 'none';
+    } else {
+        label.textContent = 'ورود / ثبت‌نام';
+        avatar.textContent = '?';
+    }
+}
+
+async function refreshAccountState() {
+    if (!authEnabled()) return;
+    try {
+        liveConfig = await NXAuth.getConfig();
+    } catch (e) { liveConfig = null; }
+    if (NXAuth.isLoggedIn()) {
+        try {
+            myProfile = await NXAuth.myProfile();
+            myTeam = await NXAuth.myMembership();
+        } catch (e) { myProfile = null; myTeam = null; }
+    } else {
+        myProfile = null; myTeam = null;
+    }
+    renderAuthChip();
+}
+
+async function refreshLiveTeams() {
+    if (!authEnabled()) { liveTeams = null; return false; }
+    try {
+        const rows = await NXAuth.listTeams();
+        liveTeams = Array.isArray(rows) ? rows : [];
+        return true;
+    } catch (e) {
+        liveTeams = null;      // fall back to the static file
+        return false;
+    }
+}
+
+async function reloadTeamsUI() {
+    await refreshLiveTeams();
+    await refreshAccountState();
+    renderTeams();
+}
+
+function renderTeamsToolbar() {
+    const bar = document.getElementById('teamsToolbar');
+    if (!bar) return;
+    if (!authEnabled() || liveTeams === null) { bar.style.display = 'none'; return; }
+    bar.style.display = 'flex';
+
+    const maxTeams = (liveConfig && liveConfig.max_teams) || MAX_TEAMS_FALLBACK;
+    const maxMembers = (liveConfig && liveConfig.max_members) || MAX_MEMBERS;
+    const count = liveTeams.length;
+    const btn = document.getElementById('createTeamBtn');
+    const counter = document.getElementById('teamsCounter');
+
+    counter.textContent = `${toFa(count)} از ${toFa(maxTeams)} تیم • حداکثر ${toFa(maxMembers)} نفر در هر تیم`;
+
+    const closed = liveConfig && liveConfig.team_creation_open === false;
+    if (closed) {
+        btn.disabled = true;
+        btn.textContent = '🔒 ساخت تیم بسته است';
+    } else if (!NXAuth.isLoggedIn()) {
+        btn.disabled = false;
+        btn.textContent = '🔑 برای ساخت تیم وارد شو';
+    } else if (myTeam) {
+        btn.disabled = true;
+        btn.textContent = '✅ تو عضو یک تیم هستی';
+    } else if (count >= maxTeams) {
+        btn.disabled = true;
+        btn.textContent = '🚫 ظرفیت تیم‌ها پر است';
+    } else {
+        btn.disabled = false;
+        btn.textContent = '➕ ساخت تیم جدید';
+    }
+}
+
+function toFa(n) {
+    return String(n).replace(/\d/g, d => '۰۱۲۳۴۵۶۷۸۹'[d]);
+}
+
+function escapeHtml(t) {
+    return String(t == null ? '' : t)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function renderLiveTeams() {
+    const grid = document.getElementById('teamsGrid');
+    const maxMembers = (liveConfig && liveConfig.max_members) || MAX_MEMBERS;
+    const joinClosed = liveConfig && liveConfig.join_open === false;
+    const uid = NXAuth.isLoggedIn() && NXAuth.user() ? NXAuth.user().id : null;
+
+    if (!liveTeams.length) {
+        grid.innerHTML = '<div style="text-align:center;padding:60px;color:var(--text-tertiary);">' +
+            'هنوز تیمی ساخته نشده — اولین نفر باش!</div>';
+        return;
+    }
+
+    grid.innerHTML = liveTeams.map(team => {
+        const members = Array.isArray(team.members) ? team.members : [];
+        const count = members.length;
+        const isFull = count >= maxMembers;
+        const pct = Math.min(100, (count / maxMembers) * 100);
+        const fillClass = isFull ? 'full' : (count >= maxMembers - 2 ? 'warning' : 'safe');
+        const mine = !!(uid && members.some(m => m.user_id === uid));
+        const iAmOwner = !!(uid && team.owner_id === uid);
+
+        const rows = members.map(m => {
+            const kick = (iAmOwner && m.user_id !== uid)
+                ? `<button class="member-kick" data-kick="${escapeHtml(team.id)}" data-user="${escapeHtml(m.user_id)}" title="اخراج">✕</button>`
+                : '';
+            return `<div class="member-row ${m.is_leader ? 'leader' : ''}">
+                <span class="member-name">${m.is_leader ? '<span class="member-crown">👑</span>' : ''}${escapeHtml(m.name)}</span>${kick}</div>`;
+        }).join('');
+
+        let foot = '';
+        if (!NXAuth.isLoggedIn()) {
+            foot = `<button class="team-join-btn" data-needlogin="1">🔑 برای عضویت وارد شو</button>`;
+        } else if (mine) {
+            foot = iAmOwner
+                ? `<button class="team-join-btn leave" data-delete="${escapeHtml(team.id)}">🗑️ حذف تیم</button>`
+                : `<button class="team-join-btn leave" data-leave="${escapeHtml(team.id)}">🚪 خروج از تیم</button>`;
+        } else if (myTeam) {
+            foot = `<button class="team-join-btn" disabled>عضو تیم دیگری هستی</button>`;
+        } else if (isFull) {
+            foot = `<button class="team-join-btn" disabled>🚫 تیم پر است</button>`;
+        } else if (joinClosed) {
+            foot = `<button class="team-join-btn" disabled>🔒 عضویت بسته است</button>`;
+        } else {
+            foot = `<button class="team-join-btn" data-join="${escapeHtml(team.id)}">➕ عضویت در تیم</button>`;
+        }
+
+        return `<div class="team-card">
+            <div class="team-card-accent"></div>
+            <div class="team-card-head">
+                <div class="team-card-name">
+                    <span style="font-size:20px;">${escapeHtml(team.emoji || '🛡️')}</span>
+                    <span>${escapeHtml(team.name)}</span>
+                    ${mine ? '<span class="team-mine-tag">تیم تو</span>' : ''}
+                </div>
+                <span class="team-card-badge${isFull ? ' full-badge' : ''}">${toFa(count)} نفر</span>
+            </div>
+            ${team.description ? `<div style="font-size:12px;color:var(--text-tertiary);margin:4px 0 10px;">${escapeHtml(team.description)}</div>` : ''}
+            <div class="team-limit-bar">
+                <div class="team-limit-track"><div class="team-limit-fill ${fillClass}" style="width:${pct}%;"></div></div>
+                <span class="team-limit-text">${toFa(count)}/${toFa(maxMembers)}</span>
+            </div>
+            <div class="team-card-body">${rows}</div>
+            <div class="team-card-foot">${foot}</div>
+        </div>`;
+    }).join('');
+}
+
+// ---- actions -------------------------------------------------------------
+async function doJoin(teamId) {
+    if (authBusy) return; authBusy = true;
+    try {
+        await NXAuth.joinTeam(teamId);
+        nxToast('✅ به تیم اضافه شدی!', 'success');
+        await reloadTeamsUI();
+    } catch (e) {
+        nxToast(e.message, 'error');
+    } finally { authBusy = false; }
+}
+
+async function doLeave(teamId) {
+    if (!confirm('از این تیم خارج می‌شوی؟')) return;
+    if (authBusy) return; authBusy = true;
+    try {
+        await NXAuth.leaveTeam(teamId);
+        nxToast('از تیم خارج شدی.', 'success');
+        await reloadTeamsUI();
+    } catch (e) {
+        nxToast(e.message, 'error');
+    } finally { authBusy = false; }
+}
+
+async function doKick(teamId, userId) {
+    if (!confirm('این بازیکن از تیم اخراج شود؟')) return;
+    if (authBusy) return; authBusy = true;
+    try {
+        await NXAuth.kickMember(teamId, userId);
+        nxToast('بازیکن اخراج شد.', 'success');
+        await reloadTeamsUI();
+    } catch (e) {
+        nxToast(e.message, 'error');
+    } finally { authBusy = false; }
+}
+
+async function doDeleteTeam(teamId) {
+    if (!confirm('کل تیم حذف شود؟ این کار برگشت‌پذیر نیست.')) return;
+    if (authBusy) return; authBusy = true;
+    try {
+        await NXAuth.deleteTeam(teamId);
+        nxToast('تیم حذف شد.', 'success');
+        await reloadTeamsUI();
+    } catch (e) {
+        nxToast(e.message, 'error');
+    } finally { authBusy = false; }
+}
+
+function wireAuthUI() {
+    if (!authEnabled()) return;
+
+    const chip = document.getElementById('authChip');
+    const menu = document.getElementById('authMenu');
+
+    chip.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        if (NXAuth.isLoggedIn()) menu.classList.toggle('active');
+        else { showAuthError('authError', ''); openModal('authModal'); }
+    });
+    document.addEventListener('click', () => menu.classList.remove('active'));
+    menu.addEventListener('click', ev => ev.stopPropagation());
+
+    document.getElementById('authMenuLogout').addEventListener('click', async () => {
+        menu.classList.remove('active');
+        await NXAuth.signOut();
+        nxToast('از حساب خارج شدی.');
+        await reloadTeamsUI();
+    });
+    document.getElementById('authMenuTeam').addEventListener('click', () => {
+        menu.classList.remove('active');
+        const btn = document.querySelector('.nav-btn[data-section="teams"]');
+        if (btn) btn.click();
+    });
+
+    document.querySelectorAll('[data-close]').forEach(b => {
+        b.addEventListener('click', () => closeModal(b.dataset.close));
+    });
+    ['authModal', 'teamModal'].forEach(id => {
+        const m = document.getElementById(id);
+        if (m) m.addEventListener('click', ev => { if (ev.target === m) closeModal(id); });
+    });
+
+    // tabs
+    const tabLogin = document.getElementById('tabLogin');
+    const tabReg = document.getElementById('tabRegister');
+    function setTab(login) {
+        tabLogin.classList.toggle('active', login);
+        tabReg.classList.toggle('active', !login);
+        document.getElementById('loginForm').style.display = login ? 'block' : 'none';
+        document.getElementById('registerForm').style.display = login ? 'none' : 'block';
+        document.getElementById('authModalTitle').textContent = login ? '🎮 ورود به حساب' : '✨ ساخت حساب جدید';
+        showAuthError('authError', '');
+    }
+    tabLogin.addEventListener('click', () => setTab(true));
+    tabReg.addEventListener('click', () => setTab(false));
+
+    // live username check
+    let userTimer = null;
+    document.getElementById('regUser').addEventListener('input', function () {
+        const v = this.value.trim();
+        const hint = document.getElementById('regUserHint');
+        clearTimeout(userTimer);
+        if (!/^[A-Za-z0-9_]{3,16}$/.test(v)) {
+            hint.className = 'field-hint' + (v ? ' bad' : '');
+            hint.textContent = v ? 'فقط حروف انگلیسی، عدد و _ (۳ تا ۱۶ کاراکتر)' : '۳ تا ۱۶ کاراکتر؛ حروف انگلیسی، عدد و _';
+            return;
+        }
+        hint.className = 'field-hint';
+        hint.textContent = 'در حال بررسی...';
+        userTimer = setTimeout(async () => {
+            try {
+                const free = await NXAuth.checkUsername(v);
+                hint.className = 'field-hint ' + (free ? 'ok' : 'bad');
+                hint.textContent = free ? '✅ این نام آزاد است' : '❌ این نام قبلاً گرفته شده';
+            } catch (e) { hint.className = 'field-hint'; hint.textContent = ''; }
+        }, 450);
+    });
+
+    // login
+    document.getElementById('loginSubmit').addEventListener('click', async function () {
+        if (authBusy) return; authBusy = true;
+        this.disabled = true; this.textContent = 'در حال ورود...';
+        try {
+            await NXAuth.signIn(document.getElementById('loginId').value,
+                                document.getElementById('loginPass').value);
+            closeModal('authModal');
+            document.getElementById('loginPass').value = '';
+            await reloadTeamsUI();
+            nxToast('👋 خوش آمدی ' + (myProfile ? myProfile.mc_username : '') + '!', 'success');
+        } catch (e) {
+            showAuthError('authError', e.message);
+        } finally {
+            authBusy = false; this.disabled = false; this.textContent = 'ورود';
+        }
+    });
+
+    // register
+    document.getElementById('registerSubmit').addEventListener('click', async function () {
+        if (authBusy) return; authBusy = true;
+        this.disabled = true; this.textContent = 'در حال ساخت...';
+        try {
+            const res = await NXAuth.signUp({
+                username: document.getElementById('regUser').value,
+                email: document.getElementById('regEmail').value,
+                password: document.getElementById('regPass').value
+            });
+            if (res.session) {
+                closeModal('authModal');
+                await reloadTeamsUI();
+                nxToast('🎉 حساب ساخته شد، خوش آمدی!', 'success');
+            } else {
+                showAuthError('authError',
+                    '✅ حساب ساخته شد. لینک تأیید به ایمیلت فرستاده شد؛ بعد از تأیید وارد شو.', true);
+                setTab(true);
+            }
+        } catch (e) {
+            showAuthError('authError', e.message);
+        } finally {
+            authBusy = false; this.disabled = false; this.textContent = 'ساخت حساب';
+        }
+    });
+
+    document.getElementById('forgotLink').addEventListener('click', async () => {
+        const id = document.getElementById('loginId').value.trim();
+        if (id.indexOf('@') === -1) {
+            showAuthError('authError', 'برای بازیابی رمز، ایمیل حسابت را در کادر بالا بنویس.');
+            return;
+        }
+        try {
+            await NXAuth.resetPassword(id);
+            showAuthError('authError', '✅ لینک بازیابی به ایمیلت فرستاده شد.', true);
+        } catch (e) { showAuthError('authError', e.message); }
+    });
+
+    // create team
+    document.getElementById('createTeamBtn').addEventListener('click', () => {
+        if (!NXAuth.isLoggedIn()) { showAuthError('authError', ''); openModal('authModal'); return; }
+        showAuthError('teamError', '');
+        openModal('teamModal');
+    });
+
+    document.getElementById('teamSubmit').addEventListener('click', async function () {
+        if (authBusy) return; authBusy = true;
+        this.disabled = true; this.textContent = 'در حال ساخت...';
+        try {
+            await NXAuth.createTeam({
+                name: document.getElementById('teamName').value,
+                description: document.getElementById('teamDesc').value,
+                emoji: document.getElementById('teamEmoji').value.trim() || '🛡️'
+            });
+            closeModal('teamModal');
+            document.getElementById('teamName').value = '';
+            document.getElementById('teamDesc').value = '';
+            await reloadTeamsUI();
+            nxToast('🎉 تیمت ساخته شد!', 'success');
+        } catch (e) {
+            showAuthError('teamError', e.message);
+        } finally {
+            authBusy = false; this.disabled = false; this.textContent = 'ساخت تیم';
+        }
+    });
+
+    // delegated team-card buttons
+    document.getElementById('teamsGrid').addEventListener('click', ev => {
+        const t = ev.target.closest('[data-join],[data-leave],[data-kick],[data-delete],[data-needlogin]');
+        if (!t) return;
+        if (t.dataset.needlogin) { showAuthError('authError', ''); openModal('authModal'); return; }
+        if (t.dataset.join)   return doJoin(t.dataset.join);
+        if (t.dataset.leave)  return doLeave(t.dataset.leave);
+        if (t.dataset.delete) return doDeleteTeam(t.dataset.delete);
+        if (t.dataset.kick)   return doKick(t.dataset.kick, t.dataset.user);
+    });
+}
+
+async function initAccounts() {
+    if (typeof NXAuth === 'undefined') return;
+    try { await NXAuth.init(); } catch (e) {}
+    if (!NXAuth.isConfigured()) { renderAuthChip(); return; }
+    await refreshLiveTeams();
+    await refreshAccountState();
+    wireAuthUI();
+    renderTeams();
+}
+
+// Test hooks (harmless in production: nothing calls these in the browser).
+function __setLive(teams, cfg, mine) { liveTeams = teams; liveConfig = cfg; myTeam = mine; }
+
 async function loadApp() {
     await loadData();
     setTimeout(() => {
@@ -1277,6 +1928,7 @@ async function loadApp() {
         renderAll();
         initNavIndicator();
         startLiveRefresh();
+        initAccounts();
     }, 600);
 }
 
@@ -1460,8 +2112,14 @@ function getTeamTotalMembers(team) {
 }
 
 function calcStats() {
-    let teams = teamsData.teams.length, members = 0;
-    teamsData.teams.forEach(t => { members += getTeamTotalMembers(t); });
+    let teams, members = 0;
+    if (typeof liveTeams !== 'undefined' && liveTeams !== null) {
+        teams = liveTeams.length;
+        liveTeams.forEach(t => { members += Array.isArray(t.members) ? t.members.length : 0; });
+    } else {
+        teams = teamsData.teams.length;
+        teamsData.teams.forEach(t => { members += getTeamTotalMembers(t); });
+    }
     return { totalTeams: teams, totalMembers: members };
 }
 
@@ -1671,6 +2329,13 @@ function renderStats(id, stats) {
 function renderTeams() {
     const grid = document.getElementById('teamsGrid');
     if (!grid) return;
+    renderTeamsToolbar();
+    // Database mode: players manage their own teams.
+    if (typeof liveTeams !== 'undefined' && liveTeams !== null) {
+        renderLiveTeams();
+        const st = calcStats(); renderStats('homeStats', st); renderStats('teamsStats', st);
+        return;
+    }
     if (!teamsData.teams.length) {
         grid.innerHTML = '<div style="text-align:center;padding:60px;color:var(--text-tertiary);">هیچ تیمی ثبت نشده است</div>';
         const stats = calcStats(); renderStats('homeStats', stats); renderStats('teamsStats', stats);

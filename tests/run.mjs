@@ -1,4 +1,4 @@
-import { installDom, loadPage, reporter, makeEl } from './harness.mjs';
+import { installDom, loadPage, loadScript, reporter, makeEl } from './harness.mjs';
 import { readFileSync } from 'node:fs';
 const R = reporter();
 let exitCode = 0;
@@ -303,6 +303,219 @@ let exitCode = 0;
   let threw = null;
   try { ['status','teams','rules','texts','images'].forEach(t => A.tab(t, makeEl('b'))); } catch(e){ threw = e; }
   R.check('all tabs switch without error', !threw);
+}
+
+
+/* ============ N. ACCOUNTS: auth layer (js/nx-auth.js) ============ */
+{
+  const { store } = installDom();
+  loadScript('js/nx-auth.js');
+  const A = globalThis.NXAuth;
+
+  R.section('N. auth layer');
+  R.check('not configured out of the box', A.isConfigured() === false);
+  await A.init().catch(()=>{});
+  let rejected = null;
+  await A.getConfig().catch(e => { rejected = e; });
+  R.check('calls fail cleanly when unconfigured', !!rejected);
+
+  A.saveConfig('https://demo.supabase.co/', 'anon-key-123');
+  R.check('config saved and normalised', A.config().url === 'https://demo.supabase.co');
+  R.check('config persisted to localStorage', !!store['nthx_supabase']);
+  R.check('isConfigured flips on', A.isConfigured() === true);
+
+  // Persian error translation — the whole point is that players see a
+  // human sentence, never a raw Postgres exception.
+  const cases = [
+    ['... raise exception TEAM_FULL',        'این تیم پر است.'],
+    ['ALREADY_IN_TEAM',                      'شما در حال حاضر عضو یک تیم هستید. اول از آن خارج شوید.'],
+    ['MAX_TEAMS_REACHED',                    'ظرفیت تیم‌ها تکمیل است؛ تیم جدیدی نمی‌توان ساخت.'],
+    ['USERNAME_TAKEN',                       'این نام ماینکرفت قبلاً ثبت شده است.'],
+    ['OWNER_CANNOT_LEAVE',                   'شما کاپیتان تیم هستید؛ اول کاپیتانی را واگذار یا تیم را حذف کنید.'],
+    ['Invalid login credentials',            'نام کاربری/ایمیل یا رمز عبور اشتباه است.'],
+    ['REGISTRATION_CLOSED',                  'ثبت‌نام در حال حاضر بسته است.'],
+    ['JOIN_CLOSED',                          'عضویت در تیم‌ها در حال حاضر بسته است.'],
+  ];
+  R.check('all DB errors translate to Persian',
+    cases.every(([raw, fa]) => A.humanize(raw) === fa));
+  R.check('unknown errors pass through', A.humanize('weird thing') === 'weird thing');
+
+  // --- fake Supabase REST, routed by URL (never by timing) ---
+  const seen = [];
+  let routes = {};
+  let nextResponse = { ok:true, status:200, body:'[]' };
+  globalThis.fetch = async (url, opt={}) => {
+    const u = String(url);
+    seen.push({ url:u, method:opt.method||'GET',
+                body: opt.body ? JSON.parse(opt.body) : null, headers: opt.headers||{} });
+    for (const key in routes) if (u.includes(key)) return mk(routes[key]);
+    return mk(nextResponse);
+  };
+  function mk(r){ return { ok:r.ok, status:r.status, text:async()=>r.body }; }
+
+  // validation happens before any network call
+  seen.length = 0;
+  let err = null;
+  await A.signUp({ username:'ab', email:'a@b.co', password:'123456' }).catch(e => err = e);
+  R.check('short username rejected locally', !!err && seen.length === 0);
+  err = null;
+  await A.signUp({ username:'Steve!', email:'a@b.co', password:'123456' }).catch(e => err = e);
+  R.check('invalid characters rejected', !!err && seen.length === 0);
+  err = null;
+  await A.signUp({ username:'Steve', email:'nope', password:'123456' }).catch(e => err = e);
+  R.check('bad email rejected', !!err && seen.length === 0);
+  err = null;
+  await A.signUp({ username:'Steve', email:'a@b.co', password:'123' }).catch(e => err = e);
+  R.check('short password rejected', !!err && seen.length === 0);
+
+  // sign-up sends the minecraft name as user metadata
+  seen.length = 0;
+  routes = {
+    'username_available': { ok:true, status:200, body:'true' },
+    '/auth/v1/signup':    { ok:true, status:200, body: JSON.stringify({
+        access_token:'tok', refresh_token:'ref', expires_in:3600,
+        user:{ id:'u1', email:'steve@mc.com' } }) }
+  };
+  await A.signUp({ username:'Steve', email:'steve@mc.com', password:'secret123' }).catch(()=>{});
+  R.check('username availability checked first',
+    seen[0] && seen[0].url.includes('/rpc/username_available'));
+  const su = seen.find(s => s.url.includes('/auth/v1/signup'));
+  R.check('signup posts mc_username as metadata',
+    !!su && su.body.data.mc_username === 'Steve');
+  R.check('session stored after signup', A.isLoggedIn() === true);
+  R.check('session persisted', !!store['nthx_session']);
+
+  // requests carry the user's token, not the anon key
+  seen.length = 0;
+  routes = {};
+  nextResponse = { ok:true, status:200, body:'[]' };
+  await A.listTeams();
+  R.check('authenticated request uses the session token',
+    seen[0].headers.Authorization === 'Bearer tok');
+  R.check('apikey header always present', seen[0].headers.apikey === 'anon-key-123');
+  R.check('team list is cache-busted', seen[0].url.includes('/teams_public'));
+
+  // login by minecraft name resolves to the account email first
+  seen.length = 0;
+  routes = {
+    'email_for_login':      { ok:true, status:200, body:'"steve@mc.com"' },
+    'grant_type=password':  { ok:true, status:200, body: JSON.stringify({
+        access_token:'tok2', refresh_token:'ref2', expires_in:3600, user:{ id:'u1' } }) }
+  };
+  await A.signIn('Steve', 'secret123').catch(()=>{});
+  R.check('minecraft name resolved via RPC', seen[0].url.includes('/rpc/email_for_login'));
+  // Privacy: the server only reveals the email if the password checks out,
+  // so the password must travel with the lookup.
+  R.check('lookup sends the password so emails cannot be harvested',
+    seen[0].body && seen[0].body.p_password === 'secret123');
+  const tokenCall = seen.find(s => s.url.includes('grant_type=password'));
+  R.check('login uses the resolved email', !!tokenCall && tokenCall.body.email === 'steve@mc.com');
+
+  // email login skips the lookup
+  seen.length = 0;
+  await A.signIn('steve@mc.com', 'secret123').catch(()=>{});
+  R.check('email login skips the name lookup',
+    !seen.some(s => s.url.includes('email_for_login')));
+
+  // create/join/leave hit the right endpoints
+  seen.length = 0;
+  routes = {};
+  nextResponse = { ok:true, status:200, body: JSON.stringify([{ id:'t1', name:'Alpha' }]) };
+  await A.createTeam({ name:'Alpha', description:'hi', emoji:'⚔️' }).catch(()=>{});
+  R.check('createTeam posts to /teams', seen[0].url.includes('/teams'));
+  R.check('creator is set as owner', seen[0].body.owner_id === 'u1');
+  R.check('team name trimmed', seen[0].body.name === 'Alpha');
+
+  err = null;
+  await A.createTeam({ name:'A' }).catch(e => err = e);
+  R.check('one-character team name rejected locally', !!err);
+
+  seen.length = 0;
+  await A.joinTeam('t1').catch(()=>{});
+  R.check('joinTeam posts the current user', seen[0].body.user_id === 'u1');
+  R.check('joiner is not a leader', seen[0].body.is_leader === false);
+
+  seen.length = 0;
+  await A.leaveTeam('t1').catch(()=>{});
+  R.check('leaveTeam deletes only my own row',
+    seen[0].method === 'DELETE' && seen[0].url.includes('user_id=eq.u1'));
+
+  // server-side rejections surface in Persian
+  nextResponse = { ok:false, status:400, body: JSON.stringify({ message:'TEAM_FULL' }) };
+  err = null;
+  await A.joinTeam('t1').catch(e => err = e);
+  R.check('server rejection is translated', err && err.message === 'این تیم پر است.');
+  R.check('raw error kept for debugging', err && /TEAM_FULL/.test(err.raw));
+
+  // sign-out clears everything
+  nextResponse = { ok:true, status:200, body:'' };
+  await A.signOut();
+  R.check('signOut clears the session', A.isLoggedIn() === false);
+  R.check('signOut clears storage', !store['nthx_session']);
+}
+
+/* ============ O. SITE: team UI states ============ */
+{
+  const { reg, store } = installDom();
+  globalThis.fetch = async () => ({ ok:false, status:404 });
+  loadScript('js/nx-auth.js');
+  globalThis.NXAuth.saveConfig('https://demo.supabase.co', 'k');
+
+  const S = loadPage('index.html', `globalThis.__X={setLive:__setLive, renderTeams,
+    stats:calcStats, esc:escapeHtml, toolbar:renderTeamsToolbar}`);
+
+  R.section('O. team UI states');
+  const cfg = { max_teams:10, max_members:10, team_creation_open:true, join_open:true };
+  const teams = [
+    { id:'t1', name:'Alpha', emoji:'⚔️', owner_id:'u1', owner_name:'Steve',
+      members:[{ user_id:'u1', name:'Steve', is_leader:true }] },
+    { id:'t2', name:'Beta', emoji:'🛡️', owner_id:'u2', owner_name:'Alex',
+      members: Array.from({length:10}, (_,i)=>({ user_id:'x'+i, name:'P'+i, is_leader:i===0 })) },
+  ];
+
+  // logged out
+  S.setLive(teams, cfg, null);
+  S.renderTeams();
+  const html = reg['teamsGrid'].innerHTML;
+  R.check('live teams render instead of the static file', html.includes('Alpha') && html.includes('Beta'));
+  R.check('logged-out visitors are prompted to sign in', html.includes('data-needlogin'));
+  R.check('no join button while logged out', !html.includes('data-join='));
+  R.check('full team shows 10/10', html.includes('۱۰/۱۰'));
+  R.check('stats count live teams', S.stats().totalTeams === 2);
+  R.check('stats count live members', S.stats().totalMembers === 11);
+
+  // XSS: a team named like a script tag must never become markup
+  S.setLive([{ id:'t9', name:'<img src=x onerror=alert(1)>', emoji:'🛡️', owner_id:'u9',
+              members:[] }], cfg, null);
+  S.renderTeams();
+  R.check('team names are escaped',
+    !reg['teamsGrid'].innerHTML.includes('<img src=x'));
+  R.check('escaping keeps the visible text',
+    reg['teamsGrid'].innerHTML.includes('&lt;img'));
+
+  // toolbar reflects the caps
+  S.setLive(teams, { ...cfg, max_teams:2 }, null);
+  S.toolbar();
+  R.check('counter shows the team cap', reg['teamsCounter'].textContent.includes('۲ از ۲'));
+  R.check('member cap shown in Persian digits', reg['teamsCounter'].textContent.includes('۱۰ نفر'));
+
+  S.setLive(teams, { ...cfg, team_creation_open:false }, null);
+  S.toolbar();
+  R.check('closed creation disables the button even before login',
+    reg['createTeamBtn'].disabled === true &&
+    reg['createTeamBtn'].textContent.includes('بسته'));
+
+  S.setLive([], cfg, null);
+  S.renderTeams();
+  R.check('empty state invites the first team',
+    reg['teamsGrid'].innerHTML.includes('اولین نفر باش'));
+
+  // fallback: no database → the old static rendering still works
+  S.setLive(null, null, null);
+  S.renderTeams();
+  R.check('falls back to teams.json when the DB is off',
+    reg['teamsGrid'].innerHTML.includes('هیچ تیمی ثبت نشده'));
+  R.check('toolbar hidden without a database', reg['teamsToolbar'].style.display === 'none');
 }
 
 exitCode = R.done('ALL NETHERAXIA TESTS');
