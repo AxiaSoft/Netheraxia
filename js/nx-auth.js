@@ -15,12 +15,14 @@
     var cfg = { url: '', anonKey: '' };
 
     function loadConfig() {
-        if (global.NETHERAXIA_SUPABASE &&
-            global.NETHERAXIA_SUPABASE.url &&
-            global.NETHERAXIA_SUPABASE.anonKey) {
+        // js/nx-config.js assigns to `window`; look there as well as on the
+        // global object, since they are not always the same reference.
+        var fromFile = global.NETHERAXIA_SUPABASE ||
+            (typeof window !== 'undefined' && window && window.NETHERAXIA_SUPABASE) || null;
+        if (fromFile && fromFile.url && fromFile.anonKey) {
             cfg = {
-                url: String(global.NETHERAXIA_SUPABASE.url).replace(/\/+$/, ''),
-                anonKey: String(global.NETHERAXIA_SUPABASE.anonKey)
+                url: String(fromFile.url).replace(/\/+$/, ''),
+                anonKey: String(fromFile.anonKey)
             };
         }
         try {
@@ -41,7 +43,10 @@
         return cfg;
     }
 
-    function isConfigured() { return !!(cfg.url && cfg.anonKey); }
+    function isConfigured() {
+        if (!cfg.url || !cfg.anonKey) loadConfig();   // tolerate being asked early
+        return !!(cfg.url && cfg.anonKey);
+    }
 
     /* ---- نشست ------------------------------------------------------------ */
     var session = null;
@@ -335,6 +340,8 @@
         loadSession();
         return refreshIfNeeded().then(function () { return session; });
     }
+
+    try { loadConfig(); } catch (e) {}
 
     global.NXAuth = {
         init: init,

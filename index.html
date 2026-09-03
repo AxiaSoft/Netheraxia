@@ -666,29 +666,41 @@
 
         /* ==================== Accounts & teams ==================== */
         .auth-chip {
-            position: fixed; top: 18px; left: 18px; z-index: 60;
-            display: flex; align-items: center; gap: 8px;
-            padding: 9px 14px; border-radius: var(--r-md);
-            background: var(--glass); border: 1px solid var(--glass-border);
-            backdrop-filter: blur(14px); cursor: pointer;
-            color: var(--text-primary); font-family: inherit; font-size: 13px;
-            font-weight: 700; box-shadow: var(--pixel-shadow);
-            transition: transform .15s, border-color .15s;
+            height: 44px; flex-shrink: 0;
+            display: flex; align-items: center; gap: 7px;
+            padding: 0 13px; border-radius: var(--r-md);
+            border: 1px solid var(--border-default);
+            background: var(--bg-glass-nav);
+            backdrop-filter: var(--nav-blur); -webkit-backdrop-filter: var(--nav-blur);
+            color: var(--text-primary); cursor: pointer;
+            font-family: inherit; font-size: 13px; font-weight: 700;
+            box-shadow: var(--shadow-md);
+            transition: all 0.3s var(--ease-smooth);
+            -webkit-tap-highlight-color: transparent; user-select: none;
         }
-        .auth-chip:hover { transform: translateY(-2px); border-color: var(--secondary); }
+        .auth-chip:hover {
+            transform: translate(-2px,-2px);
+            border-color: var(--accent);
+            box-shadow: var(--pixel-shadow), 0 0 24px var(--accent-glow);
+        }
         .auth-chip-avatar {
-            width: 24px; height: 24px; border-radius: var(--r-xs);
-            background: linear-gradient(135deg, var(--primary), var(--cyan));
-            display: grid; place-items: center; font-size: 12px; font-weight: 900; color: #fff;
+            width: 24px; height: 24px; border-radius: var(--r-xs); flex-shrink: 0;
+            background: linear-gradient(135deg, var(--accent-dark), var(--cyan));
+            display: grid; place-items: center;
+            font-size: 12px; font-weight: 900; color: #fff;
         }
+        .auth-chip-label { max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
         .auth-menu {
-            position: fixed; top: 62px; left: 18px; z-index: 61; display: none;
-            min-width: 210px; padding: 8px; border-radius: var(--r-md);
-            background: var(--glass); border: 1px solid var(--glass-border);
-            backdrop-filter: blur(18px); box-shadow: var(--pixel-shadow);
+            position: fixed; top: 70px; left: 50%; transform: translateX(-50%);
+            z-index: 1002; display: none;
+            min-width: 220px; padding: 8px; border-radius: var(--r-md);
+            background: var(--bg-glass-nav); border: 1px solid var(--border-default);
+            backdrop-filter: var(--nav-blur); -webkit-backdrop-filter: var(--nav-blur);
+            box-shadow: var(--shadow-lg);
         }
         .auth-menu.active { display: block; }
-        .auth-menu-head { padding: 10px 12px; border-bottom: 1px solid var(--glass-border); margin-bottom: 6px; }
+        .auth-menu-head { padding: 10px 12px; border-bottom: 1px solid var(--border-default); margin-bottom: 6px; }
         .auth-menu-name { font-weight: 800; font-size: 14px; }
         .auth-menu-sub { font-size: 11px; color: var(--text-tertiary); margin-top: 3px; }
         .auth-menu-item {
@@ -702,21 +714,21 @@
         .auth-tabs { display: flex; gap: 6px; margin-bottom: 20px; }
         .auth-tab {
             flex: 1; padding: 11px; border-radius: var(--r-sm); cursor: pointer;
-            background: rgba(10,26,54,0.6); border: 1px solid var(--glass-border);
+            background: rgba(10,26,54,0.6); border: 1px solid var(--border-default);
             color: var(--text-tertiary); font-family: inherit; font-size: 13px; font-weight: 700;
         }
         .auth-tab.active {
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            color: #fff; border-color: var(--secondary);
+            background: linear-gradient(135deg, var(--accent-dark), var(--accent));
+            color: #fff; border-color: var(--accent);
         }
         .field { margin-bottom: 15px; }
         .field label { display: block; font-size: 12px; font-weight: 700; margin-bottom: 7px; color: var(--text-secondary); }
         .field input, .field textarea, .field select {
             width: 100%; padding: 12px 14px; border-radius: var(--r-sm);
-            background: rgba(3,10,24,0.7); border: 1px solid var(--glass-border);
+            background: rgba(3,10,24,0.7); border: 1px solid var(--border-default);
             color: var(--text-primary); font-family: inherit; font-size: 14px; outline: none;
         }
-        .field input:focus, .field textarea:focus { border-color: var(--secondary); }
+        .field input:focus, .field textarea:focus { border-color: var(--accent); }
         .field-hint { font-size: 11px; color: var(--text-tertiary); margin-top: 6px; }
         .field-hint.ok  { color: #4ade80; }
         .field-hint.bad { color: #fca5a5; }
@@ -728,7 +740,7 @@
         .auth-error.ok { background: rgba(34,197,94,0.12); border-color: rgba(34,197,94,0.35); color: #86efac; }
         .btn-primary-full {
             width: 100%; padding: 13px; border: none; border-radius: var(--r-sm); cursor: pointer;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            background: linear-gradient(135deg, var(--accent-dark), var(--accent));
             color: #fff; font-family: inherit; font-size: 14px; font-weight: 800;
             box-shadow: var(--pixel-shadow);
         }
@@ -742,18 +754,18 @@
         }
         .team-action-btn {
             padding: 11px 20px; border-radius: var(--r-sm); cursor: pointer;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            border: 1px solid var(--secondary); color: #fff;
+            background: linear-gradient(135deg, var(--accent-dark), var(--accent));
+            border: 1px solid var(--accent); color: #fff;
             font-family: inherit; font-size: 13px; font-weight: 800; box-shadow: var(--pixel-shadow);
         }
         .team-action-btn.ghost {
-            background: rgba(10,26,54,0.6); border-color: var(--glass-border); color: var(--text-secondary);
+            background: rgba(10,26,54,0.6); border-color: var(--border-default); color: var(--text-secondary);
         }
         .team-action-btn:disabled { opacity: .5; cursor: not-allowed; box-shadow: none; }
         .teams-counter {
             font-size: 12px; color: var(--text-tertiary);
             padding: 8px 14px; border-radius: var(--r-sm);
-            background: rgba(10,26,54,0.5); border: 1px solid var(--glass-border);
+            background: rgba(10,26,54,0.5); border: 1px solid var(--border-default);
         }
         .team-card-foot { display: flex; gap: 8px; margin-top: 14px; }
         .team-join-btn {
@@ -776,7 +788,7 @@
         .nx-toast {
             position: fixed; bottom: 26px; left: 50%; transform: translateX(-50%) translateY(20px);
             z-index: 200; padding: 13px 22px; border-radius: var(--r-md);
-            background: var(--glass); border: 1px solid var(--glass-border);
+            background: var(--bg-glass-nav); border: 1px solid var(--border-default);
             backdrop-filter: blur(16px); color: var(--text-primary);
             font-size: 13px; font-weight: 700; box-shadow: var(--pixel-shadow);
             opacity: 0; pointer-events: none; transition: opacity .25s, transform .25s; max-width: 90vw;
@@ -788,8 +800,13 @@
             text-align: center; padding: 40px 20px; color: var(--text-tertiary); font-size: 13px; line-height: 2;
         }
         @media (max-width: 768px) {
-            .auth-chip { top: auto; bottom: 90px; left: 14px; padding: 8px 12px; font-size: 12px; }
-            .auth-menu { top: auto; bottom: 138px; left: 14px; }
+            .auth-chip { padding: 0 10px; font-size: 12px; }
+            .auth-chip-label { max-width: 62px; }
+            .auth-menu { top: 66px; }
+        }
+        @media (max-width: 420px) {
+            .auth-chip-label { display: none; }
+            .auth-chip { padding: 0 9px; }
         }
     </style>
 </head>
@@ -828,14 +845,13 @@
     <button class="bg-switch" id="bgSwitch" title="تغییر پس‌زمینه سه‌بعدی">
         <span id="bgSwitchIcon">🧊</span>
     </button>
+    <button class="auth-chip" id="authChip" style="display:none;" title="حساب کاربری">
+        <span class="auth-chip-avatar" id="authAvatar">?</span>
+        <span class="auth-chip-label" id="authChipLabel">ورود</span>
+    </button>
 </div>
 <div class="bg-switch-label" id="bgSwitchLabel"></div>
 
-<!-- Account -->
-<button class="auth-chip" id="authChip" style="display:none;">
-    <span class="auth-chip-avatar" id="authAvatar">?</span>
-    <span id="authChipLabel">ورود / ثبت‌نام</span>
-</button>
 <div class="auth-menu" id="authMenu">
     <div class="auth-menu-head">
         <div class="auth-menu-name" id="authMenuName"></div>
@@ -1525,8 +1541,8 @@ function showAuthError(id, msg, ok) {
     el.style.display = msg ? 'block' : 'none';
 }
 
-function openModal(id)  { const m = document.getElementById(id); if (m) m.classList.add('active'); }
-function closeModal(id) { const m = document.getElementById(id); if (m) m.classList.remove('active'); }
+function openOverlay(id)  { const m = document.getElementById(id); if (m) m.classList.add('active'); }
+function closeOverlay(id) { const m = document.getElementById(id); if (m) m.classList.remove('active'); }
 
 function renderAuthChip() {
     const chip = document.getElementById('authChip');
@@ -1750,7 +1766,7 @@ function wireAuthUI() {
     chip.addEventListener('click', (ev) => {
         ev.stopPropagation();
         if (NXAuth.isLoggedIn()) menu.classList.toggle('active');
-        else { showAuthError('authError', ''); openModal('authModal'); }
+        else { showAuthError('authError', ''); openOverlay('authModal'); }
     });
     document.addEventListener('click', () => menu.classList.remove('active'));
     menu.addEventListener('click', ev => ev.stopPropagation());
@@ -1768,11 +1784,11 @@ function wireAuthUI() {
     });
 
     document.querySelectorAll('[data-close]').forEach(b => {
-        b.addEventListener('click', () => closeModal(b.dataset.close));
+        b.addEventListener('click', () => closeOverlay(b.dataset.close));
     });
     ['authModal', 'teamModal'].forEach(id => {
         const m = document.getElementById(id);
-        if (m) m.addEventListener('click', ev => { if (ev.target === m) closeModal(id); });
+        if (m) m.addEventListener('click', ev => { if (ev.target === m) closeOverlay(id); });
     });
 
     // tabs
@@ -1818,7 +1834,7 @@ function wireAuthUI() {
         try {
             await NXAuth.signIn(document.getElementById('loginId').value,
                                 document.getElementById('loginPass').value);
-            closeModal('authModal');
+            closeOverlay('authModal');
             document.getElementById('loginPass').value = '';
             await reloadTeamsUI();
             nxToast('👋 خوش آمدی ' + (myProfile ? myProfile.mc_username : '') + '!', 'success');
@@ -1840,7 +1856,7 @@ function wireAuthUI() {
                 password: document.getElementById('regPass').value
             });
             if (res.session) {
-                closeModal('authModal');
+                closeOverlay('authModal');
                 await reloadTeamsUI();
                 nxToast('🎉 حساب ساخته شد، خوش آمدی!', 'success');
             } else {
@@ -1869,9 +1885,9 @@ function wireAuthUI() {
 
     // create team
     document.getElementById('createTeamBtn').addEventListener('click', () => {
-        if (!NXAuth.isLoggedIn()) { showAuthError('authError', ''); openModal('authModal'); return; }
+        if (!NXAuth.isLoggedIn()) { showAuthError('authError', ''); openOverlay('authModal'); return; }
         showAuthError('teamError', '');
-        openModal('teamModal');
+        openOverlay('teamModal');
     });
 
     document.getElementById('teamSubmit').addEventListener('click', async function () {
@@ -1883,7 +1899,7 @@ function wireAuthUI() {
                 description: document.getElementById('teamDesc').value,
                 emoji: document.getElementById('teamEmoji').value.trim() || '🛡️'
             });
-            closeModal('teamModal');
+            closeOverlay('teamModal');
             document.getElementById('teamName').value = '';
             document.getElementById('teamDesc').value = '';
             await reloadTeamsUI();
@@ -1899,7 +1915,7 @@ function wireAuthUI() {
     document.getElementById('teamsGrid').addEventListener('click', ev => {
         const t = ev.target.closest('[data-join],[data-leave],[data-kick],[data-delete],[data-needlogin]');
         if (!t) return;
-        if (t.dataset.needlogin) { showAuthError('authError', ''); openModal('authModal'); return; }
+        if (t.dataset.needlogin) { showAuthError('authError', ''); openOverlay('authModal'); return; }
         if (t.dataset.join)   return doJoin(t.dataset.join);
         if (t.dataset.leave)  return doLeave(t.dataset.leave);
         if (t.dataset.delete) return doDeleteTeam(t.dataset.delete);

@@ -7,9 +7,22 @@ export function makeEl(id, tag='div'){
     href:'', src:'', title:'', dataset:{},
     style:new Proxy({ setProperty(k,v){ this[k]=v; } },{get:(t,k)=>t[k]??'',set:(t,k,v)=>{t[k]=v;return true;}}),
     classList:{_s:new Set(),add(c){this._s.add(c)},remove(c){this._s.delete(c)},contains(c){return this._s.has(c)},toggle(){}},
-    addEventListener(){}, appendChild(){}, removeChild(){}, remove(){}, click(){}, focus(){},
+    _h:{},
+    addEventListener(t,fn){ (this._h[t] ??= []).push(fn); },
+    dispatch(t, ev={}){ (this._h[t]||[]).forEach(fn => fn.call(this,
+      { type:t, target:this, currentTarget:this, stopPropagation(){}, preventDefault(){}, ...ev })); },
+    click(){ this.dispatch('click'); },
+    appendChild(){}, removeChild(){}, remove(){}, focus(){},
     getBoundingClientRect:()=>({left:0,top:0,width:100,height:40}),
     getAttribute:()=>null, setAttribute(){}, querySelectorAll:()=>[],
+    closest(sel){
+      const keys = String(sel).match(/\[data-([a-z]+)\]/g) || [];
+      for (const k of keys) {
+        const name = k.slice(6, -1);
+        if (this.dataset && this.dataset[name] != null) return this;
+      }
+      return null;
+    },
     getContext:()=>new Proxy({},{get:()=>()=>({addColorStop(){}})}),
     parentElement:{ getBoundingClientRect:()=>({left:0,top:0,width:400,height:50}) } };
 }
@@ -25,8 +38,17 @@ export function installDom({ protocol='https:', width=1280, height=800 } = {}){
   globalThis.location = { protocol };
   globalThis.document = {
     documentElement:{ getAttribute:()=>'dark', setAttribute(){}, style:{ setProperty:(k,v)=>{rootStyle[k]=v} } },
-    getElementById:gid, querySelector:()=>makeEl('q'), querySelectorAll:()=>[makeEl('a'),makeEl('b')],
-    addEventListener(){}, createElement:(t)=>makeEl('c',t), createRange:()=>({selectNode(){}}),
+    getElementById:gid, querySelector:()=>makeEl('q'),
+    querySelectorAll(sel){
+      const m = String(sel).match(/\[data-([a-z]+)\]/);
+      if (m) return Object.values(reg).filter(e => e.dataset && e.dataset[m[1]] != null);
+      return [makeEl('a'), makeEl('b')];
+    },
+    _h:{},
+    addEventListener(t,fn){ (this._h[t] ??= []).push(fn); },
+    dispatch(t, ev={}){ (this._h[t]||[]).forEach(fn => fn.call(this,
+      { type:t, target:ev.target||null, stopPropagation(){}, preventDefault(){}, ...ev })); },
+    createElement:(t)=>makeEl('c',t), createRange:()=>({selectNode(){}}),
     body:{ appendChild(){}, removeChild(){} }, execCommand(){} };
   Object.defineProperty(globalThis,'navigator',{value:{clipboard:{writeText:async()=>{}}},configurable:true});
   globalThis.requestAnimationFrame = ()=>0;

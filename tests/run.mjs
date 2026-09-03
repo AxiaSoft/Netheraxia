@@ -542,5 +542,109 @@ let exitCode = 0;
   R.check('toolbar hidden without a database', reg['teamsToolbar'].style.display === 'none');
 }
 
+
+/* ============ Q. SITE: the login button must actually work ============ */
+{
+  const { reg, gid } = installDom();
+  const served = { 'images.json':{}, 'teams.json':{teams:[]}, 'rules.json':{rules:[]},
+                   'status.json':{status:'online'}, 'texts.json':{} };
+  globalThis.fetch = async (url) => {
+    const u = String(url);
+    if (u.includes('supabase.co')) {
+      if (u.includes('public_config')) return { ok:true, status:200, text:async()=>JSON.stringify(
+        { max_teams:10, max_members:10, team_creation_open:true, join_open:true,
+          registration_open:true, team_count:0, player_count:0, member_count:0 }) };
+      return { ok:true, status:200, text:async()=>'[]' };
+    }
+    const n = u.split('/').pop().split('?')[0];
+    return served[n] ? { ok:true, status:200, json:async()=>served[n] } : { ok:false, status:404 };
+  };
+
+  // config arrives exactly like js/nx-config.js delivers it in the browser.
+  // (In a real page window === globalThis; the stub keeps them separate, so
+  // set both to mirror the browser faithfully.)
+  const supaCfg = { url:'https://demo.supabase.co', anonKey:'sb_publishable_test' };
+  globalThis.window.NETHERAXIA_SUPABASE = supaCfg;
+  globalThis.NETHERAXIA_SUPABASE = supaCfg;
+  loadScript('js/nx-auth.js');
+
+  const S = loadPage('index.html', `globalThis.__X={init:initAccounts, enabled:authEnabled,
+    openOv:openOverlay, closeOv:closeOverlay, chip:renderAuthChip}`);
+
+  R.section('Q. login button actually works');
+  R.check('config from nx-config.js is picked up', S.enabled() === true);
+
+  await S.init();
+  R.check('the account button becomes visible', reg['authChip'].style.display !== 'none');
+  R.check('it invites the user to sign in', reg['authChipLabel'].textContent.includes('ورود'));
+
+  // Regression for the duplicate-function bug: openModal() already existed for
+  // the connect modal, so redeclaring it made the login button a no-op.
+  R.check('overlay opener takes an id', typeof S.openOv === 'function');
+  S.openOv('authModal');
+  R.check('opening authModal by id works', reg['authModal'].classList.contains('active'));
+  R.check('it does not open the connect modal',
+    !reg['connectModal'].classList.contains('active'));
+  S.closeOv('authModal');
+  R.check('closing by id works', !reg['authModal'].classList.contains('active'));
+
+  // the click itself
+  reg['authChip'].click();
+  R.check('clicking the button opens the login modal',
+    reg['authModal'].classList.contains('active'));
+
+  // tab switching inside the modal
+  gid('tabRegister').click();
+  R.check('register tab shows the signup form', reg['registerForm'].style.display === 'block');
+  R.check('and hides the login form', reg['loginForm'].style.display === 'none');
+  gid('tabLogin').click();
+  R.check('login tab switches back', reg['loginForm'].style.display === 'block');
+
+  // the ✕ button: confirm the markup declares it and the handler closes by id
+  const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  R.check('both modals ship a close button',
+    (html.match(/data-close="(authModal|teamModal)"/g) || []).length === 2);
+  R.check('close buttons are wired by data-close',
+    /querySelectorAll\('\[data-close\]'\)[\s\S]{0,160}closeOverlay\(b\.dataset\.close\)/.test(html));
+  S.openOv('authModal');
+  S.closeOv('authModal');
+  R.check('closing via the handler path works', !reg['authModal'].classList.contains('active'));
+
+  // a failed login must surface a Persian message, not a silent dead end
+  gid('loginId').value = 'Steve';
+  gid('loginPass').value = 'wrong';
+  globalThis.fetch = async () => ({ ok:false, status:400,
+    text:async()=>JSON.stringify({ message:'Invalid login credentials' }) });
+  gid('loginSubmit').click();
+  await new Promise(r => setTimeout(r, 30));
+  R.check('a wrong password shows a Persian error',
+    /رمز عبور|اشتباه/.test(reg['authError'].textContent));
+  R.check('the error box is made visible', reg['authError'].style.display === 'block');
+}
+
+/* ============ R. SITE: styling must use variables this theme defines ====== */
+{
+  // The account CSS originally used --glass/--primary/--secondary, which this
+  // theme never defines, so the button rendered invisible.
+  const css = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  const scope = t => css.slice(css.indexOf(t), css.indexOf('}', css.indexOf(t)));
+  const defined = new Set();
+  [':root {', '[data-theme="dark"]', '[data-theme="light"]'].forEach(sel => {
+    [...scope(sel).matchAll(/--([a-z0-9-]+)\s*:/g)].forEach(m => defined.add(m[1]));
+  });
+
+  const accounts = css.slice(css.indexOf('/* ==================== Accounts & teams'),
+                             css.indexOf('</style>', css.indexOf('/* ==================== Accounts & teams')));
+  const used = new Set([...accounts.matchAll(/var\(--([a-z0-9-]+)/g)].map(m => m[1]));
+  const missing = [...used].filter(v => !defined.has(v));
+
+  R.section('R. account styles use real theme variables');
+  R.check('no undefined CSS variables in the account UI (' + missing.join(', ') + ')',
+    missing.length === 0);
+  R.check('the account button sits in the navbar',
+    /<button class="auth-chip"[\s\S]{0,400}?<\/div>/.test(
+      css.slice(css.indexOf('bg-switch" id="bgSwitch"'))));
+}
+
 exitCode = R.done('ALL NETHERAXIA TESTS');
 process.exit(exitCode);
