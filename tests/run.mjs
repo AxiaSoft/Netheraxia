@@ -1175,7 +1175,7 @@ let exitCode = 0;
   await globalThis.NXAuth.init();          // the panel does this on tab open
   await P.state();
   R.check('a non-admin account is called out', /ادمین نیست/.test(reg['acAuthText'].innerHTML));
-  R.check('the exact SQL to fix it is shown', /is_admin = true/.test(reg['acAuthText'].innerHTML));
+  R.check('the exact SQL to fix it is shown', /make_admin\(/.test(reg['acAuthText'].innerHTML));
   R.check('the SQL names the signed-in player', /Steve/.test(reg['acAuthText'].innerHTML));
   R.check('the lock warning stays up for a non-admin', reg['acLockedNote'].style.display !== 'none');
 
@@ -1222,6 +1222,115 @@ let exitCode = 0;
   reg['acMaxTeams'].value = '0';
   await P.save();
   R.check('a zero cap is rejected before the request', touched === false);
+}
+
+/* ============ BB. players without a team + admin bootstrap ============ */
+{
+  const { reg, store } = installDom();
+  globalThis.location = { origin:'https://x.io', pathname:'/admin.html', hash:'', search:'' };
+  globalThis.history = { replaceState(){} };
+  const cfg = { url:'https://demo.supabase.co', anonKey:'k' };
+  globalThis.window.NETHERAXIA_SUPABASE = cfg; globalThis.NETHERAXIA_SUPABASE = cfg;
+  loadScript('js/nx-auth.js');
+  const A = globalThis.NXAuth;
+  A.saveConfig(cfg.url, cfg.anonKey);
+
+  const players = [
+    { id:'u1', mc_username:'Steve',  email:'s@mc.com', is_admin:false, is_banned:false, created_at:'2025-01-01' },
+    { id:'u2', mc_username:'Alex',   email:'a@mc.com', is_admin:false, is_banned:false, created_at:'2025-01-02' },
+    { id:'u3', mc_username:'Herobrine', email:'h@mc.com', is_admin:false, is_banned:true, created_at:'2025-01-03' }
+  ];
+  const members = [{ user_id:'u1', team_id:'t1', is_leader:true }];
+  const teams   = [{ id:'t1', name:'Alpha', members:[{user_id:'u1',name:'Steve',is_leader:true}] }];
+
+  globalThis.fetch = async (url) => {
+    const u = String(url);
+    if (u.includes('/auth/v1/user'))  return { ok:true, status:200, text:async()=>JSON.stringify({id:'u1'}) };
+    if (u.includes('/team_members'))  return { ok:true, status:200, text:async()=>JSON.stringify(members) };
+    if (u.includes('/teams_public'))  return { ok:true, status:200, text:async()=>JSON.stringify(teams) };
+    if (u.includes('/profiles'))      return { ok:true, status:200, text:async()=>JSON.stringify(players) };
+    if (u.includes('public_config'))  return { ok:true, status:200, text:async()=>JSON.stringify(
+      { max_teams:10, max_members:10, team_count:1, player_count:3, member_count:1 }) };
+    if (u.includes('/app_settings'))  return { ok:true, status:200, text:async()=>JSON.stringify(
+      [{ id:1, max_teams:10, max_members:10, registration_open:true, team_creation_open:true,
+         join_open:true, one_team_per_user:true }]) };
+    return { ok:true, status:200, text:async()=>'[]' };
+  };
+
+  R.section('BB. the panel can find players with no team');
+
+  const rows = await A.listPlayersWithTeams();
+  R.check('every registered player is listed', rows.length === 3);
+  R.check('a player in a team carries the team name',
+    rows.find(r => r.mc_username === 'Steve').team_name === 'Alpha');
+  R.check('team membership is flagged', rows.find(r => r.mc_username === 'Steve').has_team === true);
+  R.check('leadership is reported', rows.find(r => r.mc_username === 'Steve').is_leader === true);
+  R.check('a player with no team is flagged',
+    rows.find(r => r.mc_username === 'Alex').has_team === false);
+  R.check('a teamless player has no team name',
+    rows.find(r => r.mc_username === 'Alex').team_name === null);
+
+  const P = loadPage('admin.html', `globalThis.__X={load:loadAccountsData, filter:acSetPlayerFilter,
+    players:()=>acPlayers, boot:renderBootstrapCard}`);
+  await P.load();
+
+  R.check('the player card is filled', /Steve/.test(reg['acPlayersList'].innerHTML));
+  R.check('the teamless count is summarised', /بدون تیم/.test(reg['acPlayersCount'].textContent));
+  R.check('a filter bar is offered', /ac-filter/.test(reg['acPlayerFilters'].innerHTML));
+  R.check('teamless players are badged', /🚩 بدون تیم/.test(reg['acPlayersList'].innerHTML));
+  R.check('a team member shows their team', /Alpha/.test(reg['acPlayersList'].innerHTML));
+
+  // the actual feature the user asked for
+  P.filter('noteam');
+  const only = reg['acPlayersList'].innerHTML;
+  R.check('the teamless filter keeps players with no team', /Alex/.test(only));
+  R.check('the teamless filter drops players who have one', !/Steve/.test(only));
+  R.check('a banned teamless player is still listed', /Herobrine/.test(only));
+
+  P.filter('team');
+  R.check('the with-team filter keeps only team members',
+    /Steve/.test(reg['acPlayersList'].innerHTML) && !/Alex/.test(reg['acPlayersList'].innerHTML));
+
+  P.filter('banned');
+  R.check('the banned filter works',
+    /Herobrine/.test(reg['acPlayersList'].innerHTML) && !/Alex/.test(reg['acPlayersList'].innerHTML));
+
+  P.filter('all');
+  R.check('back to all shows everyone',
+    /Steve/.test(reg['acPlayersList'].innerHTML) && /Alex/.test(reg['acPlayersList'].innerHTML));
+
+  // ---- the bootstrap card: no admin exists anywhere -----------------------
+  R.check('the bootstrap card appears when nobody is an admin',
+    reg['accountsBootstrapCard'].style.display !== 'none');
+  R.check('it offers the working helper, not a bare UPDATE',
+    /make_admin\(/.test(reg['acBootstrapBody'].innerHTML));
+  R.check('it names a real registered player',
+    /make_admin\('Steve'\)/.test(reg['acBootstrapBody'].innerHTML));
+
+  // once somebody is an admin the card must go away
+  players[0].is_admin = true;
+  await P.load();
+  R.check('the bootstrap card disappears once an admin exists',
+    reg['accountsBootstrapCard'].style.display === 'none');
+  R.check('the admin is badged in the list', /ادمین/.test(reg['acPlayersList'].innerHTML));
+}
+
+/* ============ CC. the retired teams tab is really gone ============ */
+{
+  const raw = readFileSync(new URL('../admin.html', import.meta.url), 'utf8');
+  R.section('CC. the old teams tab is gone');
+  R.check('the tab button is removed', !/switchTab\('teams'/.test(raw));
+  R.check('the panel markup is removed', !/id="teamsPanel"/.test(raw));
+  R.check('the old list container is removed', !/id="teamsList"/.test(raw));
+  R.check('no dangling renderTeams call', !/renderTeams\(/.test(raw));
+  R.check('the add-team button is removed', !/openAddTeamModal/.test(raw));
+  // the live tab must still be there
+  R.check('the live players tab survives', /switchTab\('accounts'/.test(raw));
+  R.check('publishing teams.json still works', /teams\.json/.test(raw));
+  // and the parts that merely lived nearby must survive
+  R.check('saveLocal survived the deletion', /function saveLocal/.test(raw));
+  R.check('the status preview key survived', /nthx_status/.test(raw));
+  R.check('the data-folder picker survived', /selectDataFolder/.test(raw));
 }
 
 exitCode = R.done('ALL NETHERAXIA TESTS');

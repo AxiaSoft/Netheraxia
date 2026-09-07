@@ -514,6 +514,34 @@
     function listPlayers() {
         return rest('/profiles?select=*&order=created_at.desc');
     }
+
+    // بازیکنان + تیمشان (برای پیدا کردن کسانی که هنوز تیم ندارند)
+    function listPlayersWithTeams() {
+        return Promise.all([
+            listPlayers(),
+            rest('/team_members?select=user_id,team_id,is_leader'),
+            listTeams()
+        ]).then(function (res) {
+            var players = res[0] || [], members = res[1] || [], teams = res[2] || [];
+            var teamById = {};
+            teams.forEach(function (t) { teamById[t.id] = t; });
+            var byUser = {};
+            members.forEach(function (m) { byUser[m.user_id] = m; });
+            return players.map(function (p) {
+                var m = byUser[p.id];
+                var t = m ? teamById[m.team_id] : null;
+                return {
+                    id: p.id, mc_username: p.mc_username, email: p.email,
+                    is_admin: p.is_admin, is_banned: p.is_banned,
+                    created_at: p.created_at,
+                    team_id: m ? m.team_id : null,
+                    team_name: t ? t.name : (m ? '—' : null),
+                    is_leader: m ? !!m.is_leader : false,
+                    has_team: !!m
+                };
+            });
+        });
+    }
     function setPlayerFlags(userId, patch) {
         return rest('/profiles?id=eq.' + userId, {
             method: 'PATCH', headers: { 'Prefer': 'return=representation' }, body: patch
@@ -563,7 +591,8 @@
         transferLeadership: transferLeadership,
         getSettings: getSettings, updateSettings: updateSettings,
         adminState: adminState,
-        listPlayers: listPlayers, setPlayerFlags: setPlayerFlags,
+        listPlayers: listPlayers, listPlayersWithTeams: listPlayersWithTeams,
+        setPlayerFlags: setPlayerFlags,
         adminAddMember: adminAddMember,
         humanize: humanize, rest: rest, rpc: rpc, refresh: refreshIfNeeded,
         takeWarning: takeWarning

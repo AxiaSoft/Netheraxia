@@ -730,6 +730,23 @@
         .pv-sub { font-size: 13px; color: #7ba3cc; }
         .pv-label:empty, .pv-title:empty, .pv-sub:empty { display: none; }
 
+        .ac-filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+        .ac-filter {
+            padding: 7px 14px; border-radius: var(--r-sm); cursor: pointer; font-size: 12.5px;
+            font-weight: 700; background: rgba(10,26,54,0.6); color: #9fc4ee;
+            border: 1px solid var(--glass-border);
+        }
+        .ac-filter:hover  { border-color: var(--secondary); color: #d8ebff; }
+        .ac-filter.active { background: rgba(47,134,255,0.22); border-color: var(--secondary); color: #fff; }
+        .ac-filter .n { opacity: .75; font-size: 11px; }
+        .ac-badge.noteam {
+            background: rgba(245,158,11,0.15); border-color: rgba(245,158,11,0.45); color: #fcd77f;
+        }
+        .ac-badge.team {
+            background: rgba(34,197,94,0.13); border-color: rgba(34,197,94,0.38); color: #86efac;
+        }
+        .ac-empty { text-align: center; padding: 34px; color: var(--text-tertiary); }
+
         /* وضعیت ورود مدیر */
         .ac-auth-state {
             display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
@@ -814,7 +831,6 @@
         <!-- Tabs -->
         <div class="tabs">
             <button class="tab-btn active" onclick="switchTab('status', this)">🖥️ وضعیت سرور</button>
-            <button class="tab-btn" onclick="switchTab('teams', this)">👥 مدیریت تیم‌ها</button>
             <button class="tab-btn" onclick="switchTab('rules', this)">⚖️ مدیریت قوانین</button>
             <button class="tab-btn" onclick="switchTab('texts', this)">📝 متن‌های سایت</button>
             <button class="tab-btn" onclick="switchTab('accounts', this)">🧑‍🤝‍🧑 بازیکنان و تیم‌ها</button>
@@ -942,17 +958,6 @@
         </div>
 
         <!-- Teams Panel -->
-        <div id="teamsPanel" class="panel">
-            <div class="stats-grid" id="teamsStats"></div>
-            <div class="card">
-                <div class="card-header">
-                    <div class="card-title">👥 لیست تیم‌ها</div>
-                    <button class="btn btn-primary" onclick="openAddTeamModal()">➕ افزودن تیم جدید</button>
-                </div>
-                <div class="teams-list" id="teamsList"></div>
-            </div>
-        </div>
-
         <!-- Rules Panel -->
         <div id="rulesPanel" class="panel">
             <div class="card">
@@ -1090,6 +1095,17 @@
                 </div>
             </div>
 
+            <div class="card" id="accountsBootstrapCard" style="display:none;">
+                <div class="card-header">
+                    <div class="card-title">🔑 هنوز هیچ ادمینی وجود ندارد</div>
+                </div>
+                <div class="form-info">
+                    ⚠️ در این دیتابیس هیچ بازیکنی ادمین نیست، برای همین تغییر محدودیت‌ها
+                    ذخیره نمی‌شود. یک‌بار دستور زیر را در <b>SQL Editor</b> سوپابیس اجرا کنید.
+                </div>
+                <div id="acBootstrapBody"></div>
+            </div>
+
             <div class="card" id="accountsLiveCard" style="display:none;">
                 <div class="card-header">
                     <div class="card-title">⚙️ محدودیت‌ها و سوییچ‌ها</div>
@@ -1129,7 +1145,11 @@
             </div>
 
             <div class="card" id="accountsPlayersCard" style="display:none;">
-                <div class="card-header"><div class="card-title">🧑‍💻 بازیکنان ثبت‌نام‌شده</div></div>
+                <div class="card-header">
+                    <div class="card-title">🧑‍💻 بازیکنان ثبت‌نام‌شده</div>
+                    <div id="acPlayersCount" style="font-size:12.5px;color:var(--text-tertiary);"></div>
+                </div>
+                <div class="ac-filters" id="acPlayerFilters"></div>
                 <div id="acPlayersList"></div>
             </div>
         </div>
@@ -1374,41 +1394,10 @@
         }
 
         // ==================== Stats ====================
-        function updateStats() {
-            let totalTeams = appData.teams.teams.length;
-            let totalMembers = 0, totalStates = 0, stateMembers = 0;
-            appData.teams.teams.forEach(t => {
-                if (t.hasStates && t.states) {
-                    totalStates += t.states.length;
-                    t.states.forEach(s => { if (s.members) stateMembers += s.members.length; });
-                } else if (t.members) totalMembers += t.members.length;
-            });
-            totalMembers += stateMembers;
-            document.getElementById('teamsStats').innerHTML = `
-                <div class="stat-card"><div class="stat-value">${totalTeams}</div><div class="stat-label">👥 تیم</div></div>
-                <div class="stat-card"><div class="stat-value">${totalMembers}</div><div class="stat-label">👤 عضو</div></div>
-                <div class="stat-card"><div class="stat-value">${totalStates}</div><div class="stat-label">🏴 ایالت</div></div>
-                <div class="stat-card"><div class="stat-value">${stateMembers}</div><div class="stat-label">🏳️ عضو ایالتی</div></div>
-            `;
-        }
-
-        // ==================== Limit Helpers ====================
-        function getTeamTotalMembers(team) {
-            if (team.hasStates && team.states) {
-                let total = 0;
-                team.states.forEach(s => { if (s.members) total += s.members.length; });
-                return total;
-            }
-            return team.members ? team.members.length : 0;
-        }
-
-        function canAddMember(team) {
-            return getTeamTotalMembers(team) < MAX_MEMBERS;
-        }
-
-        function getRemainingSlots(team) {
-            return MAX_MEMBERS - getTeamTotalMembers(team);
-        }
+        // تب قدیمیِ «مدیریت تیم‌ها» حذف شد: تیم‌ها را خود بازیکنان در سایت
+        // می‌سازند و مدیریتشان در تب «بازیکنان و تیم‌ها» انجام می‌شود.
+        // این تابع فقط برای فراخوانی‌های قدیمی خالی نگه داشته شده است.
+        function updateStats() {}
 
         // ==================== File System ====================
         async function selectDataFolder() {
@@ -1549,343 +1538,6 @@
                     else appData[key] = json;
                 } catch(e) {}
             }
-        }
-
-        // ==================== Render Teams ====================
-        function renderTeams() {
-            const container = document.getElementById('teamsList');
-            if (!appData.teams.teams.length) {
-                container.innerHTML = '<div style="text-align:center;padding:60px;color:#b0a0c0;font-size:16px;">👥 هیچ تیمی ثبت نشده است</div>';
-                updateStats();
-                return;
-            }
-
-            container.innerHTML = appData.teams.teams.map((team, index) => {
-                const memberCount = getTeamTotalMembers(team);
-                const teamId = `team-${index}`;
-                const flagImg = renderFlagPreview(team.flag);
-                const isFull = memberCount >= MAX_MEMBERS;
-                
-                return `
-                    <div class="team-item">
-                        <div class="team-item-header" onclick="toggleTeamBody('${teamId}')">
-                            <div class="team-item-title">
-                                ${flagImg || '🏴'}
-                                <span>${team.name}</span>
-                                <span class="team-item-badge ${isFull ? 'full' : ''}">${memberCount}/${MAX_MEMBERS}</span>
-                                ${team.hasStates ? '<span class="team-item-badge state-badge">ایالتی</span>' : ''}
-                                ${isFull ? '<span style="font-size:11px;color:var(--danger);">⚠️ تکمیل</span>' : ''}
-                            </div>
-                            <div class="team-item-actions" onclick="event.stopPropagation();">
-                                <button class="btn btn-info btn-sm" onclick="editTeam(${index})">✏️ ویرایش</button>
-                                <button class="btn btn-warning btn-sm" onclick="toggleTeamType(${index})">${team.hasStates ? '🔄 عادی' : '🏴 ایالتی'}</button>
-                                <button class="btn btn-danger btn-sm" onclick="deleteTeam(${index})">🗑️ حذف</button>
-                            </div>
-                        </div>
-                        <div class="team-item-body" id="${teamId}">
-                            ${renderTeamMembers(team, index)}
-                        </div>
-                    </div>`;
-            }).join('');
-            updateStats();
-        }
-
-        function renderTeamMembers(team, teamIndex) {
-            const currentTotal = getTeamTotalMembers(team);
-            const remaining = getRemainingSlots(team);
-            const fillPercent = (currentTotal / MAX_MEMBERS) * 100;
-            let fillClass = 'green';
-            if (currentTotal >= MAX_MEMBERS) fillClass = 'red';
-            else if (currentTotal >= 8) fillClass = 'orange';
-            
-            const limitBar = `
-                <div class="limit-bar">
-                    <span class="limit-bar-label">👥 ظرفیت:</span>
-                    <div class="limit-bar-track">
-                        <div class="limit-bar-fill ${fillClass}" style="width:${fillPercent}%;"></div>
-                    </div>
-                    <span class="limit-bar-value" style="color:${currentTotal >= MAX_MEMBERS ? 'var(--danger)' : 'var(--accent)'};">${currentTotal}/${MAX_MEMBERS}</span>
-                </div>`;
-
-            if (team.hasStates && team.states) {
-                return `
-                    <div class="states-container">
-                        ${limitBar}
-                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
-                            <h4 style="color:var(--accent);">🏴 ایالت‌های ${team.name}</h4>
-                            <button class="btn btn-primary btn-sm" onclick="openAddStateModal(${teamIndex})">➕ افزودن ایالت</button>
-                        </div>
-                        ${team.states.map((state, stateIndex) => {
-                            const stateFlag = renderFlagPreview(state.flag);
-                            const stateCount = state.members ? state.members.length : 0;
-                            return `
-                            <div class="state-item">
-                                <div class="state-header">
-                                    <div class="state-title">
-                                        ${stateFlag || '🏳️'}
-                                        ${state.name}
-                                        <span style="font-size:12px;color:var(--text-secondary);">(${stateCount} عضو)</span>
-                                    </div>
-                                    <div style="display:flex;gap:5px;">
-                                        <button class="btn btn-info btn-sm" onclick="editState(${teamIndex},${stateIndex})">✏️</button>
-                                        <button class="btn btn-danger btn-sm" onclick="deleteState(${teamIndex},${stateIndex})">🗑️</button>
-                                    </div>
-                                </div>
-                                <div class="members-list">
-                                    ${state.members && state.members.length ? state.members.map((m,mi) => `
-                                        <div class="member-item ${m.isLeader?'leader':''}">
-                                            <span class="member-name">${m.isLeader?'👑 ':''}${m.name}</span>
-                                            <div class="member-actions">
-                                                <button class="btn btn-warning btn-sm" onclick="toggleMemberLeaderState(${teamIndex},${stateIndex},${mi})">${m.isLeader?'⭐':'👑'}</button>
-                                                <button class="btn btn-info btn-sm" onclick="editMemberState(${teamIndex},${stateIndex},${mi})">✏️</button>
-                                                <button class="btn btn-danger btn-sm" onclick="deleteMemberState(${teamIndex},${stateIndex},${mi})">🗑️</button>
-                                            </div>
-                                        </div>`).join('') : '<div style="text-align:center;padding:20px;color:#b0a0c0;">هیچ عضوی ثبت نشده</div>'}
-                                </div>
-                                ${remaining > 0 ? `<button class="btn btn-success btn-sm" style="margin-top:10px;" onclick="openAddMemberToStateModal(${teamIndex},${stateIndex})">➕ افزودن عضو</button>` : ''}
-                            </div>`;
-                        }).join('')}
-                        ${remaining <= 0 ? `<div class="full-warning">⚠️ ظرفیت تیم تکمیل است (${MAX_MEMBERS}/${MAX_MEMBERS}) — امکان افزودن عضو وجود ندارد</div>` : ''}
-                    </div>`;
-            } else if (team.members) {
-                return `
-                    <div>
-                        ${limitBar}
-                        <div class="members-list">
-                            ${team.members.length ? team.members.map((m,mi) => `
-                                <div class="member-item ${m.isLeader?'leader':''}">
-                                    <span class="member-name">${m.isLeader?'👑 ':''}${m.name}</span>
-                                    <div class="member-actions">
-                                        <button class="btn btn-warning btn-sm" onclick="toggleMemberLeader(${teamIndex},${mi})">${m.isLeader?'⭐':'👑'}</button>
-                                        <button class="btn btn-info btn-sm" onclick="editMember(${teamIndex},${mi})">✏️</button>
-                                        <button class="btn btn-danger btn-sm" onclick="deleteMember(${teamIndex},${mi})">🗑️</button>
-                                    </div>
-                                </div>`).join('') : '<div style="text-align:center;padding:20px;color:#b0a0c0;">هیچ عضوی ثبت نشده</div>'}
-                        </div>
-                        ${remaining > 0 ? `<button class="btn btn-success btn-sm" style="margin-top:15px;" onclick="openAddMemberModal(${teamIndex})">➕ افزودن عضو</button>` : ''}
-                        ${remaining <= 0 ? `<div class="full-warning">⚠️ ظرفیت تیم تکمیل است (${MAX_MEMBERS}/${MAX_MEMBERS}) — امکان افزودن عضو وجود ندارد</div>` : ''}
-                    </div>`;
-            }
-            return '';
-        }
-
-        function toggleTeamBody(teamId) {
-            const el = document.getElementById(teamId);
-            if (el) el.classList.toggle('open');
-        }
-
-        // ==================== Team CRUD ====================
-        function openAddTeamModal() {
-            const content = `
-                <div class="form-group"><label class="form-label">نام تیم:</label><input type="text" class="form-input" id="newTeamName" placeholder="مثال: King Action"></div>
-                ${createFlagUploadHTML('newTeam', '')}`;
-            openModal('➕ افزودن تیم جدید', content, () => {
-                const name = document.getElementById('newTeamName').value.trim();
-                if (!name) { showToast('❌ نام تیم الزامی است', 'error'); return; }
-                const flag = getFlagFromModal('newTeam');
-                appData.teams.teams.push({ name, members: [], flag: flag || undefined });
-                saveLocal(); renderTeams(); closeModal();
-                showToast('✅ تیم جدید اضافه شد', 'success');
-            });
-        }
-
-        function editTeam(index) {
-            const team = appData.teams.teams[index];
-            const content = `
-                <div class="form-group"><label class="form-label">نام تیم:</label><input type="text" class="form-input" id="editTeamName" value="${team.name.replace(/"/g, '&quot;')}"></div>
-                ${createFlagUploadHTML('editTeam', team.flag || '')}`;
-            openModal('✏️ ویرایش تیم', content, () => {
-                const name = document.getElementById('editTeamName').value.trim();
-                if (!name) { showToast('❌ نام تیم الزامی است', 'error'); return; }
-                const flag = getFlagFromModal('editTeam');
-                appData.teams.teams[index].name = name;
-                appData.teams.teams[index].flag = flag || undefined;
-                saveLocal(); renderTeams(); closeModal();
-                showToast('✅ تیم ویرایش شد', 'success');
-            });
-        }
-
-        function deleteTeam(index) {
-            const team = appData.teams.teams[index];
-            if (confirm(`آیا از حذف تیم "${team.name}" و همه اعضای آن اطمینان دارید؟\nاین عمل قابل بازگشت نیست.`)) {
-                appData.teams.teams.splice(index, 1);
-                saveLocal(); renderTeams();
-                showToast('🗑️ تیم حذف شد', 'info');
-            }
-        }
-
-        function toggleTeamType(index) {
-            const team = appData.teams.teams[index];
-            const currentTotal = getTeamTotalMembers(team);
-            const teamFlag = team.flag;
-            
-            if (team.hasStates) {
-                const allMembers = [];
-                if (team.states) team.states.forEach(s => { if (s.members) allMembers.push(...s.members); });
-                team.members = allMembers;
-                team.flag = teamFlag;
-                delete team.hasStates;
-                delete team.states;
-                showToast('🔄 تبدیل به تیم عادی', 'info');
-            } else {
-                if (currentTotal > MAX_MEMBERS) {
-                    showToast(`⚠️ این تیم ${currentTotal} نفر دارد. حداکثر ${MAX_MEMBERS} نفر مجاز است. ابتدا اعضا را کاهش دهید.`, 'error');
-                    return;
-                }
-                team.states = [{ name: 'ایالت اصلی', members: team.members || [], flag: '' }];
-                team.hasStates = true;
-                team.flag = teamFlag;
-                delete team.members;
-                showToast('🔄 تبدیل به تیم ایالتی', 'info');
-            }
-            saveLocal(); renderTeams();
-        }
-
-        // ==================== Member CRUD (Normal) ====================
-        function openAddMemberModal(teamIndex) {
-            const team = appData.teams.teams[teamIndex];
-            if (!canAddMember(team)) {
-                showToast(`⚠️ ظرفیت تیم تکمیل است (${MAX_MEMBERS}/${MAX_MEMBERS})`, 'error');
-                return;
-            }
-            const remaining = getRemainingSlots(team);
-            openModal('➕ افزودن عضو', `
-                <div class="form-info">👥 ظرفیت: ${getTeamTotalMembers(team)}/${MAX_MEMBERS} | ${remaining} جای خالی</div>
-                <div class="form-group"><label class="form-label">نام عضو:</label><input type="text" class="form-input" id="newMemberName" placeholder="مثال: علی"></div>
-                <div class="form-checkbox"><input type="checkbox" id="newMemberLeader"><label>رهبر تیم (👑)</label></div>`, () => {
-                const name = document.getElementById('newMemberName').value.trim();
-                if (!name) { showToast('❌ نام الزامی است', 'error'); return; }
-                if (!appData.teams.teams[teamIndex].members) appData.teams.teams[teamIndex].members = [];
-                if (!canAddMember(appData.teams.teams[teamIndex])) {
-                    showToast(`⚠️ ظرفیت تکمیل است`, 'error');
-                    return;
-                }
-                appData.teams.teams[teamIndex].members.push({ name, isLeader: document.getElementById('newMemberLeader').checked });
-                saveLocal(); renderTeams(); closeModal();
-                showToast('✅ عضو اضافه شد', 'success');
-            });
-        }
-
-        function editMember(teamIndex, memberIndex) {
-            const m = appData.teams.teams[teamIndex].members[memberIndex];
-            openModal('✏️ ویرایش عضو', `
-                <div class="form-group"><label class="form-label">نام:</label><input type="text" class="form-input" id="editMemberName" value="${m.name.replace(/"/g, '&quot;')}"></div>
-                <div class="form-checkbox"><input type="checkbox" id="editMemberLeader" ${m.isLeader?'checked':''}><label>رهبر (👑)</label></div>`, () => {
-                const name = document.getElementById('editMemberName').value.trim();
-                if (!name) return;
-                appData.teams.teams[teamIndex].members[memberIndex].name = name;
-                appData.teams.teams[teamIndex].members[memberIndex].isLeader = document.getElementById('editMemberLeader').checked;
-                saveLocal(); renderTeams(); closeModal();
-            });
-        }
-
-        function deleteMember(teamIndex, memberIndex) {
-            if (confirm('آیا از حذف این عضو اطمینان دارید؟')) {
-                appData.teams.teams[teamIndex].members.splice(memberIndex, 1);
-                saveLocal(); renderTeams();
-                showToast('🗑️ عضو حذف شد', 'info');
-            }
-        }
-
-        function toggleMemberLeader(teamIndex, memberIndex) {
-            appData.teams.teams[teamIndex].members[memberIndex].isLeader = !appData.teams.teams[teamIndex].members[memberIndex].isLeader;
-            saveLocal(); renderTeams();
-        }
-
-        // ==================== State CRUD ====================
-        function openAddStateModal(teamIndex) {
-            const content = `
-                <div class="form-group"><label class="form-label">نام ایالت:</label><input type="text" class="form-input" id="newStateName" placeholder="مثال: Pat & Mat"></div>
-                ${createFlagUploadHTML('newState', '')}`;
-            openModal('🏴 افزودن ایالت جدید', content, () => {
-                const name = document.getElementById('newStateName').value.trim();
-                if (!name) { showToast('❌ نام ایالت الزامی است', 'error'); return; }
-                if (!appData.teams.teams[teamIndex].states) appData.teams.teams[teamIndex].states = [];
-                const flag = getFlagFromModal('newState');
-                appData.teams.teams[teamIndex].states.push({ name, members: [], flag: flag || undefined });
-                saveLocal(); renderTeams(); closeModal();
-                showToast('✅ ایالت جدید اضافه شد', 'success');
-            });
-        }
-
-        function editState(teamIndex, stateIndex) {
-            const state = appData.teams.teams[teamIndex].states[stateIndex];
-            const content = `
-                <div class="form-group"><label class="form-label">نام ایالت:</label><input type="text" class="form-input" id="editStateName" value="${state.name.replace(/"/g, '&quot;')}"></div>
-                ${createFlagUploadHTML('editState', state.flag || '')}`;
-            openModal('✏️ ویرایش ایالت', content, () => {
-                const name = document.getElementById('editStateName').value.trim();
-                if (!name) return;
-                const flag = getFlagFromModal('editState');
-                appData.teams.teams[teamIndex].states[stateIndex].name = name;
-                appData.teams.teams[teamIndex].states[stateIndex].flag = flag || undefined;
-                saveLocal(); renderTeams(); closeModal();
-                showToast('✅ ایالت ویرایش شد', 'success');
-            });
-        }
-
-        function deleteState(teamIndex, stateIndex) {
-            const state = appData.teams.teams[teamIndex].states[stateIndex];
-            const memberCount = state.members ? state.members.length : 0;
-            const msg = memberCount > 0 
-                ? `ایالت "${state.name}" ${memberCount} عضو دارد. با حذف ایالت، همه اعضا حذف می‌شوند. اطمینان دارید؟`
-                : `آیا از حذف ایالت "${state.name}" اطمینان دارید؟`;
-            if (confirm(msg)) {
-                appData.teams.teams[teamIndex].states.splice(stateIndex, 1);
-                saveLocal(); renderTeams();
-                showToast('🗑️ ایالت حذف شد', 'info');
-            }
-        }
-
-        // ==================== State Member CRUD ====================
-        function openAddMemberToStateModal(teamIndex, stateIndex) {
-            const team = appData.teams.teams[teamIndex];
-            if (!canAddMember(team)) {
-                showToast(`⚠️ ظرفیت کل تیم تکمیل است (${MAX_MEMBERS}/${MAX_MEMBERS})`, 'error');
-                return;
-            }
-            const remaining = getRemainingSlots(team);
-            openModal('➕ افزودن عضو به ایالت', `
-                <div class="form-info">👥 ظرفیت کل تیم: ${getTeamTotalMembers(team)}/${MAX_MEMBERS} | ${remaining} جای خالی</div>
-                <div class="form-group"><label class="form-label">نام:</label><input type="text" class="form-input" id="newSMName" placeholder="نام عضو"></div>
-                <div class="form-checkbox"><input type="checkbox" id="newSMLeader"><label>رهبر ایالت (👑)</label></div>`, () => {
-                const name = document.getElementById('newSMName').value.trim();
-                if (!name) return;
-                if (!appData.teams.teams[teamIndex].states[stateIndex].members) appData.teams.teams[teamIndex].states[stateIndex].members = [];
-                if (!canAddMember(appData.teams.teams[teamIndex])) {
-                    showToast(`⚠️ ظرفیت تکمیل است`, 'error');
-                    return;
-                }
-                appData.teams.teams[teamIndex].states[stateIndex].members.push({ name, isLeader: document.getElementById('newSMLeader').checked });
-                saveLocal(); renderTeams(); closeModal();
-                showToast('✅ عضو به ایالت اضافه شد', 'success');
-            });
-        }
-
-        function editMemberState(teamIndex, stateIndex, memberIndex) {
-            const m = appData.teams.teams[teamIndex].states[stateIndex].members[memberIndex];
-            openModal('✏️ ویرایش عضو', `
-                <div class="form-group"><label class="form-label">نام:</label><input type="text" class="form-input" id="editSMName" value="${m.name.replace(/"/g, '&quot;')}"></div>
-                <div class="form-checkbox"><input type="checkbox" id="editSMLeader" ${m.isLeader?'checked':''}><label>رهبر (👑)</label></div>`, () => {
-                const name = document.getElementById('editSMName').value.trim();
-                if (!name) return;
-                appData.teams.teams[teamIndex].states[stateIndex].members[memberIndex].name = name;
-                appData.teams.teams[teamIndex].states[stateIndex].members[memberIndex].isLeader = document.getElementById('editSMLeader').checked;
-                saveLocal(); renderTeams(); closeModal();
-            });
-        }
-
-        function deleteMemberState(teamIndex, stateIndex, memberIndex) {
-            if (confirm('حذف این عضو؟')) {
-                appData.teams.teams[teamIndex].states[stateIndex].members.splice(memberIndex, 1);
-                saveLocal(); renderTeams();
-                showToast('🗑️ عضو حذف شد', 'info');
-            }
-        }
-
-        function toggleMemberLeaderState(teamIndex, stateIndex, memberIndex) {
-            appData.teams.teams[teamIndex].states[stateIndex].members[memberIndex].isLeader = !appData.teams.teams[teamIndex].states[stateIndex].members[memberIndex].isLeader;
-            saveLocal(); renderTeams();
         }
 
         // ==================== Rules ====================
@@ -2684,6 +2336,7 @@
 
         // ==================== Accounts & live teams (Supabase) ====================
         let acTeams = [], acPlayers = [], acSettings = null, acIsAdmin = false;
+        let acPlayerFilter = 'all';
 
         function sbLog(msg, kind) {
             const box = document.getElementById('sbLog');
@@ -2798,9 +2451,32 @@
                 if (acSettings) { show('accountsLiveCard'); fillAcSettings(); }
             } catch (e) { acSettings = null; }
             try {
-                acPlayers = await NXAuth.listPlayers();
+                acPlayers = await NXAuth.listPlayersWithTeams();
                 if (acPlayers && acPlayers.length) { show('accountsPlayersCard'); renderAcPlayers(); }
             } catch (e) { acPlayers = []; }
+            renderBootstrapCard();
+        }
+
+        // اگر هیچ ادمینی وجود نداشته باشد، راه‌اندازی اولیه را نشان بده.
+        function renderBootstrapCard() {
+            const card = document.getElementById('accountsBootstrapCard');
+            const body = document.getElementById('acBootstrapBody');
+            if (!card || !body) return;
+            const anyAdmin = acPlayers.some(p => p.is_admin);
+            if (acIsAdmin || anyAdmin || !acPlayers.length) { card.style.display = 'none'; return; }
+            card.style.display = '';
+            const names = acPlayers.slice(0, 8);
+            body.innerHTML = names.map(p => `
+                <div class="ac-row">
+                    <div class="ac-row-main"><div>
+                        <div class="ac-name">${escHtml(p.mc_username)}</div>
+                        <div class="ac-meta">${escHtml(p.email || '')}</div>
+                    </div></div>
+                    <code class="ac-sql">select public.make_admin('${escHtml(p.mc_username)}');</code>
+                </div>`).join('') +
+                `<div class="form-info" style="margin-top:12px;">
+                    بعد از اجرا، در همین صفحه یک‌بار <b>خروج</b> و دوباره <b>ورود</b> بزنید.
+                 </div>`;
         }
 
         // ---- ورود مدیر ----------------------------------------------------
@@ -2822,6 +2498,7 @@
             if (form) form.style.display = st.signedIn ? 'none' : '';
             if (out)  out.style.display  = st.signedIn ? '' : 'none';
             if (note) note.style.display = st.isAdmin ? 'none' : '';
+            renderBootstrapCard();
 
             const name = st.profile && st.profile.mc_username ? escHtml(st.profile.mc_username) : '';
             if (st.isAdmin) {
@@ -2830,7 +2507,7 @@
                 text.innerHTML = `⚠️ وارد شده‌اید${name ? ' به عنوان <b>' + name + '</b>' : ''}، ` +
                     `ولی این حساب <b>ادمین نیست</b>؛ تغییرات ذخیره نمی‌شود.<br>` +
                     `این دستور را در SQL Editor سوپابیس اجرا کنید:` +
-                    `<code class="ac-sql">update public.profiles set is_admin = true where lower(mc_username) = lower('${name || 'YourMinecraftName'}');</code>`;
+                    `<code class="ac-sql">select public.make_admin('${name || 'YourMinecraftName'}');</code>`;
             } else {
                 text.innerHTML = '⛔ وارد نشده‌اید. برای تغییر محدودیت‌ها با حساب ادمین وارد شوید.';
             }
@@ -2950,15 +2627,57 @@
             }).join('');
         }
 
+        function acSetPlayerFilter(f) { acPlayerFilter = f; renderAcPlayers(); }
+
         function renderAcPlayers() {
-            const box = document.getElementById('acPlayersList');
-            box.innerHTML = acPlayers.map(p => `
+            const box  = document.getElementById('acPlayersList');
+            const bar  = document.getElementById('acPlayerFilters');
+            const head = document.getElementById('acPlayersCount');
+            if (!box) return;
+
+            const noTeam = acPlayers.filter(p => !p.has_team);
+            const withTeam = acPlayers.filter(p => p.has_team);
+            const banned = acPlayers.filter(p => p.is_banned);
+
+            if (head) {
+                head.textContent = `${acPlayers.length} بازیکن • ${noTeam.length} بدون تیم`;
+            }
+            if (bar) {
+                const tabs = [
+                    ['all',     '👥 همه',        acPlayers.length],
+                    ['noteam',  '🚩 بدون تیم',   noTeam.length],
+                    ['team',    '✅ دارای تیم',  withTeam.length],
+                    ['banned',  '🚫 مسدود',      banned.length]
+                ];
+                bar.innerHTML = tabs.map(([id, label, n]) =>
+                    `<button class="ac-filter ${acPlayerFilter === id ? 'active' : ''}"
+                             onclick="acSetPlayerFilter('${id}')">${label} <span class="n">${n}</span></button>`
+                ).join('');
+            }
+
+            let list = acPlayers;
+            if (acPlayerFilter === 'noteam') list = noTeam;
+            else if (acPlayerFilter === 'team') list = withTeam;
+            else if (acPlayerFilter === 'banned') list = banned;
+
+            if (!list.length) {
+                box.innerHTML = '<div class="ac-empty">' +
+                    (acPlayerFilter === 'noteam'
+                        ? '🎉 همه‌ی بازیکنان عضو یک تیم هستند'
+                        : 'موردی برای نمایش نیست') + '</div>';
+                return;
+            }
+
+            box.innerHTML = list.map(p => `
                 <div class="ac-row">
                     <div class="ac-row-main">
                         <div>
                             <div class="ac-name">${escHtml(p.mc_username)}
                                 ${p.is_admin ? '<span class="ac-badge admin">ادمین</span>' : ''}
                                 ${p.is_banned ? '<span class="ac-badge banned">مسدود</span>' : ''}
+                                ${p.has_team
+                                    ? `<span class="ac-badge team">${p.is_leader ? '👑 ' : ''}${escHtml(p.team_name)}</span>`
+                                    : '<span class="ac-badge noteam">🚩 بدون تیم</span>'}
                             </div>
                             <div class="ac-meta">${escHtml(p.email || '')} • ${new Date(p.created_at).toLocaleDateString('fa-IR')}</div>
                         </div>
@@ -3008,7 +2727,6 @@
             if (name === 'status') fillStatusForm();
             if (name === 'texts') fillTextsForm();
             if (name === 'accounts') initAccountsTab();
-            if (name === 'teams') renderTeams();
             if (name === 'rules') renderRules();
             if (name === 'images') renderImages();
         }
@@ -3016,7 +2734,6 @@
         function renderAll() {
             fillStatusForm();
             fillTextsForm();
-            renderTeams();
             renderRules();
             renderImages();
         }

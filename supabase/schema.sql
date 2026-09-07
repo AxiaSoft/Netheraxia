@@ -375,15 +375,26 @@ create policy profiles_update on public.profiles
 create policy profiles_admin_all on public.profiles
     for delete using (public.is_admin());
 
--- کاربر عادی نمی‌تواند خودش را ادمین یا آنبن کند
+-- کاربر عادی نمی‌تواند خودش را ادمین یا آنبن کند.
+--
+-- نکته‌ی مهم: تریگرها برای «همه» اجرا می‌شوند — حتی برای کاربر postgres در
+-- SQL Editor. در نسخه‌ی قبلی همین تریگر باعث می‌شد دستور «خودم را ادمین کن»
+-- بی‌سروصدا بی‌اثر بماند: پستگرس آن را اجرا می‌کرد، تریگر مقدار را به false
+-- برمی‌گرداند و هیچ خطایی هم نمی‌داد. برای همین اولین ادمین هرگز ساخته نمی‌شد.
+--
+-- حالا فقط درخواست‌هایی که از طرف یک «کاربرِ وارد شده» می‌آیند محدود می‌شوند.
+-- auth.uid() فقط وقتی مقدار دارد که درخواست از مرورگر با توکن کاربر بیاید؛
+-- در SQL Editor و با service_role مقدارش null است، پس راه‌اندازی اولیه باز است.
+-- (کاربر anon هم auth.uid() ندارد، ولی RLS اصلاً اجازه‌ی UPDATE به او نمی‌دهد.)
 create or replace function public.guard_profile_update()
 returns trigger language plpgsql security definer set search_path = public as $$
 begin
-    if not public.is_admin() then
-        new.is_admin  := old.is_admin;
-        new.is_banned := old.is_banned;
-        new.id        := old.id;
+    if auth.uid() is null or public.is_admin() then
+        return new;             -- SQL Editor / service_role / ادمین
     end if;
+    new.is_admin  := old.is_admin;
+    new.is_banned := old.is_banned;
+    new.id        := old.id;
     return new;
 end $$;
 drop trigger if exists trg_profiles_guard on public.profiles;
@@ -453,7 +464,37 @@ grant update                         on public.app_settings to authenticated;
 notify pgrst, 'reload schema';
 
 -- ============================================================================
--- ۱۱) بعد از ثبت‌نام، خودتان را ادمین کنید (نام خود را جایگزین کنید):
---     update public.profiles set is_admin = true
---     where lower(mc_username) = lower('YourMinecraftName');
+-- ۱۱) ادمین کردن خودتان
+-- ============================================================================
+-- تابع زیر برخلاف UPDATE ساده، اگر بازیکن پیدا نشود خطای واضح می‌دهد؛
+-- پس دیگر «اجرا شد ولی هیچ اتفاقی نیفتاد» پیش نمی‌آید.
+create or replace function public.make_admin(p_username text)
+returns text language plpgsql security definer set search_path = public as $$
+declare n int;
+begin
+    update public.profiles
+       set is_admin = true
+     where lower(mc_username) = lower(btrim(p_username));
+    get diagnostics n = row_count;
+    if n = 0 then
+        raise exception
+            'بازیکنی با نام «%» پیدا نشد. اول در خود سایت ثبت‌نام کنید، بعد این را اجرا کنید. برای دیدن نام‌های ثبت‌شده: select mc_username from public.profiles;', p_username;
+    end if;
+    return 'انجام شد — «' || btrim(p_username) || '» حالا ادمین است.';
+end $$;
+
+-- پستگرس به‌صورت پیش‌فرض اجرای توابع را به همه می‌دهد؛ این یکی نباید از
+-- مرورگر قابل صدا زدن باشد، وگرنه هر بازیکنی می‌تواند خودش را ادمین کند.
+revoke execute on function public.make_admin(text) from public;
+revoke execute on function public.make_admin(text) from anon, authenticated;
+
+-- ============================================================================
+-- طرز استفاده (در SQL Editor):
+--   ۱) ببینید چه کسانی ثبت‌نام کرده‌اند:
+--        select mc_username, email, is_admin from public.profiles order by created_at;
+--   ۲) خودتان را ادمین کنید — نام را دقیقاً از خروجی بالا بردارید:
+--        select public.make_admin('YourMinecraftName');
+--   ۳) بررسی کنید:
+--        select mc_username, is_admin from public.profiles where is_admin;
+--   بعد در پنل مدیریت یک‌بار خروج و دوباره ورود بزنید.
 -- ============================================================================
