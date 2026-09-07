@@ -498,3 +498,34 @@ revoke execute on function public.make_admin(text) from anon, authenticated;
 --        select mc_username, is_admin from public.profiles where is_admin;
 --   بعد در پنل مدیریت یک‌بار خروج و دوباره ورود بزنید.
 -- ============================================================================
+
+-- ============================================================================
+-- ۱۲) تأیید نهایی — این پیام یعنی فایل تا آخر اجرا شد
+--     اگر این خروجی را نمی‌بینید، یعنی فایل کامل اجرا نشده و
+--     make_admin هم ساخته نشده است.
+-- ============================================================================
+do $$
+declare missing text := '';
+begin
+    if to_regprocedure('public.make_admin(text)') is null then
+        missing := missing || ' make_admin';
+    end if;
+    if to_regclass('public.teams') is null then
+        missing := missing || ' teams';
+    end if;
+    if not exists (select 1 from information_schema.columns
+                   where table_schema='public' and table_name='teams'
+                     and column_name='flag') then
+        missing := missing || ' teams.flag';
+    end if;
+    if missing <> '' then
+        raise exception 'اسکیما ناقص اجرا شد. این موارد ساخته نشدند:%', missing;
+    end if;
+    raise notice '✅ اسکیما کامل اجرا شد. حالا این را اجرا کنید: select public.make_admin(''نام_ماینکرفت_شما'');';
+end $$;
+
+select '✅ اسکیما کامل نصب شد' as وضعیت,
+       (select count(*) from public.profiles) as تعداد_بازیکن,
+       (select count(*) from public.profiles where is_admin) as تعداد_ادمین,
+       coalesce((select string_agg(mc_username, '، ')
+                 from public.profiles where is_admin), '— هیچ ادمینی نیست —') as ادمین‌ها;
