@@ -53,6 +53,10 @@ export function installDom({ protocol='https:', width=1280, height=800 } = {}){
     body:{ appendChild(){}, removeChild(){} }, execCommand(){} };
   Object.defineProperty(globalThis,'navigator',{value:{clipboard:{writeText:async()=>{}}},configurable:true});
   globalThis.requestAnimationFrame = ()=>0;
+  // Dialogs: default to "the admin clicked OK". Override per test with
+  // globalThis.confirm = () => false to exercise the cancel path.
+  globalThis.confirm = ()=>true;
+  globalThis.alert = ()=>{};
   globalThis.TextEncoder = TextEncoder; globalThis.TextDecoder = TextDecoder;
   globalThis.btoa = s => Buffer.from(s,'binary').toString('base64');
   globalThis.atob = s => Buffer.from(s,'base64').toString('binary');

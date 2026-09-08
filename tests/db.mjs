@@ -194,5 +194,108 @@ if (!base) {
     /HyraxMC\s*\|\s*t/.test(sql('b', `select mc_username, is_admin from public.profiles;`)));
 }
 
+/* ---------------------------------------------------------------- */
+section('F. an admin may place a player into a team');
+// fresh database so the member limits are predictable
+sql('c', SHIM);
+sql('c', NEW);
+sql('c', register('Boss',  'b@mc.com'));
+sql('c', register('Steve', 's@mc.com'));
+sql('c', register('Alex',  'a@mc.com'));
+sql('c', `select public.make_admin('Boss');`);
+// Steve creates a team the normal way
+sql('c', `${asUser('Steve')} set role authenticated;
+  insert into public.teams (name, owner_id)
+  select 'Alpha', id from public.profiles where mc_username='Steve';
+  reset role;`);
+check('a player can create their own team',
+  sql('c', `select name from public.teams;`).includes('Alpha'));
+check('the owner is auto-added as a member',
+  /Steve/.test(sql('c', `select p.mc_username from public.team_members tm
+    join public.profiles p on p.id=tm.user_id;`)));
+check('Alex has no team yet',
+  !/Alex/.test(sql('c', `select p.mc_username from public.team_members tm
+    join public.profiles p on p.id=tm.user_id;`)));
+
+// the feature: the admin inserts someone else's membership
+const assigned = sql('c', `${asUser('Boss')} set role authenticated;
+  insert into public.team_members (team_id, user_id, is_leader)
+  select t.id, p.id, false from public.teams t, public.profiles p
+   where t.name='Alpha' and p.mc_username='Alex'
+  returning user_id;
+  reset role;`);
+check('an admin can add another player to a team', /INSERT 0 1/.test(assigned),
+  assigned.slice(0, 300));
+check('and the membership is really there',
+  /Alex/.test(sql('c', `select p.mc_username from public.team_members tm
+    join public.profiles p on p.id=tm.user_id;`)));
+
+// a non-admin must not be able to do the same
+sql('c', register('Nosy', 'n@mc.com'));
+const nosy = sql('c', `${asUser('Nosy')} set role authenticated;
+  insert into public.team_members (team_id, user_id, is_leader)
+  select t.id, p.id, false from public.teams t, public.profiles p
+   where t.name='Alpha' and p.mc_username='Nosy2';
+  reset role;`);
+check('a normal player cannot add a different user', /INSERT 0 0|PSQL_ERROR/.test(nosy));
+
+// the one-team rule still applies to admin inserts.
+// Steve already owns Alpha and cannot own a second team, so Bravo needs a
+// fresh owner -- otherwise the insert below would match zero rows and the
+// assertion would pass for the wrong reason.
+sql('c', register('Owner2', 'o2@mc.com'));
+sql('c', `${asUser('Owner2')} set role authenticated;
+  insert into public.teams (name, owner_id)
+  select 'Bravo', id from public.profiles where mc_username='Owner2';
+  reset role;`);
+check('a second team exists to test against',
+  sql('c', `select name from public.teams order by name;`).includes('Bravo'));
+const dup = sql('c', `${asUser('Boss')} set role authenticated;
+  do $$ begin
+    insert into public.team_members (team_id, user_id, is_leader)
+    select t.id, p.id, false from public.teams t, public.profiles p
+     where t.name='Bravo' and p.mc_username='Alex';
+    raise notice 'ALLOWED';
+  exception when others then raise notice 'REFUSED: %', sqlerrm; end $$;
+  reset role;`);
+check('an admin still cannot put someone in two teams at once',
+  /REFUSED: ALREADY_IN_TEAM/.test(dup), dup.slice(0, 300));
+
+// a banned player is refused
+sql('c', `update public.profiles set is_banned=true where mc_username='Nosy';`);
+const ban = sql('c', `${asUser('Boss')} set role authenticated;
+  do $$ begin
+    insert into public.team_members (team_id, user_id, is_leader)
+    select t.id, p.id, false from public.teams t, public.profiles p
+     where t.name='Alpha' and p.mc_username='Nosy';
+    raise notice 'ALLOWED';
+  exception when others then raise notice 'REFUSED: %', sqlerrm; end $$;
+  reset role;`);
+check('a banned player cannot be assigned', /REFUSED: BANNED/.test(ban), ban.slice(0, 300));
+
+// the per-team cap is enforced even for an admin
+sql('c', `update public.app_settings set max_members = 2 where id = 1;`);
+sql('c', register('Extra', 'e@mc.com'));
+const full = sql('c', `${asUser('Boss')} set role authenticated;
+  do $$ begin
+    insert into public.team_members (team_id, user_id, is_leader)
+    select t.id, p.id, false from public.teams t, public.profiles p
+     where t.name='Alpha' and p.mc_username='Extra';
+    raise notice 'ALLOWED';
+  exception when others then raise notice 'REFUSED: %', sqlerrm; end $$;
+  reset role;`);
+check('the team-size cap still applies to an admin',
+  /REFUSED: TEAM_FULL/.test(full), full.slice(0, 300));
+
+// and the admin can pull a player back out
+const removed = sql('c', `${asUser('Boss')} set role authenticated;
+  delete from public.team_members tm using public.profiles p
+   where tm.user_id = p.id and p.mc_username='Alex';
+  reset role;`);
+check('an admin can remove a player from a team', /DELETE 1/.test(removed));
+check('the player is teamless afterwards',
+  !/Alex/.test(sql('c', `select p.mc_username from public.team_members tm
+    join public.profiles p on p.id=tm.user_id;`)));
+
 console.log(`\n${fail ? '❌' : '🎉'} database tests: ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

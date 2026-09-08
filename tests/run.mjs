@@ -1333,5 +1333,192 @@ let exitCode = 0;
   R.check('the data-folder picker survived', /selectDataFolder/.test(raw));
 }
 
+/* ============ DD. the admin can put a teamless player into a team ============ */
+{
+  const { reg, store } = installDom();
+  globalThis.location = { origin:'https://x.io', pathname:'/admin.html', hash:'', search:'' };
+  globalThis.history = { replaceState(){} };
+  const cfg = { url:'https://demo.supabase.co', anonKey:'k' };
+  globalThis.window.NETHERAXIA_SUPABASE = cfg; globalThis.NETHERAXIA_SUPABASE = cfg;
+  loadScript('js/nx-auth.js');
+  const A = globalThis.NXAuth;
+  A.saveConfig(cfg.url, cfg.anonKey);
+  store['nthx_session'] = JSON.stringify({ access_token:'t', refresh_token:'r',
+    expires_at: Math.floor(Date.now()/1000)+9999, user:{ id:'admin' } });
+  await A.init();
+
+  // Alex has no team, Steve leads Alpha, Bravo is full.
+  let members = [
+    { user_id:'u1', team_id:'t1', is_leader:true },
+    { user_id:'u4', team_id:'t2', is_leader:true },
+    { user_id:'u5', team_id:'t2', is_leader:false }
+  ];
+  const players = [
+    { id:'admin', mc_username:'Boss',  email:'b@mc.com', is_admin:true,  is_banned:false, created_at:'2025-01-01' },
+    { id:'u1', mc_username:'Steve',    email:'s@mc.com', is_admin:false, is_banned:false, created_at:'2025-01-02' },
+    { id:'u2', mc_username:'Alex',     email:'a@mc.com', is_admin:false, is_banned:false, created_at:'2025-01-03' },
+    { id:'u3', mc_username:'Banned',   email:'x@mc.com', is_admin:false, is_banned:true,  created_at:'2025-01-04' }
+  ];
+  const teams = () => [
+    { id:'t1', name:'Alpha', members: members.filter(m=>m.team_id==='t1')
+        .map(m=>({ user_id:m.user_id, name:'x', is_leader:m.is_leader })) },
+    { id:'t2', name:'Bravo', members: members.filter(m=>m.team_id==='t2')
+        .map(m=>({ user_id:m.user_id, name:'y', is_leader:m.is_leader })) }
+  ];
+
+  let writes = [];
+  const route = async (url, opt={}) => {
+    const u = String(url), method = opt.method || 'GET';
+    if (u.includes('/auth/v1/user')) return { ok:true, status:200, text:async()=>JSON.stringify({id:'admin'}) };
+    if (u.includes('/profiles'))     return { ok:true, status:200, text:async()=>JSON.stringify(players) };
+    if (u.includes('/teams_public')) return { ok:true, status:200, text:async()=>JSON.stringify(teams()) };
+    if (u.includes('public_config')) return { ok:true, status:200, text:async()=>JSON.stringify(
+      { max_teams:10, max_members:2, team_count:2, player_count:4, member_count:members.length }) };
+    if (u.includes('/app_settings')) return { ok:true, status:200, text:async()=>JSON.stringify(
+      [{ id:1, max_teams:10, max_members:2, registration_open:true, team_creation_open:true,
+         join_open:true, one_team_per_user:true }]) };
+    if (u.includes('/team_members')) {
+      if (method === 'POST') {
+        const b = JSON.parse(opt.body);
+        writes.push({ op:'add', ...b });
+        const n = members.filter(m => m.team_id === b.team_id).length;
+        if (n >= 2) return { ok:false, status:400, text:async()=>JSON.stringify({ message:'TEAM_FULL' }) };
+        members.push({ user_id:b.user_id, team_id:b.team_id, is_leader:false });
+        return { ok:true, status:200, text:async()=>JSON.stringify([b]) };
+      }
+      if (method === 'DELETE') {
+        const uid = (u.match(/user_id=eq\.([^&]+)/)||[])[1];
+        const tid = (u.match(/team_id=eq\.([^&]+)/)||[])[1];
+        writes.push({ op:'del', user_id:uid, team_id:tid });
+        const before = members.length;
+        members = members.filter(m => !(m.user_id === uid && m.team_id === tid));
+        return { ok:true, status:200,
+          text:async()=>JSON.stringify(before === members.length ? [] : [{ user_id:uid, team_id:tid }]) };
+      }
+      return { ok:true, status:200, text:async()=>JSON.stringify(members) };
+    }
+    return { ok:true, status:200, text:async()=>'[]' };
+  };
+  globalThis.fetch = route;
+
+  const P = loadPage('admin.html', `globalThis.__X={load:loadAccountsData, assign:acAssignTeam,
+    filter:acSetPlayerFilter, players:()=>acPlayers, picker:renderTeamPicker}`);
+  await P.load();
+
+  R.section('DD. an admin can assign a team to a teamless player');
+
+  const alex = () => globalThis.__X.players().find(p => p.mc_username === 'Alex');
+  R.check('Alex starts with no team', alex().has_team === false);
+  R.check('a team picker is offered on the row',
+    /acTeamPick-u2/.test(reg['acPlayersList'].innerHTML));
+  R.check('the picker lists the existing teams',
+    /Alpha/.test(reg['acPlayersList'].innerHTML) && /Bravo/.test(reg['acPlayersList'].innerHTML));
+  R.check('each option shows how full the team is',
+    /Alpha \(1\/2\)/.test(reg['acPlayersList'].innerHTML));
+  R.check('a full team is disabled in the picker',
+    /Bravo \(2\/2\)[^<]*— پر<\/option>/.test(reg['acPlayersList'].innerHTML.replace(/\s+/g,' ')) ||
+    /value="t2"[^>]*disabled/.test(reg['acPlayersList'].innerHTML));
+  R.check('a banned player cannot be assigned',
+    /acTeamPick-u3[\s\S]{0,200}disabled/.test(reg['acPlayersList'].innerHTML));
+
+  // the actual request
+  writes = [];
+  await P.assign('u2', 't1');
+  R.check('exactly one membership row is written', writes.filter(w=>w.op==='add').length === 1);
+  R.check('the player is added to the chosen team',
+    writes[0].op === 'add' && writes[0].team_id === 't1' && writes[0].user_id === 'u2');
+  R.check('they are not made leader', writes[0].is_leader === false);
+  R.check('the list now shows the team', alex().has_team === true && alex().team_name === 'Alpha');
+  R.check('the teamless filter no longer lists them',
+    (P.filter('noteam'), !/Alex/.test(reg['acPlayersList'].innerHTML)));
+  P.filter('all');
+
+  // moving between teams: leave first, then join
+  writes = [];
+  members.push({ user_id:'u9', team_id:'t1', is_leader:false });   // make room? no: Alpha now 2/2
+  members = members.filter(m => m.user_id !== 'u9');
+  await P.assign('u2', 't2');   // Bravo is full -> must fail and roll back
+  R.check('moving into a full team fails', alex().team_name === 'Alpha');
+  R.check('and the player is put back in their original team',
+    members.some(m => m.user_id === 'u2' && m.team_id === 't1'),
+    'a failed move must never leave the player with no team');
+
+  // a real move
+  members = members.filter(m => m.user_id !== 'u5');   // free a slot in Bravo
+  writes = [];
+  await P.assign('u2', 't2');
+  R.check('a real move deletes the old membership',
+    writes.some(w => w.op === 'del' && w.team_id === 't1' && w.user_id === 'u2'));
+  R.check('and inserts the new one',
+    writes.some(w => w.op === 'add' && w.team_id === 't2' && w.user_id === 'u2'));
+  R.check('the player ends up in the new team', alex().team_name === 'Bravo');
+
+  // removing from a team entirely
+  writes = [];
+  await P.assign('u2', '');
+  R.check('choosing the blank option removes them',
+    writes.some(w => w.op === 'del' && w.user_id === 'u2'));
+  R.check('the player is teamless again', alex().has_team === false);
+
+  // cancelling must change nothing
+  await P.assign('u2', 't1');
+  globalThis.confirm = () => false;
+  writes = [];
+  await P.assign('u2', '');
+  R.check('cancelling the confirm writes nothing', writes.length === 0);
+  R.check('and the player keeps their team', alex().team_name === 'Alpha');
+  globalThis.confirm = () => true;
+
+  // re-selecting the same team is a no-op
+  writes = [];
+  await P.assign('u2', 't1');
+  R.check('re-picking the current team does nothing', writes.length === 0);
+}
+
+/* ============ EE. assignment failures are never silent ============ */
+{
+  const { store } = installDom();
+  globalThis.location = { origin:'https://x.io', pathname:'/admin.html', hash:'', search:'' };
+  loadScript('js/nx-auth.js');
+  const A = globalThis.NXAuth;
+  A.saveConfig('https://demo.supabase.co', 'k');
+  store['nthx_session'] = JSON.stringify({ access_token:'t', refresh_token:'r',
+    expires_at: Math.floor(Date.now()/1000)+9999, user:{ id:'admin' } });
+  await A.init();
+
+  R.section('EE. a refused assignment is reported');
+
+  // RLS hides the row -> 200 with []
+  globalThis.fetch = async (url, opt={}) => {
+    if (String(url).includes('/auth/v1/user'))
+      return { ok:true, status:200, text:async()=>JSON.stringify({id:'admin'}) };
+    return { ok:true, status:200, text:async()=>'[]' };
+  };
+  let err = null;
+  await A.adminAddMember('t1','u2').catch(e => err = e);
+  R.check('a silently-refused insert throws', !!err);
+  R.check('the message points at the admin session', !!err && /ادمین/.test(err.message));
+
+  // the database rejects it outright
+  globalThis.fetch = async (url, opt={}) => {
+    if (String(url).includes('/auth/v1/user'))
+      return { ok:true, status:200, text:async()=>JSON.stringify({id:'admin'}) };
+    return { ok:false, status:400, text:async()=>JSON.stringify({ message:'ALREADY_IN_TEAM' }) };
+  };
+  err = null;
+  await A.adminAddMember('t1','u2').catch(e => err = e);
+  R.check('a trigger rejection is translated to Persian',
+    !!err && /عضو یک تیم/.test(err.message));
+
+  err = null;
+  await A.adminAddMember('', 'u2').catch(e => err = e);
+  R.check('no team selected is caught before the request',
+    !!err && /تیم انتخاب/.test(err.message));
+
+  err = null;
+  await A.adminMovePlayer('u2', 't1', 't1').catch(e => err = e);
+  R.check('moving into the same team is refused', !!err && /همین تیم/.test(err.message));
+}
+
 exitCode = R.done('ALL NETHERAXIA TESTS');
 process.exit(exitCode);

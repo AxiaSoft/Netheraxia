@@ -20,6 +20,8 @@ Covers:
 - admin writes that a database can refuse *silently* (sections Z, AA)
 - finding players with no team, and the admin-bootstrap card (BB)
 - the retired teams tab staying removed without collateral damage (CC)
+- the admin assigning / moving / removing a player's team, including the
+  rollback when the destination team is full (DD, EE)
 
 ## 2. Database tests — `node tests/db.mjs`
 
@@ -51,3 +53,6 @@ Covers:
 - the upgrade path on the user's existing database: the old schema's silent
   failure is reproduced, then the new file is applied over it, players are
   preserved and the bootstrap works
+- an admin can add and remove other players' memberships, while a normal
+  player cannot -- and the one-team, team-full and banned rules still hold
+  for the admin too

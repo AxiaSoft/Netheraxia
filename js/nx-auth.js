@@ -559,11 +559,37 @@
             return saved;
         });
     }
+    // ادمین یک بازیکن را در تیم می‌گذارد.
+    // مثل بقیه‌ی نوشتن‌های ادمین، اگر RLS ردیف را پنهان کند پستگرس خطا نمی‌دهد
+    // و آرایه‌ی خالی برمی‌گردد؛ پس حتماً باید ردیف برگشتی را بررسی کنیم.
     function adminAddMember(teamId, userId) {
+        if (!teamId) return Promise.reject(new Error('اول یک تیم انتخاب کنید.'));
+        if (!userId) return Promise.reject(new Error('بازیکن مشخص نیست.'));
         return rest('/team_members', {
             method: 'POST', headers: { 'Prefer': 'return=representation' },
             body: { team_id: teamId, user_id: userId, is_leader: false }
-        });
+        }).then(function (rows) { return requireRows(rows)[0]; });
+    }
+
+    // جابه‌جایی بازیکن بین تیم‌ها: اول از تیم قبلی بیرون، بعد داخل تیم جدید.
+    // اگر افزودن شکست بخورد (مثلاً تیم پر باشد) بازیکن را به تیم قبلی برمی‌گردانیم
+    // تا بی‌تیم رها نشود.
+    function adminMovePlayer(userId, toTeamId, fromTeamId) {
+        if (!fromTeamId) return adminAddMember(toTeamId, userId);
+        if (fromTeamId === toTeamId) {
+            return Promise.reject(new Error('بازیکن از قبل در همین تیم است.'));
+        }
+        return rest('/team_members?team_id=eq.' + fromTeamId + '&user_id=eq.' + userId,
+                    { method: 'DELETE', headers: { 'Prefer': 'return=representation' } })
+            .then(function (rows) {
+                requireRows(rows, 'خارج کردن بازیکن از تیم قبلی انجام نشد.');
+                return adminAddMember(toTeamId, userId).catch(function (err) {
+                    return rest('/team_members', {
+                        method: 'POST', headers: { 'Prefer': 'return=representation' },
+                        body: { team_id: fromTeamId, user_id: userId, is_leader: false }
+                    }).then(function () { throw err; }, function () { throw err; });
+                });
+            });
     }
 
     /* ---- راه‌اندازی ------------------------------------------------------- */
@@ -593,7 +619,7 @@
         adminState: adminState,
         listPlayers: listPlayers, listPlayersWithTeams: listPlayersWithTeams,
         setPlayerFlags: setPlayerFlags,
-        adminAddMember: adminAddMember,
+        adminAddMember: adminAddMember, adminMovePlayer: adminMovePlayer,
         humanize: humanize, rest: rest, rpc: rpc, refresh: refreshIfNeeded,
         takeWarning: takeWarning
     };

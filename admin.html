@@ -730,6 +730,16 @@
         .pv-sub { font-size: 13px; color: #7ba3cc; }
         .pv-label:empty, .pv-title:empty, .pv-sub:empty { display: none; }
 
+        .ac-assign { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+        .ac-assign select {
+            padding: 7px 10px; border-radius: var(--r-sm); font-size: 12.5px; font-family: inherit;
+            background: rgba(3,10,24,0.85); color: #d8ebff; border: 1px solid var(--glass-border);
+            max-width: 190px; cursor: pointer;
+        }
+        .ac-assign select:disabled { opacity: .5; cursor: not-allowed; }
+        .ac-assign select:focus { outline: none; border-color: var(--secondary); }
+        .ac-row-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
         .ac-filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
         .ac-filter {
             padding: 7px 14px; border-radius: var(--r-sm); cursor: pointer; font-size: 12.5px;
@@ -2337,6 +2347,7 @@
         // ==================== Accounts & live teams (Supabase) ====================
         let acTeams = [], acPlayers = [], acSettings = null, acIsAdmin = false;
         let acPlayerFilter = 'all';
+        let acPublicCfg = null;
 
         function sbLog(msg, kind) {
             const box = document.getElementById('sbLog');
@@ -2437,6 +2448,7 @@
             await refreshAdminState();
             try {
                 const cfg = await NXAuth.getConfig();
+                acPublicCfg = cfg;          // max_members را حتی بدون نشست ادمین می‌دهد
                 acTeams = await NXAuth.listTeams();
                 show('accountsStatsCard'); show('accountsTeamsCard');
                 renderAcStats(cfg);
@@ -2682,11 +2694,77 @@
                             <div class="ac-meta">${escHtml(p.email || '')} • ${new Date(p.created_at).toLocaleDateString('fa-IR')}</div>
                         </div>
                     </div>
-                    <button class="btn btn-sm ${p.is_banned ? 'btn-success' : 'btn-danger'}"
-                            onclick="acToggleBan('${p.id}', ${p.is_banned ? 'false' : 'true'})">
-                        ${p.is_banned ? '✅ رفع مسدودی' : '🚫 مسدود کردن'}
-                    </button>
+                    <div class="ac-row-actions">
+                        ${renderTeamPicker(p)}
+                        <button class="btn btn-sm ${p.is_banned ? 'btn-success' : 'btn-danger'}"
+                                onclick="acToggleBan('${p.id}', ${p.is_banned ? 'false' : 'true'})">
+                            ${p.is_banned ? '✅ رفع مسدودی' : '🚫 مسدود کردن'}
+                        </button>
+                    </div>
                 </div>`).join('');
+        }
+
+        // انتخاب تیم برای بازیکن، مستقیم از همین ردیف.
+        function renderTeamPicker(p) {
+            const cap = (acSettings && acSettings.max_members) ||
+                        (acPublicCfg && acPublicCfg.max_members) || 10;
+            if (!acTeams.length) {
+                return '<span class="ac-meta">هنوز تیمی ساخته نشده</span>';
+            }
+            const opts = acTeams.map(t => {
+                const n = Array.isArray(t.members) ? t.members.length : 0;
+                const full = n >= cap;
+                const here = p.team_id === t.id;
+                // یک تیم پر فقط وقتی انتخاب‌شدنی است که بازیکن همین حالا داخلش باشد
+                return `<option value="${t.id}" ${here ? 'selected' : ''} ${full && !here ? 'disabled' : ''}>` +
+                       `${escHtml(t.name)} (${n}/${cap})${full && !here ? ' — پر' : ''}</option>`;
+            }).join('');
+            return `<span class="ac-assign">
+                <select id="acTeamPick-${p.id}" onchange="acAssignTeam('${p.id}', this.value)"
+                        ${p.is_banned ? 'disabled title="بازیکن مسدود است"' : ''}>
+                    <option value="">${p.has_team ? '— خارج کردن از تیم —' : '— انتخاب تیم —'}</option>
+                    ${opts}
+                </select>
+            </span>`;
+        }
+
+        // ادمین تیم بازیکن را عوض می‌کند (یا او را بی‌تیم می‌کند).
+        async function acAssignTeam(userId, teamId) {
+            const player = acPlayers.find(p => p.id === userId);
+            if (!player) return;
+            const from = player.team_id || null;
+            const target = acTeams.find(t => t.id === teamId);
+            const sel = document.getElementById('acTeamPick-' + userId);
+            if (sel) sel.disabled = true;
+
+            try {
+                if (!teamId) {
+                    if (!from) return;
+                    if (!confirm(`«${player.mc_username}» از تیم «${player.team_name}» خارج شود؟`)) {
+                        renderAcPlayers();
+                        return;
+                    }
+                    await NXAuth.kickMember(from, userId);
+                    showToast('✅ از تیم خارج شد', 'success');
+                } else if (from === teamId) {
+                    return;
+                } else if (from) {
+                    if (!confirm(`«${player.mc_username}» از «${player.team_name}» به «${target.name}» منتقل شود؟`)) {
+                        renderAcPlayers();
+                        return;
+                    }
+                    await NXAuth.adminMovePlayer(userId, teamId, from);
+                    showToast(`✅ به تیم «${target.name}» منتقل شد`, 'success');
+                } else {
+                    await NXAuth.adminAddMember(teamId, userId);
+                    showToast(`✅ به تیم «${target.name}» اضافه شد`, 'success');
+                }
+                await loadAccountsData();
+            } catch (e) {
+                showToast('❌ ' + (e.message || e), 'error');
+                sbLog('❌ ' + (e.message || e), 'err');
+                await loadAccountsData();   // نمایش وضعیت واقعی، نه چیزی که انتخاب شد
+            }
         }
 
         async function acKick(teamId, userId) {
