@@ -297,5 +297,69 @@ check('the player is teamless afterwards',
   !/Alex/.test(sql('c', `select p.mc_username from public.team_members tm
     join public.profiles p on p.id=tm.user_id;`)));
 
+/* ----------------------------------------------------------------
+ * G. closing registration really closes it
+ *
+ * The user reported signups still going through after switching
+ * registration off in the panel. The site not checking the flag was
+ * one half; a stale handle_new_user() in an older database is the
+ * other. check-registration.sql diagnoses and repairs the latter.
+ * ---------------------------------------------------------------- */
+section('G. closing registration is enforced by the database');
+
+const DIAG = readFileSync(join(ROOT, 'supabase/check-registration.sql'), 'utf8');
+const signup = (dbKey, name, mail) => sql(dbKey, `do $$ begin
+    insert into auth.users (email, raw_user_meta_data)
+    values ('${mail}', '{"mc_username":"${name}"}'::jsonb);
+    raise notice 'SIGNUP WENT THROUGH';
+  exception when others then raise notice 'BLOCKED: %', sqlerrm; end $$;`);
+
+sql('g', SHIM);
+sql('g', NEW);
+
+sql('g', `update public.app_settings set registration_open = false where id = 1;`);
+check('a closed registration refuses a new signup',
+  /BLOCKED: REGISTRATION_CLOSED/.test(signup('g', 'Nope', 'nope@mc.com')));
+sql('g', `update public.app_settings set registration_open = true where id = 1;`);
+check('re-opening lets players in again',
+  /SIGNUP WENT THROUGH/.test(signup('g', 'Yep', 'yep@mc.com')));
+
+// Reproduce the stale-trigger database, then prove the repair script fixes it.
+sql('h', SHIM);
+sql('h', NEW);
+sql('h', `create or replace function public.handle_new_user()
+  returns trigger language plpgsql security definer set search_path = public as $$
+  begin
+    insert into public.profiles (id, mc_username, email)
+    values (new.id, btrim(coalesce(new.raw_user_meta_data->>'mc_username','')), new.email);
+    return new;
+  end $$;`);
+sql('h', `update public.app_settings set registration_open = false where id = 1;`);
+check('an out-of-date trigger reproduces the reported bug',
+  /SIGNUP WENT THROUGH/.test(signup('h', 'Stale', 'stale@mc.com')),
+  'this is what the user is most likely hitting');
+
+const repair = sql('h', DIAG);
+check('the diagnostic spots the out-of-date function',
+  /تابع قدیمی است/.test(repair), repair.slice(0, 500));
+check('the diagnostic runs without error', !repair.includes('PSQL_ERROR'),
+  repair.slice(0, 400));
+check('its built-in self-test passes', /تست موفق/.test(repair), repair.slice(-400));
+check('after repair a closed signup is refused',
+  /BLOCKED: REGISTRATION_CLOSED/.test(signup('h', 'Fixed', 'fixed@mc.com')));
+check('the repair preserves the closed setting',
+  /\n\s*f\s*\n/.test(sql('h', `select registration_open from public.app_settings where id = 1;`)));
+check('the self-test leaves no test user behind',
+  !/NxSelfTest/.test(sql('h', `select mc_username from public.profiles;`)));
+
+// A missing trigger is the other way this breaks.
+sql('i', SHIM);
+sql('i', NEW);
+sql('i', `drop trigger if exists on_auth_user_created on auth.users;`);
+const recreate = sql('i', DIAG);
+check('a missing trigger is detected',
+  /تریگر ثبت‌نام وجود ندارد/.test(recreate), recreate.slice(0, 500));
+check('and is put back', /تست موفق/.test(recreate), recreate.slice(-400));
+
 console.log(`\n${fail ? '❌' : '🎉'} database tests: ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

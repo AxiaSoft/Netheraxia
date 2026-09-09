@@ -747,6 +747,15 @@
         .btn-primary-full:disabled { opacity: .55; cursor: not-allowed; }
         .auth-switch { text-align: center; margin-top: 15px; font-size: 12px; color: var(--text-tertiary); }
         .auth-link { color: var(--accent); cursor: pointer; text-decoration: underline; }
+        .reg-closed-note {
+            padding: 12px 14px; border-radius: var(--r-sm); margin-bottom: 16px;
+            background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.42);
+            color: #fcd34d; font-size: 12.5px; line-height: 1.9;
+        }
+        .auth-tab.closed { opacity: .6; }
+        .field input:disabled {
+            opacity: .5; cursor: not-allowed; background: rgba(3,10,24,0.45);
+        }
 
         .teams-toolbar {
             display: flex; gap: 10px; justify-content: center; align-items: center;
@@ -1057,6 +1066,11 @@
 
         <!-- register -->
         <div id="registerForm" style="display:none;">
+            <div class="reg-closed-note" id="regClosedNote" style="display:none;">
+                🚪 <b>ثبت‌نام در حال حاضر بسته است.</b><br>
+                مدیر سرور ثبت‌نام بازیکن جدید را موقتاً غیرفعال کرده است.
+                اگر از قبل حساب داری، از تب «ورود» وارد شو.
+            </div>
             <div class="field">
                 <label>نام کاربری ماینکرفت</label>
                 <input type="text" id="regUser" autocomplete="username" placeholder="Steve" maxlength="16">
@@ -2007,9 +2021,40 @@ function wireAuthUI() {
         document.getElementById('registerForm').style.display = login ? 'none' : 'block';
         document.getElementById('authModalTitle').textContent = login ? '🎮 ورود به حساب' : '✨ ساخت حساب جدید';
         showAuthError('authError', '');
+        if (!login) refreshRegistrationLock();
     }
     tabLogin.addEventListener('click', () => setTab(true));
     tabReg.addEventListener('click', () => setTab(false));
+
+    /* ── ثبت‌نام بسته است؟ ────────────────────────────────────────────────
+     * دیتابیس خودش جلوی ثبت‌نام را می‌گیرد، ولی تا قبل از این، سایت اصلاً
+     * این تنظیم را نگاه نمی‌کرد؛ برای همین فرم باز می‌ماند و بازیکن تا آخر
+     * می‌رفت و بعد خطا می‌گرفت. حالا فرم از همان اول قفل می‌شود.
+     * ------------------------------------------------------------------ */
+    async function refreshRegistrationLock() {
+        const btn  = document.getElementById('registerSubmit');
+        const note = document.getElementById('regClosedNote');
+        if (!btn || !note) return;
+
+        if (!liveConfig && typeof NXAuth !== 'undefined' &&
+            NXAuth.isConfigured && NXAuth.isConfigured()) {
+            try { liveConfig = await NXAuth.getConfig(); } catch (e) {}
+        }
+        // فقط وقتی صریحاً false باشد قفل کن؛ اگر تنظیمات نیامده باشد
+        // (مثلاً اینترنت قطع است) فرم را بی‌دلیل نبند.
+        const closed = !!(liveConfig && liveConfig.registration_open === false);
+
+        note.style.display = closed ? 'block' : 'none';
+        btn.disabled = closed;
+        btn.title = closed ? 'ثبت‌نام در حال حاضر بسته است.' : '';
+        ['regUser', 'regEmail', 'regPass'].forEach(function (id) {
+            const el = document.getElementById(id);
+            if (el) el.disabled = closed;
+        });
+        tabReg.classList.toggle('closed', closed);
+    }
+    // در دسترس گذاشتن برای بقیه‌ی بخش‌ها (مثلاً بعد از رفرش تنظیمات)
+    window.refreshRegistrationLock = refreshRegistrationLock;
 
     // live username check
     let userTimer = null;

@@ -1520,5 +1520,70 @@ let exitCode = 0;
   R.check('moving into the same team is refused', !!err && /همین تیم/.test(err.message));
 }
 
+/* ==========================================================================
+ * FF. closing registration must actually close the form
+ *
+ * The database always refused these signups, but the public page never
+ * looked at registration_open, so the form stayed fully usable and the
+ * player only found out after filling everything in.
+ * ========================================================================== */
+{
+  installDom();
+  loadScript('js/nx-auth.js');
+  globalThis.NXAuth.saveConfig('https://demo.supabase.co', 'k');
+
+  // refreshRegistrationLock is defined inside wireAuthUI(), which normally
+  // runs on DOMContentLoaded. Call it so the real handlers get wired, then
+  // reach the function through the window export.
+  const S = loadPage('index.html', `globalThis.__X={
+    wire: wireAuthUI,
+    lock: () => window.refreshRegistrationLock(),
+    setCfg: c => { liveConfig = c; }}`);
+  S.wire();
+
+  R.section('FF. registration can be closed from the panel');
+
+  const el = id => document.getElementById(id);
+  const btn = () => el('registerSubmit');
+  const note = () => el('regClosedNote');
+
+  // open
+  S.setCfg({ registration_open: true, max_teams: 10, max_members: 10 });
+  await S.lock();
+  R.check('while open, the button works', btn().disabled === false);
+  R.check('and no notice is shown', note().style.display === 'none');
+  R.check('the fields are usable', el('regUser').disabled === false);
+
+  // closed
+  S.setCfg({ registration_open: false, max_teams: 10, max_members: 10 });
+  await S.lock();
+  R.check('closing it disables the create button', btn().disabled === true,
+    'this is the reported bug: the form stayed usable');
+  // The DOM stub does not parse static markup into innerHTML, so the
+  // visibility is asserted at runtime and the wording against the file.
+  R.check('the explanatory notice is shown', note().style.display === 'block');
+  R.check('and it is written in Persian',
+    /id="regClosedNote"[\s\S]{0,400}ثبت‌نام در حال حاضر بسته است/
+      .test(readFileSync(new URL('../index.html', import.meta.url), 'utf8')));
+  R.check('the username field is locked', el('regUser').disabled === true);
+  R.check('the email field is locked', el('regEmail').disabled === true);
+  R.check('the password field is locked', el('regPass').disabled === true);
+
+  // re-opening must undo all of it
+  S.setCfg({ registration_open: true, max_teams: 10, max_members: 10 });
+  await S.lock();
+  R.check('re-opening restores the button', btn().disabled === false);
+  R.check('re-opening hides the notice', note().style.display === 'none');
+  R.check('re-opening unlocks the fields', el('regEmail').disabled === false);
+
+  // A missing config must not lock people out of a working site.
+  S.setCfg(null);
+  globalThis.NXAuth.getConfig = () => Promise.reject(new Error('offline'));
+  await S.lock();
+  R.check('an unreachable database does not falsely close registration',
+    btn().disabled === false,
+    'only an explicit false may close the form');
+}
+
 exitCode = R.done('ALL NETHERAXIA TESTS');
 process.exit(exitCode);
