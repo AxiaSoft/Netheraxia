@@ -1605,6 +1605,25 @@ let exitCode = 0;
   const html = readFileSync('index.html', 'utf8');
 
   R.check('the gate markup exists', /id="tgGate"/.test(html));
+
+  // The first attempt hid the real Telegram widget under a fake button at
+  // opacity 0.01. Telegram's iframe is a fixed size, so clicks landed on
+  // nothing. The code path must be the primary route now.
+  R.check('there is no invisible widget overlay any more',
+    !/tg-widget-host/.test(html) && !/opacity:\s*0\.01/.test(html),
+    'the overlay is what made button 2 do nothing');
+  R.check('a real code entry field exists', /id="tgCodeInput"/.test(html));
+  R.check('the code can be submitted', /id="tgCodeSubmit"/.test(html));
+  R.check('there is a direct link to the bot', /id="tgBotLink"/.test(html));
+  R.check('the bot link opens a start chat', /'https:\/\/t\.me\/' \+ cfg\.botUser/.test(html));
+  R.check('persian digits are accepted in the code box',
+    /\[۰-۹\]/.test(html), 'iranian keyboards produce these by default');
+  R.check('enter submits the code', /e\.key === 'Enter'/.test(html));
+  R.check('the widget is only shown once its iframe really appears',
+    /querySelector\('iframe'\)/.test(html),
+    'telegram.org usually hangs rather than erroring, so onerror is not enough');
+  R.check('no dead references to the removed button remain',
+    !/tgVerifyBtn/.test(html));
   R.check('the submit button is gated', /tgSyncSubmit/.test(html));
   R.check('the ticket is handed to signUp', /telegramTicket:\s*tgTicket/.test(html));
   R.check('the ticket is cleared after use', /tgTicket = null/.test(html));
@@ -1616,6 +1635,10 @@ let exitCode = 0;
 
   const auth = readFileSync('js/nx-auth.js', 'utf8');
   R.check('verifyTelegram is exported', /verifyTelegram: verifyTelegram/.test(auth));
+  R.check('redeemTelegramCode is exported', /redeemTelegramCode: redeemTelegramCode/.test(auth));
+  R.check('the code is redeemed through an RPC, not a table read',
+    /rpc\('redeem_telegram_code'/.test(auth),
+    'reading the codes table from the browser would leak valid codes');
   R.check('signUp forwards the ticket as user metadata',
     /meta\.telegram_ticket = ticket/.test(auth));
   R.check('the ticket is omitted when there is none',

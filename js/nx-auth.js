@@ -96,7 +96,11 @@
         TELEGRAM_TICKET_INVALID:'تأیید تلگرام معتبر نیست. دوباره روی دکمه‌ی تلگرام بزنید.',
         TELEGRAM_TICKET_USED:   'این تأیید تلگرام قبلاً استفاده شده است. دوباره تأیید کنید.',
         TELEGRAM_TICKET_EXPIRED:'زمان تأیید تلگرام تمام شده است. دوباره تأیید کنید.',
-        TELEGRAM_ALREADY_USED:  'با این حساب تلگرام قبلاً ثبت‌نام شده است.'
+        TELEGRAM_ALREADY_USED:  'با این حساب تلگرام قبلاً ثبت‌نام شده است.',
+        TELEGRAM_CODE_INVALID:  'این کد درست نیست. از ربات یک کد تازه بگیر.',
+        TELEGRAM_CODE_USED:     'این کد قبلاً استفاده شده است. کد تازه بگیر.',
+        TELEGRAM_CODE_EXPIRED:  'این کد منقضی شده است. از ربات کد تازه بگیر.',
+        TOO_MANY_ATTEMPTS:      'تلاش‌های زیادی انجام شده. چند دقیقه صبر کن.'
     };
 
     function humanize(raw) {
@@ -237,6 +241,21 @@
         }, function () {
             throw new Error('ارتباط با سرویس بررسی تلگرام برقرار نشد.');
         });
+    }
+
+    /**
+     * کد ۶ رقمی ربات را به بلیت ثبت‌نام تبدیل می‌کند.
+     *
+     * این راه برای کاربرانی است که telegram.org در مرورگرشان باز نمی‌شود؛
+     * تمام کار با سوپابیس انجام می‌شود و نیازی به دسترسی مرورگر به تلگرام
+     * نیست. بررسی عضویت قبلاً توسط خود ربات (سمت سرور) انجام شده است.
+     */
+    function redeemTelegramCode(code) {
+        return rpc('redeem_telegram_code', { p_code: String(code || '').trim() })
+            .then(function (res) {
+                if (!res || !res.ticket) throw new Error(MESSAGES.TELEGRAM_CODE_INVALID);
+                return res;
+            });
     }
 
     function signUp(opts) {
@@ -659,7 +678,7 @@
         fetchUser: fetchUser,
         consumeRecoveryLink: consumeRecoveryLink, updatePassword: updatePassword, siteUrl: siteUrl,
         checkUsername: checkUsername, myProfile: myProfile,
-        verifyTelegram: verifyTelegram,
+        verifyTelegram: verifyTelegram, redeemTelegramCode: redeemTelegramCode,
         getConfig: getConfig, listTeams: listTeams, myMembership: myMembership,
         createTeam: createTeam, joinTeam: joinTeam, leaveTeam: leaveTeam,
         kickMember: kickMember, deleteTeam: deleteTeam, updateTeam: updateTeam,

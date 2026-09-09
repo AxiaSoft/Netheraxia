@@ -421,5 +421,66 @@ check('public_config exposes the telegram settings to the site',
 check('public_config does not leak anything token-shaped',
   !/bot_token|TELEGRAM_BOT_TOKEN/i.test(sql('g', `select public.public_config();`)));
 
+/* ----------------------------------------------------------------
+ * H. the 6-digit code path (for users who cannot open telegram.org)
+ * ---------------------------------------------------------------- */
+section('H. verifying by code instead of the login button');
+
+sql('h', SHIM);
+sql('h', NEW);
+sql('h', `update public.app_settings set telegram_required = true where id = 1;`);
+
+const redeem = (code) => sql('h', `do $$ declare r json; begin
+    r := public.redeem_telegram_code('${code}');
+    raise notice 'TICKET %', r->>'ticket';
+  exception when others then raise notice 'REFUSED: %', sqlerrm; end $$;`);
+
+check('an unknown code is refused',
+  /REFUSED: TELEGRAM_CODE_INVALID/.test(redeem('123456')));
+
+sql('h', `insert into public.telegram_codes (code, telegram_id, telegram_username)
+          values ('654321', 777001, 'coder');`);
+const ok = redeem('654321');
+check('a real code returns a ticket', /TICKET [0-9a-f-]{36}/.test(ok), ok.slice(0, 300));
+check('the code is burned after use',
+  /REFUSED: TELEGRAM_CODE_USED/.test(redeem('654321')));
+
+sql('h', `insert into public.telegram_codes (code, telegram_id, created_at)
+          values ('111111', 777002, now() - interval '30 minutes');`);
+check('an expired code is refused',
+  /REFUSED: TELEGRAM_CODE_EXPIRED/.test(redeem('111111')));
+
+// The ticket that came out of the code must actually work for signing up.
+const viaCode = sql('h', `do $$ declare t uuid; begin
+    select token into t from public.telegram_tickets
+     where telegram_id = 777001 and used_at is null;
+    insert into auth.users (email, raw_user_meta_data)
+    values ('coder@mc.com', ('{"mc_username":"Coder","telegram_ticket":"' || t || '"}')::jsonb);
+    raise notice 'ALLOWED';
+  exception when others then raise notice 'REFUSED: %', sqlerrm; end $$;`);
+check('a ticket earned by code can register',
+  /ALLOWED/.test(viaCode), viaCode.slice(0, 300));
+check('and the telegram id is recorded',
+  /777001/.test(sql('h', `select telegram_id from public.profiles where mc_username='Coder';`)));
+
+// Same anti-abuse rules as the button path.
+sql('h', `insert into public.telegram_codes (code, telegram_id) values ('222222', 777001);`);
+check('one telegram account still cannot register twice',
+  /REFUSED: TELEGRAM_ALREADY_USED/.test(redeem('222222')));
+
+const readCodes = sql('h', `set role anon;
+  do $$ begin perform * from public.telegram_codes; raise notice 'ALLOWED';
+  exception when others then raise notice 'REFUSED: %', sqlerrm; end $$;
+  reset role;`);
+check('a visitor cannot read the codes table',
+  /REFUSED/.test(readCodes), 'otherwise anyone could just read a valid code');
+
+const writeCodes = sql('h', `set role anon;
+  do $$ begin insert into public.telegram_codes (code, telegram_id) values ('999999', 1);
+    raise notice 'ALLOWED';
+  exception when others then raise notice 'REFUSED: %', sqlerrm; end $$;
+  reset role;`);
+check('a visitor cannot mint their own code', /REFUSED/.test(writeCodes));
+
 console.log(`\n${fail ? '❌' : '🎉'} database tests: ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
