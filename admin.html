@@ -780,6 +780,27 @@
             font-size: 12.5px; line-height: 1.9;
         }
 
+        /* ── تنظیمات تلگرام ─────────────────────────────────────────── */
+        .form-hint {
+            font-size: 11.5px; color: var(--text-tertiary);
+            margin-top: 6px; line-height: 1.9;
+        }
+        .form-hint code {
+            background: rgba(3,10,24,0.75); padding: 1px 5px; border-radius: 4px;
+            font-size: 11px; color: #9fd0ff; direction: ltr; display: inline-block;
+        }
+        .tg-admin-block {
+            margin-top: 14px; padding-top: 14px;
+            border-top: 1px dashed var(--glass-border);
+        }
+        .tg-admin-block .form-group { margin-top: 12px; }
+        .tg-admin-warn {
+            display: none; margin-top: 12px; padding: 11px 14px; border-radius: var(--r-sm);
+            background: rgba(245,158,11,0.10); border: 1px solid rgba(245,158,11,0.40);
+            font-size: 12px; line-height: 1.9;
+        }
+        .tg-admin-warn.on { display: block; }
+
         .ac-row {
             display: flex; align-items: center; justify-content: space-between; gap: 12px;
             padding: 12px 14px; margin-bottom: 8px; border-radius: var(--r-sm);
@@ -1142,6 +1163,43 @@
                 <div class="switch-row"><label for="acTeamOpen">➕ ساخت تیم جدید باز باشد</label><input type="checkbox" id="acTeamOpen" checked></div>
                 <div class="switch-row"><label for="acJoinOpen">🤝 عضویت در تیم‌ها باز باشد</label><input type="checkbox" id="acJoinOpen" checked></div>
                 <div class="switch-row"><label for="acOneTeam">☝️ هر بازیکن فقط عضو یک تیم باشد</label><input type="checkbox" id="acOneTeam" checked></div>
+
+                <div class="tg-admin-block">
+                    <div class="tg-admin-warn on" id="acTgNeedSchema" style="display:none;">
+                        ⚠️ برای فعال کردن این قابلیت، اول فایل <code>supabase/schema.sql</code>
+                        را دوباره در SQL Editor سوپابیس اجرا کنید.
+                        راهنمای کامل: <code>SETUP-TELEGRAM.md</code>
+                    </div>
+                    <div class="switch-row">
+                        <label for="acTgRequired">✈️ عضویت در گروه تلگرام برای ثبت‌نام الزامی باشد</label>
+                        <input type="checkbox" id="acTgRequired" onchange="acTgToggleFields()">
+                    </div>
+                    <div id="acTgFields" style="display:none;">
+                        <div class="form-group">
+                            <label class="form-label">لینک گروه تلگرام:</label>
+                            <input type="text" class="form-input" id="acTgGroupUrl" dir="ltr" placeholder="https://t.me/YourGroup" oninput="acTgToggleFields()">
+                            <div class="form-hint">دکمه‌ی «عضو شدن در گروه» در فرم ثبت‌نام به اینجا وصل می‌شود.</div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">نام کاربری ربات:</label>
+                            <input type="text" class="form-input" id="acTgBotUser" dir="ltr" placeholder="NetheraxiaBot" oninput="acTgToggleFields()">
+                            <div class="form-hint">
+                                بدون @ — همان رباتی که در گروه <b>ادمین</b> است.
+                                در BotFather هم باید با دستور <code>/setdomain</code> دامنه‌ی
+                                <code>axiasoft.github.io</code> را برایش ثبت کنید.
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">آدرس سرویس بررسی (اختیاری):</label>
+                            <input type="text" class="form-input" id="acTgVerifyUrl" dir="ltr" placeholder="خالی = پیش‌فرض سوپابیس">
+                            <div class="form-hint">
+                                اگر خالی باشد، خودکار از
+                                <code>&lt;پروژه&gt;.supabase.co/functions/v1/telegram-verify</code> استفاده می‌شود.
+                            </div>
+                        </div>
+                        <div class="tg-admin-warn" id="acTgWarn"></div>
+                    </div>
+                </div>
             </div>
 
             <div class="card" id="accountsStatsCard" style="display:none;">
@@ -2556,6 +2614,35 @@
             document.getElementById('acTeamOpen').checked = !!acSettings.team_creation_open;
             document.getElementById('acJoinOpen').checked = !!acSettings.join_open;
             document.getElementById('acOneTeam').checked = !!acSettings.one_team_per_user;
+            document.getElementById('acTgRequired').checked = !!acSettings.telegram_required;
+            document.getElementById('acTgGroupUrl').value  = acSettings.telegram_group_url || '';
+            document.getElementById('acTgBotUser').value   = acSettings.telegram_bot_username || '';
+            document.getElementById('acTgVerifyUrl').value = acSettings.telegram_verify_url || '';
+            // اگر دیتابیس هنوز ستون‌های تلگرام را ندارد، به‌جای یک تیک که
+            // ذخیره نمی‌شود، بگو باید اسکیما را اجرا کند.
+            const tgReady = ('telegram_required' in acSettings);
+            document.getElementById('acTgRequired').disabled = !tgReady;
+            document.getElementById('acTgNeedSchema').style.display = tgReady ? 'none' : 'block';
+            acTgToggleFields();
+        }
+
+        /** نمایش/پنهان کردن کادرهای تلگرام + هشدار پیکربندی ناقص */
+        function acTgToggleFields() {
+            const on = document.getElementById('acTgRequired').checked;
+            document.getElementById('acTgFields').style.display = on ? 'block' : 'none';
+            const warn = document.getElementById('acTgWarn');
+            if (!on) { warn.classList.remove('on'); return; }
+
+            const missing = [];
+            if (!document.getElementById('acTgBotUser').value.trim())  missing.push('نام کاربری ربات');
+            if (!document.getElementById('acTgGroupUrl').value.trim()) missing.push('لینک گروه');
+            warn.innerHTML = missing.length
+                ? '⚠️ تا وقتی <b>' + missing.join('</b> و <b>') + '</b> را پر نکنید، ' +
+                  'دکمه‌ی تأیید در سایت کار نمی‌کند و <b>هیچ‌کس نمی‌تواند ثبت‌نام کند</b>.'
+                : '⚠️ یادتان باشد: توکن ربات باید در سوپابیس → Edge Functions → Secrets ' +
+                  'ذخیره شده باشد و ربات هم در گروه <b>ادمین</b> باشد. ' +
+                  'راهنمای کامل در فایل <code>SETUP-TELEGRAM.md</code>.';
+            warn.classList.add('on');
         }
 
         async function saveAccountSettings() {
@@ -2575,6 +2662,34 @@
                 return;
             }
 
+            // اگر دروازه‌ی تلگرام روشن شود ولی ناقص باشد، عملاً ثبت‌نام قفل
+            // می‌شود. بهتر است همین‌جا جلویش گرفته شود تا بعداً سردرگمی نشود.
+            const tgOn      = document.getElementById('acTgRequired').checked;
+            const tgBot     = document.getElementById('acTgBotUser').value.trim().replace(/^@/, '');
+            const tgGroup   = document.getElementById('acTgGroupUrl').value.trim();
+            const tgVerify  = document.getElementById('acTgVerifyUrl').value.trim();
+            if (tgOn && !tgBot) {
+                showToast('❌ نام کاربری ربات تلگرام را وارد کنید', 'error');
+                sbLog('❌ «عضویت تلگرام الزامی» روشن است ولی نام ربات خالی است؛ کسی نمی‌تواند ثبت‌نام کند.', 'err');
+                return;
+            }
+            if (tgOn && !(acSettings && acSettings.telegram_required) &&
+                !confirm('از این به بعد فقط کسانی می‌توانند ثبت‌نام کنند که عضو گروه تلگرام باشند.\n' +
+                         'مطمئن شوید ربات در گروه ادمین است و توکنش در Edge Function Secrets ذخیره شده.\n\nادامه می‌دهید؟')) {
+                return;
+            }
+
+            // اگر دیتابیس هنوز به‌روز نشده، ستون‌های تلگرام وجود ندارند.
+            // در آن حالت نباید فرستاده شوند، وگرنه ذخیره‌ی بقیه‌ی تنظیمات هم
+            // شکست می‌خورد.
+            const tgSupported = !!(acSettings && 'telegram_required' in acSettings);
+            if (tgOn && !tgSupported) {
+                showToast('❌ اول فایل schema.sql را دوباره اجرا کنید', 'error');
+                sbLog('❌ ستون‌های تلگرام در دیتابیس نیست. supabase/schema.sql را در SQL Editor اجرا کنید ' +
+                      '(راهنما: SETUP-TELEGRAM.md).', 'err');
+                return;
+            }
+
             const patch = {
                 max_teams: maxTeams,
                 max_members: maxMembers,
@@ -2583,6 +2698,12 @@
                 join_open: document.getElementById('acJoinOpen').checked,
                 one_team_per_user: document.getElementById('acOneTeam').checked
             };
+            if (tgSupported) {
+                patch.telegram_required      = tgOn;
+                patch.telegram_group_url     = tgGroup;
+                patch.telegram_bot_username  = tgBot;
+                patch.telegram_verify_url    = tgVerify;
+            }
             try {
                 const saved = await NXAuth.updateSettings(patch);
                 acSettings = saved;

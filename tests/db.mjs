@@ -297,5 +297,129 @@ check('the player is teamless afterwards',
   !/Alex/.test(sql('c', `select p.mc_username from public.team_members tm
     join public.profiles p on p.id=tm.user_id;`)));
 
+/* ----------------------------------------------------------------
+ * G. the Telegram gate cannot be walked around
+ *
+ * The browser check is only a convenience. What actually protects
+ * registration is the trigger, so these run straight against the
+ * database the way an attacker calling the REST API would.
+ * ---------------------------------------------------------------- */
+section('G. registration is gated on Telegram membership');
+
+sql('g', SHIM);
+sql('g', NEW);
+
+check('the ticket table exists',
+  sql('g', `select to_regclass('public.telegram_tickets');`).includes('telegram_tickets'));
+
+// While the gate is off, nothing changes for existing servers.
+const offSignup = sql('g', `do $$ begin ${register('NoGate', 'ng@mc.com').replace(/^insert/, 'insert')}
+  raise notice 'ALLOWED'; exception when others then raise notice 'REFUSED: %', sqlerrm; end $$;`);
+check('with the gate off, registration works as before',
+  /ALLOWED/.test(offSignup), offSignup.slice(0, 300));
+
+// Turn the gate on.
+sql('g', `update public.app_settings set telegram_required = true where id = 1;`);
+
+const noTicket = sql('g', `do $$ begin
+    insert into auth.users (email, raw_user_meta_data)
+    values ('sneaky@mc.com', '{"mc_username":"Sneaky"}'::jsonb);
+    raise notice 'ALLOWED';
+  exception when others then raise notice 'REFUSED: %', sqlerrm; end $$;`);
+check('a direct API signup with no ticket is refused',
+  /REFUSED: TELEGRAM_REQUIRED/.test(noTicket), noTicket.slice(0, 300));
+
+const madeUp = sql('g', `do $$ begin
+    insert into auth.users (email, raw_user_meta_data)
+    values ('fake@mc.com', ('{"mc_username":"Faker","telegram_ticket":"'
+            || gen_random_uuid() || '"}')::jsonb);
+    raise notice 'ALLOWED';
+  exception when others then raise notice 'REFUSED: %', sqlerrm; end $$;`);
+check('an invented ticket id is refused',
+  /REFUSED: TELEGRAM_TICKET_INVALID/.test(madeUp), madeUp.slice(0, 300));
+
+const garbage = sql('g', `do $$ begin
+    insert into auth.users (email, raw_user_meta_data)
+    values ('junk@mc.com', '{"mc_username":"Junk","telegram_ticket":"not-a-uuid"}'::jsonb);
+    raise notice 'ALLOWED';
+  exception when others then raise notice 'REFUSED: %', sqlerrm; end $$;`);
+check('a malformed ticket does not crash the trigger',
+  /REFUSED: TELEGRAM_TICKET_INVALID/.test(garbage), garbage.slice(0, 300));
+
+// A real ticket — the sort the Edge Function issues after getChatMember.
+sql('g', `insert into public.telegram_tickets (token, telegram_id, telegram_username)
+          values ('11111111-1111-1111-1111-111111111111', 555001, 'realguy');`);
+const good = sql('g', `do $$ begin
+    insert into auth.users (email, raw_user_meta_data)
+    values ('real@mc.com',
+            '{"mc_username":"RealGuy","telegram_ticket":"11111111-1111-1111-1111-111111111111"}'::jsonb);
+    raise notice 'ALLOWED';
+  exception when others then raise notice 'REFUSED: %', sqlerrm; end $$;`);
+check('a genuine ticket lets the player register',
+  /ALLOWED/.test(good), good.slice(0, 300));
+check('the telegram id is stored on the profile',
+  /555001/.test(sql('g', `select telegram_id from public.profiles where mc_username='RealGuy';`)));
+check('the ticket is marked used',
+  /t/.test(sql('g', `select used_at is not null from public.telegram_tickets
+                     where token='11111111-1111-1111-1111-111111111111';`)));
+
+// Replay: the same ticket a second time.
+const replay = sql('g', `do $$ begin
+    insert into auth.users (email, raw_user_meta_data)
+    values ('replay@mc.com',
+            '{"mc_username":"Replay","telegram_ticket":"11111111-1111-1111-1111-111111111111"}'::jsonb);
+    raise notice 'ALLOWED';
+  exception when others then raise notice 'REFUSED: %', sqlerrm; end $$;`);
+check('the same ticket cannot be reused',
+  /REFUSED: TELEGRAM_TICKET_USED/.test(replay), replay.slice(0, 300));
+
+// An expired ticket.
+sql('g', `insert into public.telegram_tickets (token, telegram_id, created_at)
+          values ('22222222-2222-2222-2222-222222222222', 555002, now() - interval '2 hours');`);
+const stale = sql('g', `do $$ begin
+    insert into auth.users (email, raw_user_meta_data)
+    values ('stale@mc.com',
+            '{"mc_username":"Stale","telegram_ticket":"22222222-2222-2222-2222-222222222222"}'::jsonb);
+    raise notice 'ALLOWED';
+  exception when others then raise notice 'REFUSED: %', sqlerrm; end $$;`);
+check('an expired ticket is refused',
+  /REFUSED: TELEGRAM_TICKET_EXPIRED/.test(stale), stale.slice(0, 300));
+
+// One Telegram account may not register twice.
+sql('g', `insert into public.telegram_tickets (token, telegram_id)
+          values ('33333333-3333-3333-3333-333333333333', 555001);`);
+const twice = sql('g', `do $$ begin
+    insert into auth.users (email, raw_user_meta_data)
+    values ('alt@mc.com',
+            '{"mc_username":"AltAccount","telegram_ticket":"33333333-3333-3333-3333-333333333333"}'::jsonb);
+    raise notice 'ALLOWED';
+  exception when others then raise notice 'REFUSED: %', sqlerrm; end $$;`);
+check('one telegram account cannot make a second player',
+  /REFUSED: TELEGRAM_ALREADY_USED/.test(twice), twice.slice(0, 300));
+
+// The browser must never be able to mint its own ticket.
+const forge = sql('g', `set role authenticated;
+  do $$ begin
+    insert into public.telegram_tickets (telegram_id) values (999999);
+    raise notice 'ALLOWED';
+  exception when others then raise notice 'REFUSED: %', sqlerrm; end $$;
+  reset role;`);
+check('a logged-in user cannot mint their own ticket',
+  /REFUSED/.test(forge), forge.slice(0, 300));
+
+const peek = sql('g', `set role anon;
+  do $$ begin
+    perform * from public.telegram_tickets;
+    raise notice 'ALLOWED';
+  exception when others then raise notice 'REFUSED: %', sqlerrm; end $$;
+  reset role;`);
+check('an anonymous visitor cannot read tickets',
+  /REFUSED/.test(peek), peek.slice(0, 300));
+
+check('public_config exposes the telegram settings to the site',
+  /telegram_required/.test(sql('g', `select public.public_config();`)));
+check('public_config does not leak anything token-shaped',
+  !/bot_token|TELEGRAM_BOT_TOKEN/i.test(sql('g', `select public.public_config();`)));
+
 console.log(`\n${fail ? '❌' : '🎉'} database tests: ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

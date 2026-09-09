@@ -56,3 +56,16 @@ Covers:
 - an admin can add and remove other players' memberships, while a normal
   player cannot -- and the one-team, team-full and banned rules still hold
   for the admin too
+- the Telegram gate holds at the database level: a signup with no ticket, an
+  invented ticket, a malformed one, a replayed one and an expired one are all
+  refused, a genuine ticket is accepted exactly once, one Telegram account
+  cannot make two players, and neither `anon` nor `authenticated` can read or
+  mint tickets
+
+`run.mjs` additionally verifies the Telegram login signature (section FF) by
+lifting `checkTelegramSignature` out of the Edge Function and running it
+against a vector computed independently from Telegram's published algorithm —
+a tampered user id, a wrong hash and a wrong bot token must all be rejected.
+It also asserts we use the Login Widget algorithm (`SHA256(bot_token)`) and
+not the Mini App one (`HMAC(bot_token,'WebAppData')`), which is a common and
+silent mix-up.

@@ -748,6 +748,45 @@
         .auth-switch { text-align: center; margin-top: 15px; font-size: 12px; color: var(--text-tertiary); }
         .auth-link { color: var(--accent); cursor: pointer; text-decoration: underline; }
 
+        /* ── دروازه‌ی تلگرام ─────────────────────────────────────────── */
+        .tg-gate {
+            border: 1px solid rgba(56,160,232,0.42); border-radius: var(--r-sm);
+            background: rgba(42,171,238,0.09); padding: 14px; margin-bottom: 18px;
+        }
+        .tg-gate.done { border-color: rgba(34,197,94,0.45); background: rgba(34,197,94,0.10); }
+        .tg-gate-head { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 12px; }
+        .tg-gate-icon { font-size: 20px; line-height: 1.2; }
+        .tg-gate-title { font-size: 13px; font-weight: 800; color: var(--text-primary); }
+        .tg-gate-sub { font-size: 11.5px; color: var(--text-tertiary); margin-top: 3px; line-height: 1.7; }
+        .tg-gate-steps { display: flex; flex-direction: column; gap: 8px; }
+        .tg-step-btn-wrap { position: relative; }
+        .tg-step-btn {
+            display: flex; align-items: center; gap: 9px; width: 100%;
+            padding: 11px 13px; border-radius: var(--r-sm); cursor: pointer;
+            background: rgba(3,10,24,0.55); border: 1px solid var(--border-default);
+            color: var(--text-primary); font-family: inherit; font-size: 12.5px;
+            font-weight: 700; text-decoration: none; text-align: right;
+        }
+        .tg-step-btn:hover { border-color: var(--accent); }
+        .tg-step-btn:disabled { opacity: .5; cursor: not-allowed; }
+        .tg-step-num {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 20px; height: 20px; flex: 0 0 20px; border-radius: 5px;
+            background: var(--accent); color: #fff; font-size: 11px; font-weight: 800;
+        }
+        /* ویجت واقعی تلگرام روی دکمه می‌نشیند تا ظاهر سایت حفظ شود */
+        .tg-widget-host {
+            position: absolute; inset: 0; z-index: 2; overflow: hidden;
+            opacity: 0.01; display: none;
+        }
+        .tg-widget-host.on { display: block; }
+        .tg-widget-host iframe { width: 100% !important; height: 100% !important; }
+        .tg-gate-status { font-size: 11.5px; margin-top: 10px; line-height: 1.8; display: none; }
+        .tg-gate-status.on { display: block; }
+        .tg-gate-status.bad { color: #fca5a5; }
+        .tg-gate-status.ok  { color: #86efac; }
+        .tg-gate-status.wait { color: var(--text-tertiary); }
+
         .teams-toolbar {
             display: flex; gap: 10px; justify-content: center; align-items: center;
             flex-wrap: wrap; margin-bottom: 26px;
@@ -1057,6 +1096,29 @@
 
         <!-- register -->
         <div id="registerForm" style="display:none;">
+            <!-- دروازه‌ی تلگرام: فقط وقتی مدیر روشنش کرده باشد نمایش داده می‌شود -->
+            <div id="tgGate" class="tg-gate" style="display:none;">
+                <div class="tg-gate-head">
+                    <span class="tg-gate-icon">✈️</span>
+                    <div>
+                        <div class="tg-gate-title">عضویت در گروه تلگرام الزامی است</div>
+                        <div class="tg-gate-sub" id="tgGateSub">اول عضو گروه شو، بعد عضویتت را تأیید کن.</div>
+                    </div>
+                </div>
+                <div class="tg-gate-steps">
+                    <a class="tg-step-btn" id="tgJoinBtn" href="#" target="_blank" rel="noopener">
+                        <span class="tg-step-num">۱</span> عضو شدن در گروه
+                    </a>
+                    <div class="tg-step-btn-wrap">
+                        <div id="tgWidgetHost" class="tg-widget-host"></div>
+                        <button class="tg-step-btn" id="tgVerifyBtn" type="button">
+                            <span class="tg-step-num">۲</span> تأیید عضویت با تلگرام
+                        </button>
+                    </div>
+                </div>
+                <div class="tg-gate-status" id="tgStatus"></div>
+            </div>
+
             <div class="field">
                 <label>نام کاربری ماینکرفت</label>
                 <input type="text" id="regUser" autocomplete="username" placeholder="Steve" maxlength="16">
@@ -2007,9 +2069,128 @@ function wireAuthUI() {
         document.getElementById('registerForm').style.display = login ? 'none' : 'block';
         document.getElementById('authModalTitle').textContent = login ? '🎮 ورود به حساب' : '✨ ساخت حساب جدید';
         showAuthError('authError', '');
+        if (!login) tgRefreshGate();
     }
     tabLogin.addEventListener('click', () => setTab(true));
     tabReg.addEventListener('click', () => setTab(false));
+
+    /* ── دروازه‌ی عضویت تلگرام ────────────────────────────────────────────
+     * منطق: تا وقتی Edge Function نگفته «عضو است»، دکمه‌ی ساخت حساب خاموش
+     * می‌ماند. بلیتی که برمی‌گردد به signUp داده می‌شود و تریگر دیتابیس هم
+     * همان را دوباره چک می‌کند — پس دور زدن این مرحله از سمت مرورگر بی‌فایده
+     * است.
+     * ------------------------------------------------------------------ */
+    let tgTicket = null;      // بلیت تأییدشده
+    let tgWidgetLoaded = false;
+
+    function tgCfg() {
+        const c = liveConfig || {};
+        return {
+            required: !!c.telegram_required,
+            groupUrl: c.telegram_group_url || '',
+            botUser:  (c.telegram_bot_username || '').replace(/^@/, ''),
+            verifyUrl: c.telegram_verify_url || ''
+        };
+    }
+
+    function tgSetStatus(msg, kind) {
+        const el = document.getElementById('tgStatus');
+        if (!el) return;
+        el.textContent = msg || '';
+        el.className = 'tg-gate-status' + (msg ? ' on ' + (kind || 'wait') : '');
+    }
+
+    function tgSyncSubmit() {
+        const btn = document.getElementById('registerSubmit');
+        if (!btn) return;
+        const need = tgCfg().required;
+        btn.disabled = !!(need && !tgTicket);
+        btn.title = btn.disabled ? 'اول عضویتت در گروه تلگرام را تأیید کن.' : '';
+    }
+
+    /** ویجت رسمی تلگرام را می‌سازد و نامرئی روی دکمه‌ی ما می‌نشاند. */
+    function tgMountWidget() {
+        const cfg = tgCfg();
+        const host = document.getElementById('tgWidgetHost');
+        if (!host || tgWidgetLoaded || !cfg.botUser) return;
+        tgWidgetLoaded = true;
+
+        window.nxTelegramAuth = function (user) { tgOnAuth(user); };
+
+        const s = document.createElement('script');
+        s.async = true;
+        s.src = 'https://telegram.org/js/telegram-widget.js?22';
+        s.setAttribute('data-telegram-login', cfg.botUser);
+        s.setAttribute('data-size', 'large');
+        s.setAttribute('data-radius', '8');
+        s.setAttribute('data-onauth', 'nxTelegramAuth(user)');
+        s.setAttribute('data-request-access', 'write');
+        s.onerror = function () {
+            host.classList.remove('on');
+            tgSetStatus('اسکریپت تلگرام بارگذاری نشد. فیلترشکن/اینترنت را بررسی کن.', 'bad');
+        };
+        host.appendChild(s);
+        host.classList.add('on');
+    }
+
+    async function tgOnAuth(user) {
+        tgSetStatus('در حال بررسی عضویت در گروه...', 'wait');
+        const btn = document.getElementById('tgVerifyBtn');
+        if (btn) btn.disabled = true;
+        try {
+            const res = await NXAuth.verifyTelegram(user, tgCfg().verifyUrl);
+            if (res && res.ok && res.ticket) {
+                tgTicket = res.ticket;
+                document.getElementById('tgGate').classList.add('done');
+                const who = res.telegram && (res.telegram.username || res.telegram.name);
+                tgSetStatus('✅ عضویت تأیید شد' + (who ? ' — ' + who : '') + '. حالا فرم را پر کن.', 'ok');
+            } else {
+                tgTicket = null;
+                tgSetStatus('❌ ' + ((res && res.message) || 'تأیید نشد.'), 'bad');
+            }
+        } catch (e) {
+            tgTicket = null;
+            tgSetStatus('❌ ' + (e.message || 'خطا در بررسی عضویت.'), 'bad');
+        } finally {
+            if (btn) btn.disabled = false;
+            tgSyncSubmit();
+        }
+    }
+
+    /** هر بار که فرم ثبت‌نام باز می‌شود صدا زده می‌شود. */
+    async function tgRefreshGate() {
+        const gate = document.getElementById('tgGate');
+        if (!gate) return;
+        // اگر تنظیمات هنوز نیامده، اول آن را بگیر؛ وگرنه ممکن است دروازه
+        // اشتباهاً پنهان بماند.
+        if (!liveConfig && typeof NXAuth !== 'undefined' && NXAuth.isConfigured && NXAuth.isConfigured()) {
+            try { liveConfig = await NXAuth.getConfig(); } catch (e) {}
+        }
+        const cfg = tgCfg();
+        gate.style.display = cfg.required ? 'block' : 'none';
+        if (!cfg.required) { tgSyncSubmit(); return; }
+
+        const join = document.getElementById('tgJoinBtn');
+        if (join) {
+            join.href = cfg.groupUrl || '#';
+            join.style.display = cfg.groupUrl ? 'flex' : 'none';
+        }
+        document.getElementById('tgGateSub').textContent = cfg.botUser
+            ? 'اول عضو گروه شو، بعد روی دکمه‌ی تأیید بزن.'
+            : 'نام ربات تلگرام هنوز در پنل مدیریت تنظیم نشده است.';
+
+        if (cfg.botUser) tgMountWidget();
+        else tgSetStatus('پیکربندی تلگرام ناقص است؛ به مدیر سرور اطلاع بده.', 'bad');
+        tgSyncSubmit();
+    }
+
+    document.getElementById('tgVerifyBtn').addEventListener('click', function () {
+        // اگر ویجت واقعی سوار شده باشد، کلیک به آن می‌رسد؛ این پیام فقط
+        // برای وقتی است که ویجت به هر دلیلی بالا نیامده.
+        if (!tgWidgetLoaded || !document.getElementById('tgWidgetHost').classList.contains('on')) {
+            tgSetStatus('دکمه‌ی تلگرام آماده نیست. صفحه را تازه کن یا فیلترشکن را روشن کن.', 'bad');
+        }
+    });
 
     // live username check
     let userTimer = null;
@@ -2059,8 +2240,10 @@ function wireAuthUI() {
             const res = await NXAuth.signUp({
                 username: document.getElementById('regUser').value,
                 email: document.getElementById('regEmail').value,
-                password: document.getElementById('regPass').value
+                password: document.getElementById('regPass').value,
+                telegramTicket: tgTicket
             });
+            tgTicket = null;   // بلیت یک‌بارمصرف است
             if (res.session) {
                 closeOverlay('authModal');
                 await reloadTeamsUI();
@@ -2071,9 +2254,12 @@ function wireAuthUI() {
                 setTab(true);
             }
         } catch (e) {
+            // اگر بلیت سوخته بود، باید دوباره تأیید بگیرد
+            if (/تأیید تلگرام|گروه تلگرام/.test(e.message || '')) tgTicket = null;
             showAuthError('authError', e.message);
         } finally {
             authBusy = false; this.disabled = false; this.textContent = 'ساخت حساب';
+            tgSyncSubmit();   // اگر دروازه‌ی تلگرام باز نشده، دکمه باید خاموش بماند
         }
     });
 

@@ -91,7 +91,12 @@
         BANNED:              'حساب شما مسدود شده است.',
         NOT_A_MEMBER:        'این بازیکن عضو تیم نیست.',
         NOT_ALLOWED:         'اجازه‌ی این کار را ندارید.',
-        TEAM_NOT_FOUND:      'تیم پیدا نشد.'
+        TEAM_NOT_FOUND:      'تیم پیدا نشد.',
+        TELEGRAM_REQUIRED:      'برای ثبت‌نام باید اول عضویتتان در گروه تلگرام تأیید شود.',
+        TELEGRAM_TICKET_INVALID:'تأیید تلگرام معتبر نیست. دوباره روی دکمه‌ی تلگرام بزنید.',
+        TELEGRAM_TICKET_USED:   'این تأیید تلگرام قبلاً استفاده شده است. دوباره تأیید کنید.',
+        TELEGRAM_TICKET_EXPIRED:'زمان تأیید تلگرام تمام شده است. دوباره تأیید کنید.',
+        TELEGRAM_ALREADY_USED:  'با این حساب تلگرام قبلاً ثبت‌نام شده است.'
     };
 
     function humanize(raw) {
@@ -194,10 +199,51 @@
         return rpc('username_available', { p_username: name });
     }
 
+    /**
+     * تأیید عضویت در گروه تلگرام.
+     *
+     * دیتای دکمه‌ی ورود تلگرام را به Edge Function می‌فرستد. آنجا (سمت سرور)
+     * امضا چک می‌شود و با getChatMember از تلگرام پرسیده می‌شود که این نفر
+     * واقعاً عضو گروه هست یا نه. توکن ربات هیچ‌وقت وارد مرورگر نمی‌شود.
+     *
+     * خروجی: { ok:true, ticket } یا { ok:false, code, message }
+     */
+    function verifyTelegram(tgUser, verifyUrl) {
+        var url = String(verifyUrl || '').trim();
+        if (!url) {
+            if (!cfg.url) return Promise.reject(new Error('اتصال به سرور تنظیم نشده است.'));
+            url = cfg.url.replace(/\/+$/, '') + '/functions/v1/telegram-verify';
+        }
+        if (!tgUser || !tgUser.hash) {
+            return Promise.reject(new Error('دیتای تلگرام دریافت نشد. دوباره تلاش کنید.'));
+        }
+        return fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'apikey': cfg.anonKey,
+                'Authorization': 'Bearer ' + cfg.anonKey
+            },
+            body: JSON.stringify(tgUser)
+        }).then(function (res) {
+            return res.json().catch(function () { return null; }).then(function (body) {
+                if (!body) {
+                    throw new Error(res.status === 404
+                        ? 'سرویس بررسی تلگرام روی سوپابیس نصب نشده است (telegram-verify).'
+                        : 'پاسخ سرویس تلگرام قابل خواندن نبود.');
+                }
+                return body;
+            });
+        }, function () {
+            throw new Error('ارتباط با سرویس بررسی تلگرام برقرار نشد.');
+        });
+    }
+
     function signUp(opts) {
         var username = String(opts.username || '').trim();
         var email = String(opts.email || '').trim();
         var password = String(opts.password || '');
+        var ticket = String(opts.telegramTicket || '').trim();
 
         if (!/^[A-Za-z0-9_]{3,16}$/.test(username)) return Promise.reject(new Error(MESSAGES.USERNAME_INVALID));
         if (!/^\S+@\S+\.\S+$/.test(email))          return Promise.reject(new Error('ایمیل معتبر وارد کنید.'));
@@ -205,9 +251,11 @@
 
         return checkUsername(username).then(function (free) {
             if (free === false) throw new Error(MESSAGES.USERNAME_TAKEN);
+            var meta = { mc_username: username };
+            if (ticket) meta.telegram_ticket = ticket;
             return request('/auth/v1/signup', {
                 method: 'POST',
-                body: { email: email, password: password, data: { mc_username: username } }
+                body: { email: email, password: password, data: meta }
             });
         }).then(function (data) {
             if (data && data.access_token) { applyAuthResponse(data); return { session: true, user: data.user }; }
@@ -611,6 +659,7 @@
         fetchUser: fetchUser,
         consumeRecoveryLink: consumeRecoveryLink, updatePassword: updatePassword, siteUrl: siteUrl,
         checkUsername: checkUsername, myProfile: myProfile,
+        verifyTelegram: verifyTelegram,
         getConfig: getConfig, listTeams: listTeams, myMembership: myMembership,
         createTeam: createTeam, joinTeam: joinTeam, leaveTeam: leaveTeam,
         kickMember: kickMember, deleteTeam: deleteTeam, updateTeam: updateTeam,

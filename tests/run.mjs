@@ -1520,5 +1520,140 @@ let exitCode = 0;
   R.check('moving into the same team is refused', !!err && /همین تیم/.test(err.message));
 }
 
+/* ==========================================================================
+ * FF. the Telegram signature check in the Edge Function
+ *
+ * This is the one piece that decides whether the "I am a member" claim is
+ * real, so it is verified against an independent reference vector computed
+ * from Telegram's published algorithm rather than from our own code.
+ * ========================================================================== */
+{
+  R.section('FF. the Telegram login signature is verified correctly');
+
+  const { readFileSync } = await import('node:fs');
+  const crypto = await import('node:crypto');
+  const src = readFileSync('supabase/functions/telegram-verify/index.ts', 'utf8');
+
+  // Reference implementation of Telegram's spec, written independently.
+  const refHash = (token, data) => {
+    const dcs = Object.keys(data).filter(k => k !== 'hash' && data[k] !== '')
+      .sort().map(k => `${k}=${data[k]}`).join('\n');
+    const secret = crypto.createHash('sha256').update(token).digest();
+    return crypto.createHmac('sha256', secret).update(dcs).digest('hex');
+  };
+
+  // Lift the real functions out of the Edge Function and run them here.
+  const grab = (needle) => {
+    const i = src.indexOf(needle);
+    if (i < 0) return null;
+    let depth = 0, started = false, j = i;
+    while (j < src.length) {
+      if (src[j] === '{') { depth++; started = true; }
+      else if (src[j] === '}') { depth--; if (started && !depth) { j++; break; } }
+      j++;
+    }
+    return src.slice(i, j);
+  };
+  const lifted = ['function toHex', 'function safeEqual', 'async function checkTelegramSignature']
+    .map(grab);
+  R.check('the signature helpers are present in the function', lifted.every(Boolean));
+
+  const js = lifted.join('\n\n')
+    .replace(/: ArrayBuffer|: Record<string, string>|: Promise<boolean>|: string|: boolean|: number/g, '');
+  const mod = new Function('BOT_TOKEN', `
+    const enc = new TextEncoder();
+    ${js}
+    return checkTelegramSignature;`);
+
+  const TOKEN = '123456:TEST-TOKEN-abcdefghijklmnop';
+  const data = { id: '555001', first_name: 'Ali', username: 'aliii', auth_date: '1757400000' };
+  const good = refHash(TOKEN, data);
+  const verify = mod(TOKEN);
+
+  R.check('a genuine Telegram signature is accepted',
+    await verify({ ...data, hash: good }, good));
+  R.check('a tampered user id is rejected',
+    !(await verify({ ...data, id: '999999', hash: good }, good)),
+    'this is what stops someone claiming to be another telegram account');
+  R.check('a random hash is rejected',
+    !(await verify({ ...data, hash: 'a'.repeat(64) }, 'a'.repeat(64))));
+  R.check('a signature made with a different bot token is rejected',
+    !(await mod('wrong-token')({ ...data, hash: good }, good)));
+  R.check('an added field invalidates the signature',
+    !(await verify({ ...data, is_admin: 'true', hash: good }, good)));
+
+  // The Mini-App variant is a different algorithm; using it here is a
+  // well-known bug, so make sure we did not.
+  R.check('the Login Widget algorithm is used, not the Mini App one',
+    /digest\("SHA-256",\s*enc\.encode\(BOT_TOKEN\)\)/.test(src) && !/WebAppData/.test(src));
+  R.check('the comparison is constant time', /safeEqual\(/.test(src));
+  R.check('stale logins are rejected', /MAX_AUTH_AGE_SECONDS/.test(src));
+  R.check('only real membership statuses count',
+    /creator/.test(src) && /administrator/.test(src) && !/"left"\s*,/.test(
+      (src.match(/MEMBER_STATUSES = \[[^\]]*\]/) || [''])[0]));
+  R.check('the bot token is only ever read from the environment',
+    /Deno\.env\.get\("TELEGRAM_BOT_TOKEN"\)/.test(src));
+}
+
+/* ==========================================================================
+ * GG. the registration form respects the gate
+ * ========================================================================== */
+{
+  R.section('GG. the sign-up form honours the Telegram gate');
+
+  const { readFileSync } = await import('node:fs');
+  const html = readFileSync('index.html', 'utf8');
+
+  R.check('the gate markup exists', /id="tgGate"/.test(html));
+  R.check('the submit button is gated', /tgSyncSubmit/.test(html));
+  R.check('the ticket is handed to signUp', /telegramTicket:\s*tgTicket/.test(html));
+  R.check('the ticket is cleared after use', /tgTicket = null/.test(html));
+  R.check('the gate is re-evaluated when the register tab opens',
+    /if \(!login\) tgRefreshGate\(\)/.test(html));
+  R.check('the bot token never appears in the public page',
+    !/TELEGRAM_BOT_TOKEN|bot[0-9]{6,}:/.test(html),
+    'the token must only ever live in Edge Function secrets');
+
+  const auth = readFileSync('js/nx-auth.js', 'utf8');
+  R.check('verifyTelegram is exported', /verifyTelegram: verifyTelegram/.test(auth));
+  R.check('signUp forwards the ticket as user metadata',
+    /meta\.telegram_ticket = ticket/.test(auth));
+  R.check('the ticket is omitted when there is none',
+    /if \(ticket\) meta\.telegram_ticket/.test(auth));
+  for (const code of ['TELEGRAM_REQUIRED', 'TELEGRAM_TICKET_INVALID',
+                      'TELEGRAM_TICKET_USED', 'TELEGRAM_TICKET_EXPIRED',
+                      'TELEGRAM_ALREADY_USED']) {
+    R.check(`${code} has a Persian message`,
+      new RegExp(code + ':\\s*\'[^\']*[\\u0600-\\u06FF]').test(auth));
+  }
+
+  const admin = readFileSync('admin.html', 'utf8');
+  R.check('the admin panel can switch the gate on', /id="acTgRequired"/.test(admin));
+  R.check('the admin panel saves the telegram settings',
+    /patch\.telegram_required\s*=\s*tgOn/.test(admin) &&
+    /patch\.telegram_bot_username\s*=\s*tgBot/.test(admin));
+  R.check('turning the gate on without a bot name is blocked',
+    /tgOn && !tgBot/.test(admin),
+    'otherwise registration would be silently locked for everyone');
+  R.check('the admin panel never asks for the bot token',
+    !/bot.?token/i.test(admin.replace(/توکن ربات باید در سوپابیس[^<]*/g, '')),
+    'the token belongs in Edge Function secrets, never in a browser form');
+
+  // An older database has none of the telegram columns. Sending them would
+  // make every settings save fail, so they must be left out.
+  R.check('the telegram columns are only sent when the database has them',
+    /const tgSupported = !!\(acSettings && 'telegram_required' in acSettings\)/.test(admin) &&
+    /if \(tgSupported\) \{/.test(admin),
+    'otherwise upgrading breaks saving the ordinary limits too');
+  R.check('an out-of-date database is reported instead of failing silently',
+    /acTgNeedSchema/.test(admin) && /schema\.sql/.test(admin));
+  // acSettings is null until an admin signs in, so the "are we turning this
+  // on for the first time?" check must not dereference it bare.
+  R.check('the confirm guard tolerates settings not being loaded yet',
+    /!\(acSettings && acSettings\.telegram_required\)/.test(admin) &&
+    !/[^&(]\s!acSettings\.telegram_required/.test(admin),
+    'acSettings is null before the admin logs in');
+}
+
 exitCode = R.done('ALL NETHERAXIA TESTS');
 process.exit(exitCode);
