@@ -27,13 +27,6 @@ create table if not exists public.app_settings (
 );
 insert into public.app_settings (id) values (1) on conflict (id) do nothing;
 
--- تنظیمات گروه تلگرام (اگر قبلاً اسکیما را اجرا کرده‌اید، این ستون‌ها اضافه می‌شوند)
-alter table public.app_settings
-    add column if not exists telegram_required      boolean not null default false,
-    add column if not exists telegram_group_url     text    not null default '',
-    add column if not exists telegram_bot_username  text    not null default '',
-    add column if not exists telegram_verify_url    text    not null default '';
-
 -- ============================================================================
 -- ۲) پروفایل بازیکن — به auth.users وصل است
 -- ============================================================================
@@ -51,107 +44,9 @@ do $$ begin
         check (mc_username ~ '^[A-Za-z0-9_]{3,16}$');
 exception when duplicate_object then null; end $$;
 
--- حساب تلگرامی که موقع ثبت‌نام تأیید شده است
-alter table public.profiles
-    add column if not exists telegram_id       bigint,
-    add column if not exists telegram_username text;
-
--- هر حساب تلگرام فقط یک بازیکن (جلوگیری از چند حسابه)
-create unique index if not exists profiles_telegram_uniq
-    on public.profiles (telegram_id) where telegram_id is not null;
-
 -- نام ماینکرفتی بدون توجه به بزرگی/کوچکی حروف یکتاست
 create unique index if not exists profiles_username_uniq
     on public.profiles (lower(mc_username));
-
--- ============================================================================
--- ۲.۵) بلیت عضویت تلگرام
---     Edge Function بعد از اینکه با getChatMember مطمئن شد طرف واقعاً عضو
---     گروه است، اینجا یک بلیت یک‌بارمصرف می‌سازد. موقع ثبت‌نام همین بلیت
---     مصرف می‌شود.
---
---     چرا بلیت؟ چون اگر فقط مرورگر بگوید «تأیید شد»، کاربر می‌تواند مستقیم
---     به REST API درخواست بدهد و مرحله را رد کند. بلیت را فقط سرور می‌سازد.
--- ============================================================================
-create table if not exists public.telegram_tickets (
-    token             uuid primary key default gen_random_uuid(),
-    telegram_id       bigint      not null,
-    telegram_username text,
-    telegram_name     text,
-    created_at        timestamptz not null default now(),
-    used_at           timestamptz,
-    used_by           uuid references auth.users(id) on delete set null
-);
-
-create index if not exists telegram_tickets_tg_id on public.telegram_tickets (telegram_id);
-
--- ── کدهای تأیید (راه دوم، بدون نیاز به باز شدن telegram.org در مرورگر) ──
---    بازیکن در خود تلگرام به ربات پیام می‌دهد، ربات یک کد ۶ رقمی می‌دهد و
---    بازیکن همان کد را در سایت وارد می‌کند. چون کد فقط در چت خصوصیِ همان
---    شخص فرستاده می‌شود، داشتنِ کد یعنی واقعاً صاحب آن حساب تلگرام است.
-create table if not exists public.telegram_codes (
-    code              text primary key,
-    telegram_id       bigint      not null,
-    telegram_username text,
-    telegram_name     text,
-    created_at        timestamptz not null default now(),
-    used_at           timestamptz
-);
-
-create index if not exists telegram_codes_tg_id on public.telegram_codes (telegram_id);
-
--- کد ۶ رقمی را می‌گیرد و اگر درست بود، بلیت ثبت‌نام می‌دهد.
--- کد ۱۰ دقیقه اعتبار دارد و فقط یک بار مصرف می‌شود.
-create or replace function public.redeem_telegram_code(p_code text)
-returns json language plpgsql security definer set search_path = public as $$
-declare
-    c public.telegram_codes;
-    t uuid;
-    tries int;
-begin
-    -- محافظت در برابر حدس زدن: بیش از ۱۰ تلاش ناموفق در ۱۵ دقیقه یعنی حمله
-    select count(*) into tries from public.telegram_codes
-     where used_at is null and created_at > now() - interval '15 minutes';
-    if tries > 200 then
-        raise exception 'TOO_MANY_ATTEMPTS';
-    end if;
-
-    select * into c from public.telegram_codes
-     where code = btrim(p_code) for update;
-
-    if c.code is null then
-        raise exception 'TELEGRAM_CODE_INVALID';
-    end if;
-    if c.used_at is not null then
-        raise exception 'TELEGRAM_CODE_USED';
-    end if;
-    if c.created_at < now() - interval '10 minutes' then
-        raise exception 'TELEGRAM_CODE_EXPIRED';
-    end if;
-    if exists (select 1 from public.profiles p where p.telegram_id = c.telegram_id) then
-        raise exception 'TELEGRAM_ALREADY_USED';
-    end if;
-
-    update public.telegram_codes set used_at = now() where code = c.code;
-
-    insert into public.telegram_tickets (telegram_id, telegram_username, telegram_name)
-    values (c.telegram_id, c.telegram_username, c.telegram_name)
-    returning token into t;
-
-    return json_build_object('ticket', t,
-                             'username', c.telegram_username,
-                             'name', c.telegram_name);
-end $$;
-
--- بلیت ۳۰ دقیقه اعتبار دارد
-create or replace function public.telegram_ticket_valid(p_token uuid)
-returns boolean language sql stable security definer set search_path = public as $$
-    select exists (
-        select 1 from public.telegram_tickets t
-        where t.token = p_token
-          and t.used_at is null
-          and t.created_at > now() - interval '30 minutes');
-$$;
 
 -- ============================================================================
 -- ۳) تیم‌ها
@@ -205,49 +100,10 @@ returns trigger language plpgsql security definer set search_path = public as $$
 declare
     s public.app_settings;
     uname text;
-    tkt   text;
-    trow  public.telegram_tickets;
 begin
     select * into s from public.app_settings where id = 1;
     if not s.registration_open then
         raise exception 'REGISTRATION_CLOSED';
-    end if;
-
-    -- ── دروازه‌ی تلگرام ──────────────────────────────────────────────────
-    -- اگر مدیر «عضویت در گروه تلگرام الزامی است» را روشن کرده باشد، ثبت‌نام
-    -- فقط با بلیتی انجام می‌شود که Edge Function بعد از getChatMember ساخته.
-    -- این چک اینجاست (نه در مرورگر) تا حتی درخواست مستقیم به API هم رد شود.
-    if s.telegram_required then
-        tkt := btrim(coalesce(new.raw_user_meta_data->>'telegram_ticket', ''));
-        if tkt = '' then
-            raise exception 'TELEGRAM_REQUIRED';
-        end if;
-
-        begin
-            select * into trow from public.telegram_tickets
-            where token = tkt::uuid for update;
-        exception when invalid_text_representation then
-            raise exception 'TELEGRAM_TICKET_INVALID';
-        end;
-
-        if trow.token is null then
-            raise exception 'TELEGRAM_TICKET_INVALID';
-        end if;
-        if trow.used_at is not null then
-            raise exception 'TELEGRAM_TICKET_USED';
-        end if;
-        if trow.created_at < now() - interval '30 minutes' then
-            raise exception 'TELEGRAM_TICKET_EXPIRED';
-        end if;
-        if exists (select 1 from public.profiles p
-                   where p.telegram_id = trow.telegram_id) then
-            raise exception 'TELEGRAM_ALREADY_USED';
-        end if;
-
-        -- بلیت مصرف شد؛ دیگر قابل استفاده‌ی دوباره نیست
-        update public.telegram_tickets
-           set used_at = now(), used_by = new.id
-         where token = trow.token;
     end if;
 
     uname := btrim(coalesce(new.raw_user_meta_data->>'mc_username', ''));
@@ -261,8 +117,8 @@ begin
         raise exception 'USERNAME_TAKEN';
     end if;
 
-    insert into public.profiles (id, mc_username, email, telegram_id, telegram_username)
-    values (new.id, uname, new.email, trow.telegram_id, trow.telegram_username);
+    insert into public.profiles (id, mc_username, email)
+    values (new.id, uname, new.email);
     return new;
 end $$;
 
@@ -458,10 +314,6 @@ returns json language sql stable security definer set search_path = public as $$
         'team_creation_open', s.team_creation_open,
         'join_open',          s.join_open,
         'one_team_per_user',  s.one_team_per_user,
-        'telegram_required',     s.telegram_required,
-        'telegram_group_url',    s.telegram_group_url,
-        'telegram_bot_username', s.telegram_bot_username,
-        'telegram_verify_url',   s.telegram_verify_url,
         'team_count',         (select count(*) from public.teams),
         'player_count',       (select count(*) from public.profiles),
         'member_count',       (select count(*) from public.team_members))
@@ -505,15 +357,10 @@ grant execute on function public.transfer_leadership(uuid, uuid) to authenticate
 -- ============================================================================
 -- ۸) RLS — چه کسی اجازه‌ی چه کاری دارد
 -- ============================================================================
-alter table public.profiles          enable row level security;
-alter table public.teams             enable row level security;
-alter table public.team_members      enable row level security;
-alter table public.app_settings      enable row level security;
-alter table public.telegram_tickets  enable row level security;
-alter table public.telegram_codes    enable row level security;
--- هیچ policyای برای telegram_tickets تعریف نمی‌شود ⇒ هیچ کاربر عادی‌ای
--- (نه anon نه authenticated) نمی‌تواند بخواند یا بنویسد. کلید سرویس RLS را
--- دور می‌زند، پس Edge Function کار می‌کند.
+alter table public.profiles     enable row level security;
+alter table public.teams        enable row level security;
+alter table public.team_members enable row level security;
+alter table public.app_settings enable row level security;
 
 drop policy if exists profiles_select   on public.profiles;
 drop policy if exists profiles_update   on public.profiles;
@@ -609,15 +456,6 @@ grant insert, update, delete         on public.team_members to authenticated;
 grant select                         on public.app_settings to anon, authenticated;
 grant update                         on public.app_settings to authenticated;
 
--- جدول بلیت‌ها عمداً به anon/authenticated داده نمی‌شود: فقط Edge Function
--- (با کلید سرویس) می‌نویسد و فقط تریگر ثبت‌نام (security definer) می‌خواند.
--- اگر مرورگر می‌توانست بلیت بسازد، کل دروازه بی‌معنی می‌شد.
-revoke all on public.telegram_tickets from anon, authenticated;
-revoke all on public.telegram_codes   from anon, authenticated;
-grant execute on function public.telegram_ticket_valid(uuid) to anon, authenticated;
--- کدها فقط از طریق این تابع مصرف می‌شوند، نه با خواندن مستقیم جدول
-grant execute on function public.redeem_telegram_code(text) to anon, authenticated;
-
 -- ============================================================================
 -- ۱۰) تازه‌سازی کش اسکیمای PostgREST
 --     بدون این، ستون‌های تازه‌اضافه‌شده (مثل teams.flag) با خطای
@@ -679,14 +517,6 @@ begin
                    where table_schema='public' and table_name='teams'
                      and column_name='flag') then
         missing := missing || ' teams.flag';
-    end if;
-    if to_regclass('public.telegram_tickets') is null then
-        missing := missing || ' telegram_tickets';
-    end if;
-    if not exists (select 1 from information_schema.columns
-                   where table_schema='public' and table_name='app_settings'
-                     and column_name='telegram_required') then
-        missing := missing || ' app_settings.telegram_required';
     end if;
     if missing <> '' then
         raise exception 'اسکیما ناقص اجرا شد. این موارد ساخته نشدند:%', missing;
