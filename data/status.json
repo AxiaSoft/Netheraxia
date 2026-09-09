@@ -1,14 +1,14 @@
 {
   "status": "starting",
   "headline": "آماده سازی سیزن ۲",
-  "message": "سرور ۲۰ شهریور شروع میشود. برای اطلاعات بیشتر در تلگرام به آی دی @HyraxMC پیغام دهید.",
+  "message": "🔴 ثبت نام سرور به پایان رسیده است",
   "javaAddress": "sv3.tgmc.ir:28416",
   "bedrockAddress": "sv3.tgmc.ir",
   "bedrockPort": "28416",
-  "version": "26.2",
+  "version": "برای جاوا: 26.2 | برای بدراک: 26.33",
   "showConnectBtn": false,
   "connectBtnText": "بزن بریم",
   "showVersion": true,
   "showPanel": true,
-  "updatedAt": "۱۴۰۵/۰۶/۱۴, ۱۶:۱۹"
+  "updatedAt": "۱۴۰۵/۰۶/۱۸, ۲۳:۱۹"
 }
