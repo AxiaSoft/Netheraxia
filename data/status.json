@@ -1,14 +1,14 @@
 {
   "status": "starting",
   "headline": "آماده سازی سیزن ۲",
-  "message": "سرور درحال کانفیگ شدن است تا لحظاتی دیگر در دسترس قرار میگیرد",
-  "javaAddress": "sv3.tgmc.ir:28416",
-  "bedrockAddress": "sv3.tgmc.ir",
-  "bedrockPort": "28416",
+  "message": "سرور در حال کانفیگ شدن میباشد تا لحظاتی دیگر سرور در دسترس خواهد بود",
+  "javaAddress": "host2.hgmc.ir:21975",
+  "bedrockAddress": "host2.hgmc.ir",
+  "bedrockPort": "21975",
   "version": "برای جاوا: 26.2 | برای بدراک: 26.33",
   "showConnectBtn": false,
   "connectBtnText": "بزن بریم",
   "showVersion": true,
   "showPanel": true,
-  "updatedAt": "۱۴۰۵/۰۶/۲۰, ۱۷:۱۵"
+  "updatedAt": "۱۴۰۵/۰۶/۲۰, ۱۷:۱۶"
 }
