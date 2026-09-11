@@ -1,7 +1,7 @@
 {
   "status": "starting",
   "headline": "آماده سازی سیزن ۲",
-  "message": "🔴 ثبت نام سرور به پایان رسیده است",
+  "message": "سرور درحال کانفیگ شدن است تا لحظاتی دیگر در دسترس قرار میگیرد",
   "javaAddress": "sv3.tgmc.ir:28416",
   "bedrockAddress": "sv3.tgmc.ir",
   "bedrockPort": "28416",
@@ -10,5 +10,5 @@
   "connectBtnText": "بزن بریم",
   "showVersion": true,
   "showPanel": true,
-  "updatedAt": "۱۴۰۵/۰۶/۱۸, ۲۳:۱۹"
+  "updatedAt": "۱۴۰۵/۰۶/۲۰, ۱۷:۱۵"
 }
