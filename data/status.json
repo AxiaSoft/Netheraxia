@@ -1,14 +1,14 @@
 {
-  "status": "starting",
+  "status": "online",
   "headline": "آماده سازی سیزن ۲",
-  "message": "سرور در حال کانفیگ شدن میباشد تا لحظاتی دیگر سرور در دسترس خواهد بود",
+  "message": "به سیزن دوم ندراکسیا خوش آمدید!",
   "javaAddress": "host2.hgmc.ir:21975",
   "bedrockAddress": "host2.hgmc.ir",
   "bedrockPort": "21975",
   "version": "برای جاوا: 26.2 | برای بدراک: 26.33",
-  "showConnectBtn": false,
+  "showConnectBtn": true,
   "connectBtnText": "بزن بریم",
   "showVersion": true,
   "showPanel": true,
-  "updatedAt": "۱۴۰۵/۰۶/۲۰, ۱۷:۱۶"
+  "updatedAt": "۱۴۰۵/۰۶/۲۰, ۱۸:۰۸"
 }
