@@ -1,6 +1,6 @@
 {
   "status": "online",
-  "headline": "آماده سازی سیزن ۲",
+  "headline": "درحال برگذاری سیزن ۲",
   "message": "به سیزن دوم ندراکسیا خوش آمدید!",
   "javaAddress": "host2.hgmc.ir:21975",
   "bedrockAddress": "host2.hgmc.ir",
@@ -10,5 +10,5 @@
   "connectBtnText": "بزن بریم",
   "showVersion": true,
   "showPanel": true,
-  "updatedAt": "۱۴۰۵/۰۶/۲۰, ۱۸:۰۸"
+  "updatedAt": "۱۴۰۵/۰۷/۱۰, ۰۶:۳۰"
 }
