@@ -91,7 +91,12 @@
         BANNED:              'حساب شما مسدود شده است.',
         NOT_A_MEMBER:        'این بازیکن عضو تیم نیست.',
         NOT_ALLOWED:         'اجازه‌ی این کار را ندارید.',
-        TEAM_NOT_FOUND:      'تیم پیدا نشد.'
+        TEAM_NOT_FOUND:      'تیم پیدا نشد.',
+        PLAYER_NOT_FOUND:    'این بازیکن پیدا نشد؛ شاید قبلاً حذف شده باشد.',
+        CANNOT_DELETE_SELF:  'نمی‌توانید حساب خودتان را حذف کنید.',
+        CANNOT_DELETE_ADMIN: 'این بازیکن ادمین است. اول دسترسی ادمین او را بردارید، ' +
+                             'بعد حذفش کنید.',
+        DELETE_FAILED:       'حذف انجام نشد. فایل supabase/schema.sql را دوباره اجرا کنید.'
     };
 
     function humanize(raw) {
@@ -571,6 +576,30 @@
         }).then(function (rows) { return requireRows(rows)[0]; });
     }
 
+    /**
+     * حذف کامل یک بازیکن از سایت (فقط ادمین).
+     *
+     * کل کار سمت دیتابیس انجام می‌شود، چون پاک کردن حساب از auth.users از
+     * مرورگر ممکن نیست. اگر فقط ردیف profiles پاک می‌شد، طرف همچنان
+     * می‌توانست وارد شود و ایمیلش هم اشغال می‌ماند.
+     *
+     * خروجی: { username, teams_deleted, teams_transferred, memberships_removed,
+     *          deleted_team_names, transferred_team_names }
+     */
+    function deletePlayer(userId) {
+        if (!userId) return Promise.reject(new Error('بازیکن مشخص نیست.'));
+        return rpc('admin_delete_player', { p_user_id: userId }).then(function (res) {
+            if (!res || !res.username) {
+                var err = new Error('حذف انجام نشد — پاسخی از دیتابیس نیامد. ' +
+                                    'مطمئن شوید با حساب ادمین وارد شده‌اید و ' +
+                                    'فایل supabase/schema.sql را دوباره اجرا کرده‌اید.');
+                err.blocked = true;
+                throw err;
+            }
+            return res;
+        });
+    }
+
     // جابه‌جایی بازیکن بین تیم‌ها: اول از تیم قبلی بیرون، بعد داخل تیم جدید.
     // اگر افزودن شکست بخورد (مثلاً تیم پر باشد) بازیکن را به تیم قبلی برمی‌گردانیم
     // تا بی‌تیم رها نشود.
@@ -620,6 +649,7 @@
         listPlayers: listPlayers, listPlayersWithTeams: listPlayersWithTeams,
         setPlayerFlags: setPlayerFlags,
         adminAddMember: adminAddMember, adminMovePlayer: adminMovePlayer,
+        deletePlayer: deletePlayer,
         humanize: humanize, rest: rest, rpc: rpc, refresh: refreshIfNeeded,
         takeWarning: takeWarning
     };

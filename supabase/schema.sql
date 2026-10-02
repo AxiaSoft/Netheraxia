@@ -348,11 +348,99 @@ begin
     update public.team_members set is_leader = (user_id = p_new_owner) where team_id = p_team_id;
 end $$;
 
+-- حذف کامل یک بازیکن از سایت (فقط ادمین)
+--
+-- چرا یک تابع لازم است؟ چون پاک کردن ردیف profiles کافی نیست: حساب در
+-- auth.users باقی می‌ماند، طرف همچنان می‌تواند وارد شود و ایمیلش هم اشغال
+-- می‌ماند. حذف واقعی باید auth.users را پاک کند و مرورگر اجازه‌ی آن را
+-- ندارد. این تابع security definer است، پس با دسترسی سازنده‌ی خودش
+-- (postgres) اجرا می‌شود — بدون اینکه کلید مخفی به مرورگر برود.
+--
+-- تیم‌های طرف چه می‌شوند؟
+--   • اگر عضو دیگری داشته باشد  → کاپیتانی به قدیمی‌ترین عضو می‌رسد و تیم می‌ماند
+--   • اگر تنها عضو تیم باشد     → تیم حذف می‌شود
+-- خروجی تابع دقیقاً می‌گوید چه اتفاقی افتاد تا ادمین غافلگیر نشود.
+create or replace function public.admin_delete_player(p_user_id uuid)
+returns json language plpgsql security definer set search_path = public as $$
+declare
+    victim    public.profiles;
+    t         record;
+    heir      uuid;
+    n_dropped int := 0;
+    n_moved   int := 0;
+    n_member  int := 0;
+    dropped   text[] := '{}';
+    moved     text[] := '{}';
+begin
+    if not public.is_admin() then
+        raise exception 'NOT_ALLOWED';
+    end if;
+
+    select * into victim from public.profiles where id = p_user_id;
+    if victim.id is null then
+        raise exception 'PLAYER_NOT_FOUND';
+    end if;
+
+    -- جلوگیری از پاک کردن حساب خودِ ادمین (قفل شدن بیرون از پنل)
+    if victim.id = auth.uid() then
+        raise exception 'CANNOT_DELETE_SELF';
+    end if;
+
+    -- یک ادمین نمی‌تواند ادمین دیگری را پاک کند؛ اول باید ادمینی‌اش گرفته شود
+    if victim.is_admin then
+        raise exception 'CANNOT_DELETE_ADMIN';
+    end if;
+
+    -- تیم‌هایی که این بازیکن کاپیتانشان است
+    for t in select * from public.teams where owner_id = p_user_id loop
+        select tm.user_id into heir
+          from public.team_members tm
+         where tm.team_id = t.id and tm.user_id <> p_user_id
+         order by tm.is_leader desc, tm.joined_at asc
+         limit 1;
+
+        if heir is null then
+            -- کسی در تیم نمانده → تیم حذف شود
+            delete from public.teams where id = t.id;
+            n_dropped := n_dropped + 1;
+            dropped   := dropped || t.name;
+        else
+            -- تیم زنده بماند و کاپیتانی منتقل شود
+            update public.teams set owner_id = heir where id = t.id;
+            update public.team_members set is_leader = (user_id = heir) where team_id = t.id;
+            n_moved := n_moved + 1;
+            moved   := moved || t.name;
+        end if;
+    end loop;
+
+    select count(*) into n_member from public.team_members where user_id = p_user_id;
+
+    -- حذف حساب؛ profiles و team_members به‌صورت آبشاری پاک می‌شوند
+    delete from auth.users where id = p_user_id;
+    -- اگر ردیف auth از قبل نبود، دست‌کم پروفایل را پاک کن
+    delete from public.profiles where id = p_user_id;
+
+    if exists (select 1 from public.profiles where id = p_user_id) then
+        raise exception 'DELETE_FAILED';
+    end if;
+
+    return json_build_object(
+        'username',               victim.mc_username,
+        'teams_deleted',          n_dropped,
+        'teams_transferred',      n_moved,
+        'memberships_removed',    n_member,
+        'deleted_team_names',     dropped,
+        'transferred_team_names', moved);
+end $$;
+
 grant execute on function public.username_available(text) to anon, authenticated;
 grant execute on function public.email_for_login(text, text) to anon, authenticated;
 grant execute on function public.public_config()          to anon, authenticated;
 grant execute on function public.my_membership()          to authenticated;
 grant execute on function public.transfer_leadership(uuid, uuid) to authenticated;
+grant execute on function public.admin_delete_player(uuid) to authenticated;
+-- هیچ‌وقت برای بازدیدکننده‌ی ناشناس باز نباشد
+revoke execute on function public.admin_delete_player(uuid) from public, anon;
 
 -- ============================================================================
 -- ۸) RLS — چه کسی اجازه‌ی چه کاری دارد
@@ -517,6 +605,9 @@ begin
                    where table_schema='public' and table_name='teams'
                      and column_name='flag') then
         missing := missing || ' teams.flag';
+    end if;
+    if to_regprocedure('public.admin_delete_player(uuid)') is null then
+        missing := missing || ' admin_delete_player';
     end if;
     if missing <> '' then
         raise exception 'اسکیما ناقص اجرا شد. این موارد ساخته نشدند:%', missing;

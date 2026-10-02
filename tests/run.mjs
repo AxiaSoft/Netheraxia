@@ -1585,5 +1585,199 @@ let exitCode = 0;
     'only an explicit false may close the form');
 }
 
+/* ==========================================================================
+ * GG. deleting a player from the panel
+ * ========================================================================== */
+{
+  const { store, reg } = installDom();
+  globalThis.history = { replaceState(){} };
+  const cfg = { url:'https://demo.supabase.co', anonKey:'k' };
+  globalThis.window.NETHERAXIA_SUPABASE = cfg; globalThis.NETHERAXIA_SUPABASE = cfg;
+  loadScript('js/nx-auth.js');
+  const A = globalThis.NXAuth;
+  A.saveConfig(cfg.url, cfg.anonKey);
+  store['nthx_session'] = JSON.stringify({ access_token:'t', refresh_token:'r',
+    expires_at: Math.floor(Date.now()/1000)+9999, user:{ id:'admin' } });
+  await A.init();
+
+  let players = [
+    { id:'admin', mc_username:'Boss',   email:'b@mc.com', is_admin:true,  is_banned:false, created_at:'2025-01-01' },
+    { id:'u1',    mc_username:'Steve',  email:'s@mc.com', is_admin:false, is_banned:false, created_at:'2025-01-02' },
+    { id:'u2',    mc_username:'Alex',   email:'a@mc.com', is_admin:false, is_banned:false, created_at:'2025-01-03' },
+    { id:'u9',    mc_username:'Second', email:'c@mc.com', is_admin:true,  is_banned:false, created_at:'2025-01-04' },
+    { id:'u3',    mc_username:'Mate',   email:'m@mc.com', is_admin:false, is_banned:false, created_at:'2025-01-05' }
+  ];
+  let members = [{ user_id:'u1', team_id:'t1', is_leader:true }];
+  const teams = () => [{ id:'t1', name:'Alpha',
+    members: members.filter(m=>m.team_id==='t1')
+      .map(m=>({ user_id:m.user_id, name:'x', is_leader:m.is_leader })) }];
+
+  let rpcCalls = [], rpcFails = null;
+  const route = async (url, opt={}) => {
+    const u = String(url);
+    if (u.includes('/auth/v1/user')) return { ok:true, status:200, text:async()=>JSON.stringify({id:'admin'}) };
+    if (u.includes('/rpc/admin_delete_player')) {
+      const body = JSON.parse(opt.body || '{}');
+      rpcCalls.push(body.p_user_id);
+      if (rpcFails) return { ok:false, status:400, text:async()=>JSON.stringify({ message: rpcFails }) };
+      const victim = players.find(p => p.id === body.p_user_id);
+      players = players.filter(p => p.id !== body.p_user_id);
+      members = members.filter(m => m.user_id !== body.p_user_id);
+      return { ok:true, status:200, text:async()=>JSON.stringify({
+        username: victim ? victim.mc_username : '?', teams_deleted:0,
+        teams_transferred:0, memberships_removed:0,
+        deleted_team_names:[], transferred_team_names:[] }) };
+    }
+    if (u.includes('/profiles'))     return { ok:true, status:200, text:async()=>JSON.stringify(players) };
+    if (u.includes('/teams_public')) return { ok:true, status:200, text:async()=>JSON.stringify(teams()) };
+    if (u.includes('public_config')) return { ok:true, status:200, text:async()=>JSON.stringify(
+      { max_teams:10, max_members:5, team_count:1, player_count:players.length, member_count:members.length }) };
+    if (u.includes('/app_settings')) return { ok:true, status:200, text:async()=>JSON.stringify(
+      [{ id:1, max_teams:10, max_members:5, registration_open:true, team_creation_open:true,
+         join_open:true, one_team_per_user:true }]) };
+    if (u.includes('/team_members')) return { ok:true, status:200, text:async()=>JSON.stringify(members) };
+    return { ok:true, status:200, text:async()=>'[]' };
+  };
+  globalThis.fetch = route;
+
+  const P = loadPage('admin.html', `globalThis.__X={load:loadAccountsData,
+    del:acDeletePlayer, players:()=>acPlayers}`);
+  await P.load();
+
+  R.section('GG. an admin can delete a player from the panel');
+
+  const html = () => reg['acPlayersList'].innerHTML;
+  // the delete buttons, in the order the rows are rendered
+  const nukes = () => (html().match(/<button[^>]*btn-nuke[^>]*>/g) || [])
+    .map(b => b.replace(/\s+/g, ' '));
+  const nukeFor = name => {
+    const parts = html().split('<div class="ac-row">').slice(1);
+    const i = parts.findIndex(s => s.includes(name));
+    return i < 0 ? '' : ((parts[i].match(/<button[^>]*btn-nuke[^>]*>/) || [''])[0]).replace(/\s+/g,' ');
+  };
+
+  R.check('every player row carries a delete button', nukes().length === players.length);
+  R.check('a delete button is offered for a normal player',
+    /onclick="acDeletePlayer\('u2'\)"/.test(nukeFor('Alex')));
+  R.check('the admin cannot delete their own account from the UI',
+    /disabled/.test(nukeFor('Boss')) && !/acDeletePlayer/.test(nukeFor('Boss')),
+    'the database refuses it too, but the button should not invite the click');
+  R.check('another admin cannot be deleted from the UI',
+    /disabled/.test(nukeFor('Second')) && !/acDeletePlayer/.test(nukeFor('Second')));
+  R.check('the disabled button explains why',
+    /title="[^"]*ادمین[^"]*"/.test(nukeFor('Second')));
+  R.check('the delete button is visually distinct from the ban button',
+    !/btn-danger/.test(nukeFor('Alex')),
+    'the two sit side by side; they must not look like the same action');
+
+  // cancelling must do nothing at all
+  let asked = '';
+  globalThis.confirm = (m) => { asked = m; return false; };
+  rpcCalls = [];
+  await P.del('u2');
+  R.check('cancelling the confirm deletes nothing', rpcCalls.length === 0);
+  R.check('the player is still listed',
+    P.players().some(p => p.mc_username === 'Alex'));
+  R.check('the confirm names the player', /Alex/.test(asked));
+  R.check('the confirm says it cannot be undone', /برگشت/.test(asked));
+
+  // a captain who is alone in their team: the team goes too
+  globalThis.confirm = (m) => { asked = m; return false; };
+  await P.del('u1');
+  R.check('deleting a lone captain warns the team will be removed',
+    /Alpha/.test(asked) && /حذف می‌شود/.test(asked),
+    'the owner_id cascade makes this a bigger action than it looks');
+
+  // now really delete
+  globalThis.confirm = () => true;
+  rpcCalls = [];
+  await P.del('u2');
+  R.check('confirming calls the delete function once', rpcCalls.length === 1);
+  R.check('and passes the right player id', rpcCalls[0] === 'u2');
+  R.check('the player disappears from the list',
+    !P.players().some(p => p.mc_username === 'Alex'),
+    'the list must be reloaded from the database afterwards');
+  R.check('the others are untouched',
+    P.players().some(p => p.mc_username === 'Steve'));
+
+  // a refusal from the database must surface, and the list must still refresh
+  rpcFails = 'CANNOT_DELETE_ADMIN';
+  rpcCalls = [];
+  await P.del('u1');
+  R.check('a refusal still reaches the database', rpcCalls.length === 1);
+  R.check('a refused delete leaves the player in place',
+    P.players().some(p => p.mc_username === 'Steve'));
+  rpcFails = null;
+
+  // the other half of the same warning: a captain who is NOT alone
+  members.push({ user_id:'u3', team_id:'t1', is_leader:false });
+  await P.load();
+  globalThis.confirm = (m) => { asked = m; return false; };
+  await P.del('u1');
+  R.check('deleting a captain with team-mates promises the team survives',
+    /حذف نمی‌شود/.test(asked) && /کاپیتانی/.test(asked),
+    'the lone-captain wording would be a lie here');
+  await P.del('u3');
+  R.check('deleting an ordinary member says the team stays',
+    /باقی می‌ماند/.test(asked) && !/کاپیتان/.test(asked));
+}
+
+/* ==========================================================================
+ * HH. the delete API itself
+ * ========================================================================== */
+{
+  installDom();
+  const cfg = { url:'https://demo.supabase.co', anonKey:'k' };
+  globalThis.window.NETHERAXIA_SUPABASE = cfg; globalThis.NETHERAXIA_SUPABASE = cfg;
+  loadScript('js/nx-auth.js');
+  const A = globalThis.NXAuth;
+  A.saveConfig(cfg.url, cfg.anonKey);
+
+  R.section('HH. deletePlayer reports failures honestly');
+
+  let err = null;
+  await A.deletePlayer('').catch(e => err = e);
+  R.check('a missing id is caught before any request',
+    !!err && /مشخص نیست/.test(err.message));
+
+  // PostgREST answers 200 with null when the call is silently refused
+  globalThis.fetch = async () => ({ ok:true, status:200, text:async()=>'null' });
+  err = null;
+  await A.deletePlayer('u2').catch(e => err = e);
+  R.check('an empty answer is treated as a failure, not a success',
+    !!err && err.blocked === true,
+    'otherwise the panel would report a delete that never happened');
+  R.check('and the message points at the admin session and the schema',
+    !!err && /ادمین/.test(err.message) && /schema\.sql/.test(err.message));
+
+  globalThis.fetch = async () => ({ ok:false, status:400,
+    text:async()=>JSON.stringify({ message:'CANNOT_DELETE_SELF' }) });
+  err = null;
+  await A.deletePlayer('admin').catch(e => err = e);
+  R.check('CANNOT_DELETE_SELF is shown in Persian',
+    !!err && /حساب خودتان/.test(err.message));
+
+  globalThis.fetch = async () => ({ ok:false, status:400,
+    text:async()=>JSON.stringify({ message:'CANNOT_DELETE_ADMIN' }) });
+  err = null;
+  await A.deletePlayer('u9').catch(e => err = e);
+  R.check('CANNOT_DELETE_ADMIN explains what to do first',
+    !!err && /دسترسی ادمین/.test(err.message));
+
+  globalThis.fetch = async () => ({ ok:false, status:400,
+    text:async()=>JSON.stringify({ message:'PLAYER_NOT_FOUND' }) });
+  err = null;
+  await A.deletePlayer('ghost').catch(e => err = e);
+  R.check('PLAYER_NOT_FOUND is shown in Persian',
+    !!err && /پیدا نشد/.test(err.message));
+
+  globalThis.fetch = async () => ({ ok:true, status:200,
+    text:async()=>JSON.stringify({ username:'Alex', teams_deleted:1,
+      teams_transferred:0, deleted_team_names:['Alpha'], transferred_team_names:[] }) });
+  const ok = await A.deletePlayer('u2');
+  R.check('a successful delete returns what happened',
+    ok.username === 'Alex' && ok.teams_deleted === 1);
+}
+
 exitCode = R.done('ALL NETHERAXIA TESTS');
 process.exit(exitCode);

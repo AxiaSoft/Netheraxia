@@ -361,5 +361,218 @@ check('a missing trigger is detected',
   /تریگر ثبت‌نام وجود ندارد/.test(recreate), recreate.slice(0, 500));
 check('and is put back', /تست موفق/.test(recreate), recreate.slice(-400));
 
+/* ----------------------------------------------------------------
+ * H. deleting a player for good
+ *
+ * Deleting only the profiles row is not enough: the auth.users row
+ * would survive, the person could still log in and their email would
+ * stay taken. These checks run against the real cascade chain
+ *   auth.users -> profiles -> teams(owner) -> team_members
+ * because that chain is what makes this operation dangerous.
+ * ---------------------------------------------------------------- */
+section('H. an admin can remove a player completely');
+
+sql('j', SHIM);
+sql('j', NEW);
+sql('j', register('Boss', 'boss@mc.com'));
+sql('j', `select public.make_admin('Boss');`);
+sql('j', register('Plain', 'plain@mc.com'));
+
+// a visitor must never reach this function
+const anonTry = sql('j', `set role anon;
+  do $$ begin perform public.admin_delete_player(gen_random_uuid());
+    raise notice 'ALLOWED';
+  exception when others then raise notice 'REFUSED: %', sqlerrm; end $$;
+  reset role;`);
+check('an anonymous visitor cannot call it', /REFUSED/.test(anonTry), anonTry.slice(0, 200));
+
+// a logged-in non-admin must be refused
+const plainTry = sql('j', `${asUser('Plain')} set role authenticated;
+  do $$ declare u uuid; begin
+    select id into u from public.profiles where mc_username='Boss';
+    perform public.admin_delete_player(u);
+    raise notice 'ALLOWED';
+  exception when others then raise notice 'REFUSED: %', sqlerrm; end $$;
+  reset role;`);
+check('a normal player cannot delete anyone',
+  /REFUSED: NOT_ALLOWED/.test(plainTry), plainTry.slice(0, 300));
+check('and the target is still there',
+  /Boss/.test(sql('j', `select mc_username from public.profiles;`)));
+
+// the happy path: a plain player with no team
+const asBoss = `${asUser('Boss')} set role authenticated;`;
+const gone = sql('j', `${asBoss}
+  do $$ declare r json; u uuid; begin
+    select id into u from public.profiles where mc_username='Plain';
+    r := public.admin_delete_player(u);
+    raise notice 'DELETED %', r->>'username';
+  exception when others then raise notice 'REFUSED: %', sqlerrm; end $$;
+  reset role;`);
+check('an admin can delete a plain player', /DELETED Plain/.test(gone), gone.slice(0, 300));
+check('the profile row is gone',
+  !/Plain/.test(sql('j', `select mc_username from public.profiles;`)));
+check('the auth account is gone too',
+  !/plain@mc\.com/.test(sql('j', `select email from auth.users;`)),
+  'otherwise they could still log in and the email would stay taken');
+check('their email can be used to register again',
+  /ALLOWED/.test(sql('j', `do $$ begin
+    insert into auth.users (email, raw_user_meta_data)
+    values ('plain@mc.com', '{"mc_username":"PlainAgain"}'::jsonb);
+    raise notice 'ALLOWED';
+  exception when others then raise notice 'REFUSED: %', sqlerrm; end $$;`)));
+
+// guards
+const self = sql('j', `${asBoss}
+  do $$ declare u uuid; begin
+    select id into u from public.profiles where mc_username='Boss';
+    perform public.admin_delete_player(u);
+    raise notice 'ALLOWED';
+  exception when others then raise notice 'REFUSED: %', sqlerrm; end $$;
+  reset role;`);
+check('an admin cannot delete their own account',
+  /REFUSED: CANNOT_DELETE_SELF/.test(self), self.slice(0, 300));
+
+sql('j', register('Other', 'other@mc.com'));
+sql('j', `select public.make_admin('Other');`);
+const otherAdmin = sql('j', `${asBoss}
+  do $$ declare u uuid; begin
+    select id into u from public.profiles where mc_username='Other';
+    perform public.admin_delete_player(u);
+    raise notice 'ALLOWED';
+  exception when others then raise notice 'REFUSED: %', sqlerrm; end $$;
+  reset role;`);
+check('one admin cannot delete another admin',
+  /REFUSED: CANNOT_DELETE_ADMIN/.test(otherAdmin), otherAdmin.slice(0, 300));
+
+const ghost = sql('j', `${asBoss}
+  do $$ begin
+    perform public.admin_delete_player('00000000-0000-0000-0000-000000000000');
+    raise notice 'ALLOWED';
+  exception when others then raise notice 'REFUSED: %', sqlerrm; end $$;
+  reset role;`);
+check('deleting an unknown player says so',
+  /REFUSED: PLAYER_NOT_FOUND/.test(ghost), ghost.slice(0, 300));
+
+/* --- what happens to their team --------------------------------- */
+sql('k', SHIM);
+sql('k', NEW);
+sql('k', register('Adm', 'adm@mc.com'));
+sql('k', `select public.make_admin('Adm');`);
+sql('k', register('Cap', 'cap@mc.com'));
+sql('k', register('Mate', 'mate@mc.com'));
+sql('k', register('Solo', 'solo@mc.com'));
+const asAdm = `${asUser('Adm')} set role authenticated;`;
+
+// Cap owns a team that Mate also belongs to
+sql('k', `${asUser('Cap')} set role authenticated;
+  insert into public.teams (name, owner_id)
+  select 'Alpha', id from public.profiles where mc_username='Cap';
+  reset role;`);
+sql('k', `${asAdm}
+  insert into public.team_members (team_id, user_id, is_leader)
+  select t.id, p.id, false from public.teams t, public.profiles p
+   where t.name='Alpha' and p.mc_username='Mate';
+  reset role;`);
+// Solo owns a team alone
+sql('k', `${asUser('Solo')} set role authenticated;
+  insert into public.teams (name, owner_id)
+  select 'Lonely', id from public.profiles where mc_username='Solo';
+  reset role;`);
+
+const capGone = sql('k', `${asAdm}
+  do $$ declare r json; u uuid; begin
+    select id into u from public.profiles where mc_username='Cap';
+    r := public.admin_delete_player(u);
+    raise notice 'MOVED % NAMES %', r->>'teams_transferred', r->>'transferred_team_names';
+  exception when others then raise notice 'REFUSED: %', sqlerrm; end $$;
+  reset role;`);
+check('deleting a captain who has team-mates reports a transfer',
+  /MOVED 1/.test(capGone), capGone.slice(0, 300));
+check('the team survives',
+  /Alpha/.test(sql('k', `select name from public.teams;`)),
+  'the owner_id cascade would otherwise wipe the whole team');
+check('the remaining member becomes the owner',
+  /Mate/.test(sql('k', `select p.mc_username from public.teams t
+    join public.profiles p on p.id = t.owner_id where t.name='Alpha';`)));
+check('and is marked as leader',
+  /t/.test(sql('k', `select tm.is_leader from public.team_members tm
+    join public.profiles p on p.id = tm.user_id
+    join public.teams t on t.id = tm.team_id
+    where t.name='Alpha' and p.mc_username='Mate';`)));
+check('the deleted captain is no longer a member',
+  !/Cap/.test(sql('k', `select p.mc_username from public.team_members tm
+    join public.profiles p on p.id=tm.user_id;`)));
+
+const soloGone = sql('k', `${asAdm}
+  do $$ declare r json; u uuid; begin
+    select id into u from public.profiles where mc_username='Solo';
+    r := public.admin_delete_player(u);
+    raise notice 'DROPPED % NAMES %', r->>'teams_deleted', r->>'deleted_team_names';
+  exception when others then raise notice 'REFUSED: %', sqlerrm; end $$;
+  reset role;`);
+check('deleting the only member of a team removes the team',
+  /DROPPED 1/.test(soloGone), soloGone.slice(0, 300));
+check('that team is really gone',
+  !/Lonely/.test(sql('k', `select name from public.teams;`)));
+
+// a plain member leaving must not disturb the team
+const mateCount = sql('k', `select count(*) from public.team_members tm
+  join public.teams t on t.id=tm.team_id where t.name='Alpha';`);
+check('the surviving team still has its member', /1/.test(mateCount));
+
+/* ---------------------------------------------------------------- */
+section('I. the stand-alone add-delete-player.sql script');
+
+// Someone who installed the schema before this round has a database with no
+// admin_delete_player in it. That is exactly the database this script has to
+// upgrade, so the test starts from one.
+sql('m', SHIM);
+sql('m', NEW);
+sql('m', 'drop function if exists public.admin_delete_player(uuid);');
+sql('m', register('Chief', 'chief@mc.com'));
+sql('m', register('Doomed', 'doomed@mc.com'));
+sql('m', `select public.make_admin('Chief');`);
+// registration closed, to prove the script puts the setting back as it found it
+sql('m', `update public.app_settings set registration_open = false where id = 1;`);
+
+check('the function really is missing to begin with',
+  sql('m', `select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+            where n.nspname='public' and p.proname='admin_delete_player';`).includes('0'));
+
+const APPLY = readFileSync(join(ROOT, 'supabase/add-delete-player.sql'), 'utf8');
+const applied = sql('m', APPLY);
+check('the script runs without errors', !applied.includes('PSQL_ERROR'),
+  applied.slice(0, 500));
+check('its built-in self-test passes', /تست موفق/.test(applied),
+  applied.slice(-500));
+check('the function exists afterwards',
+  sql('m', `select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+            where n.nspname='public' and p.proname='admin_delete_player';`).includes('1'));
+check('the self-test leaves no rubbish behind',
+  !sql('m', `select count(*) from public.profiles where mc_username='NxDelTest';`)
+    .match(/\n\s*1\s*\n/));
+check('and puts the registration setting back how it found it',
+  /\n\s*f\s*\n/.test(sql('m', `select registration_open from public.app_settings where id=1;`)),
+  'the script opens registration briefly to make its test account');
+
+check('running it a second time is safe',
+  !sql('m', APPLY).includes('PSQL_ERROR'));
+
+// and the thing it installed actually works
+const asChief = `do $$ declare uid uuid; begin
+  select id into uid from public.profiles where mc_username='Chief';
+  perform set_config('request.jwt.claim.sub', uid::text, false);
+end $$; set role authenticated;`;
+const used = sql('m', `${asChief}
+  do $$ declare u uuid; r json; begin
+    select id into u from public.profiles where mc_username='Doomed';
+    r := public.admin_delete_player(u);
+    raise notice 'GONE %', r->>'username';
+  exception when others then raise notice 'REFUSED: %', sqlerrm; end $$;`);
+check('an admin can then delete a player with it', /GONE Doomed/.test(used),
+  used.slice(0, 300));
+check('the player is gone for good',
+  !sql('m', `select mc_username from public.profiles;`).includes('Doomed'));
+
 console.log(`\n${fail ? '❌' : '🎉'} database tests: ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

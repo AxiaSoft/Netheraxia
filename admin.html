@@ -144,6 +144,14 @@
         .btn-info { background: linear-gradient(135deg, #0d7fbf, #38bdf8); }
         .btn-outline { background: transparent; border: 2px solid var(--glass-border); color: var(--accent); }
         .btn-sm { padding: 8px 16px; font-size: 12px; border-radius: var(--r-xs); }
+        /* حذف کامل: عمداً از «مسدود کردن» تیره‌تر است تا با هم اشتباه نشوند */
+        .btn-nuke {
+            background: rgba(127,29,29,0.22);
+            border: 1px solid rgba(239,68,68,0.55);
+            color: #fca5a5;
+        }
+        .btn-nuke:hover:not(:disabled) { background: rgba(185,28,28,0.45); color: #fff; }
+        .btn-nuke:disabled { opacity: .35; cursor: not-allowed; }
         .btn { box-shadow: 4px 4px 0 rgba(2, 12, 32, 0.45), inset 0 -3px 0 rgba(0, 15, 45, 0.28); }
         .btn:hover { transform: translate(-2px, -2px); box-shadow: 6px 6px 0 rgba(2, 12, 32, 0.5), inset 0 -3px 0 rgba(0, 15, 45, 0.28); }
         .btn:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 rgba(2, 12, 32, 0.4); }
@@ -2346,6 +2354,8 @@
 
         // ==================== Accounts & live teams (Supabase) ====================
         let acTeams = [], acPlayers = [], acSettings = null, acIsAdmin = false;
+        // شناسه‌ی خودِ ادمینِ واردشده — برای اینکه نتواند حساب خودش را حذف کند
+        let acMyId = null;
         let acPlayerFilter = 'all';
         let acPublicCfg = null;
 
@@ -2506,6 +2516,7 @@
             try { st = await NXAuth.adminState(); } catch (e) {}
 
             acIsAdmin = !!st.isAdmin;
+            acMyId = (st.profile && st.profile.id) || null;
             box.className = 'ac-auth-state ' + (st.isAdmin ? 'ok' : (st.signedIn ? 'warn' : 'off'));
             if (form) form.style.display = st.signedIn ? 'none' : '';
             if (out)  out.style.display  = st.signedIn ? '' : 'none';
@@ -2641,6 +2652,28 @@
 
         function acSetPlayerFilter(f) { acPlayerFilter = f; renderAcPlayers(); }
 
+        /**
+         * دکمه‌ی حذف کامل بازیکن.
+         * برای حساب خودِ ادمین و برای ادمین‌های دیگر خاموش است — دیتابیس هم
+         * همین دو مورد را رد می‌کند، ولی بهتر است کاربر از قبل بداند.
+         */
+        function renderDeleteBtn(p) {
+            let why = '';
+            if (acMyId && p.id === acMyId)  why = 'نمی‌توانید حساب خودتان را حذف کنید.';
+            else if (p.is_admin)            why = 'اول دسترسی ادمین این بازیکن را بردارید.';
+
+            if (why) {
+                return `<button class="btn btn-sm btn-nuke" disabled title="${escHtml(why)}">
+                            🗑 حذف
+                        </button>`;
+            }
+            return `<button class="btn btn-sm btn-nuke"
+                            onclick="acDeletePlayer('${p.id}')"
+                            title="حذف کامل این بازیکن از سایت">
+                        🗑 حذف
+                    </button>`;
+        }
+
         function renderAcPlayers() {
             const box  = document.getElementById('acPlayersList');
             const bar  = document.getElementById('acPlayerFilters');
@@ -2700,6 +2733,7 @@
                                 onclick="acToggleBan('${p.id}', ${p.is_banned ? 'false' : 'true'})">
                             ${p.is_banned ? '✅ رفع مسدودی' : '🚫 مسدود کردن'}
                         </button>
+                        ${renderDeleteBtn(p)}
                     </div>
                 </div>`).join('');
         }
@@ -2777,6 +2811,54 @@
             if (!confirm('تیم «' + name + '» کاملاً حذف شود؟')) return;
             try { await NXAuth.deleteTeam(teamId); showToast('✅ تیم حذف شد', 'success'); await loadAccountsData(); }
             catch (e) { showToast('❌ ' + e.message, 'error'); }
+        }
+
+        /**
+         * حذف کامل بازیکن از سایت — برگشت‌ناپذیر.
+         *
+         * قبل از حذف دقیقاً می‌گوید چه اتفاقی برای تیمش می‌افتد، چون
+         * «حذف بازیکن» می‌تواند به حذف یا تغییر کاپیتانِ یک تیم هم منجر شود
+         * و ادمین نباید غافلگیر شود.
+         */
+        async function acDeletePlayer(userId) {
+            const p = acPlayers.find(x => x.id === userId);
+            if (!p) { showToast('❌ بازیکن پیدا نشد', 'error'); return; }
+
+            // سرنوشت تیم را از روی همان داده‌ای که در پنل داریم حساب کن
+            let teamNote = '';
+            if (p.has_team && p.is_leader) {
+                const mates = acPlayers.filter(
+                    x => x.team_id === p.team_id && x.id !== p.id).length;
+                teamNote = mates > 0
+                    ? `\n\n👑 او کاپیتان تیم «${p.team_name}» است.\n` +
+                      `تیم حذف نمی‌شود؛ کاپیتانی به قدیمی‌ترین عضو دیگر می‌رسد.`
+                    : `\n\n⚠️ او تنها عضو تیم «${p.team_name}» است.\n` +
+                      `با حذف او، این تیم هم کاملاً حذف می‌شود.`;
+            } else if (p.has_team) {
+                teamNote = `\n\nاز تیم «${p.team_name}» خارج می‌شود (تیم باقی می‌ماند).`;
+            }
+
+            if (!confirm(
+                `حذف کامل «${p.mc_username}» از سایت؟` + teamNote +
+                `\n\nحساب، پروفایل و عضویت‌هایش برای همیشه پاک می‌شود و ` +
+                `این کار برگشت‌پذیر نیست.\nبعداً می‌تواند دوباره ثبت‌نام کند.`)) {
+                return;
+            }
+
+            try {
+                const res = await NXAuth.deletePlayer(userId);
+                let msg = `🗑 «${res.username}» حذف شد`;
+                if (res.teams_deleted)     msg += ` — تیم «${res.deleted_team_names.join('، ')}» هم حذف شد`;
+                if (res.teams_transferred) msg += ` — کاپیتانی «${res.transferred_team_names.join('، ')}» منتقل شد`;
+                showToast(msg, 'success');
+                sbLog(`🗑 بازیکن «${res.username}» کاملاً حذف شد ` +
+                      `(تیم حذف‌شده: ${res.teams_deleted}، کاپیتانی منتقل‌شده: ${res.teams_transferred}).`, 'ok');
+            } catch (e) {
+                showToast('❌ ' + e.message, 'error');
+                sbLog('❌ حذف بازیکن انجام نشد — ' + e.message, 'err');
+            }
+            // چه موفق چه ناموفق، لیست باید با واقعیت دیتابیس هماهنگ شود
+            await loadAccountsData();
         }
 
         async function acToggleBan(userId, ban) {
