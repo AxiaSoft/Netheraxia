@@ -1,14 +1,14 @@
 {
   "status": "online",
-  "headline": "درحال برگذاری سیزن ۲",
-  "message": "به سیزن دوم ندراکسیا خوش آمدید!",
-  "javaAddress": "host2.hgmc.ir:21975",
-  "bedrockAddress": "host2.hgmc.ir",
-  "bedrockPort": "21975",
-  "version": "برای جاوا: 26.2 | برای بدراک: 26.33",
+  "headline": "درحال برگذاری سیزن ۳",
+  "message": "به سیزن سوم ندراکسیا خوش آمدید!",
+  "javaAddress": "Netheraxia.aternos.me:51397",
+  "bedrockAddress": "Netheraxia.aternos.me",
+  "bedrockPort": "51397",
+  "version": "برای جاوا: 26.2 | برای بدراک: +26.33",
   "showConnectBtn": true,
   "connectBtnText": "بزن بریم",
   "showVersion": true,
   "showPanel": true,
-  "updatedAt": "۱۴۰۵/۰۷/۱۰, ۰۶:۳۰"
+  "updatedAt": "۱۴۰۵/۰۷/۲۸, ۲۰:۵۱"
 }
